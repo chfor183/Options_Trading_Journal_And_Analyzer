@@ -16,7 +16,13 @@ A local, Python-based web application built with Streamlit to track, journal, an
   - Dynamic Collateral Calculation (Max Loss * 1.6)
   - Auto-calculated commissions and net trade costs
 - **Market Data**: Integrates with `yfinance` to fetch live underlying prices and ticker metadata.
-- **Journal & Dashboard**: Save trades to a local PostgreSQL database, view your active journal, and manage historical performance.
+- **Trade Management**: Edit open trades dynamically and easily record closing transactions (for profit, loss, rolling, or expiration).
+- **Journal & Ledger**: 
+  - Save trades to a local PostgreSQL database (`finance` schema).
+  - View trades with pagination, sorting, and dynamic filtering (Ticker, Date, Status).
+  - Bulk delete functionality.
+  - Live "Current Price" and "Break-Even" columns to monitor active trades.
+- **Dashboard**: Review your performance metrics (Under Development).
 
 ## Tech Stack
 
@@ -31,16 +37,18 @@ A local, Python-based web application built with Streamlit to track, journal, an
 
 ```text
 finance/
-├── app.py                  # Main Streamlit entry point
+├── Home.py                 # Main Streamlit entry point / Navigation router
 ├── docker-compose.yml      # PostgreSQL database container configuration
 ├── requirements.txt        # Python dependencies
 ├── README.md               # Project documentation
 ├── pages/
-│   ├── 1_Trade.py          # Trade entry, strategy builder, and payoff chart
-│   ├── 2_Journal.py        # Ledger of saved trades with delete functionality
-│   └── 3_Dashboard.py      # High-level performance metrics
+│   ├── 0_Home_Content.py   # Home page content
+│   ├── 1_Trade.py          # Trade entry, editing, and payoff chart
+│   ├── 2_Journal.py        # Ledger of saved trades (pagination, filters, bulk delete)
+│   ├── 3_Dashboard.py      # High-level performance metrics
+│   └── 4_Close Trade.py    # Hidden navigation tab for executing closing transactions
 └── src/
-    ├── db.py               # Database connection and session management
+    ├── db.py               # Database connection, finance schema setup, and session management
     ├── market_data.py      # yfinance API wrappers
     ├── models.py           # SQLAlchemy ORM models (Trade, Leg, Transaction)
     └── options_math.py     # Payoff arrays, EV, and Probability calculations
@@ -68,7 +76,7 @@ docker-compose up -d
 ### 4. Run the Application
 Launch the Streamlit web interface:
 ```bash
-streamlit run app.py
+streamlit run Home.py
 ```
 
 ## Calculations & Math

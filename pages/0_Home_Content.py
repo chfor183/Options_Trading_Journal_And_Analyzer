@@ -24,4 +24,3 @@ try:
     st.success("Database connected and initialized.")
 except Exception as e:
     st.error(f"Failed to connect to the database. Ensure PostgreSQL is running. Error: {e}")
-

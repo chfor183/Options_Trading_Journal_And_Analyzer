@@ -1,9 +1,10 @@
 import os
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, ForeignKey, Date, Boolean
+from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, ForeignKey, Date, Boolean, MetaData
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from datetime import datetime
 
-Base = declarative_base()
+metadata = MetaData(schema="finance")
+Base = declarative_base(metadata=metadata)
 
 class Trade(Base):
     __tablename__ = 'trades'
@@ -16,6 +17,7 @@ class Trade(Base):
     idea_url = Column(String(255))
     date_opened = Column(DateTime, default=datetime.utcnow)
     collateral = Column(Float)
+    status = Column(String(20), default="Open")
     
     # Calculated Fields (could be calculated dynamically, but stored for easy querying)
     max_profit = Column(Float)

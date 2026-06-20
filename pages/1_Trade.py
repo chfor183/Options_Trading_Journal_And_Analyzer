@@ -16,29 +16,59 @@ def toggle_type(i):
     st.session_state[f"type_val_{i}"] = "Call" if current == "Put" else "Put"
 
 st.set_page_config(page_title="Trade Entry", page_icon="📝", layout="wide")
-st.title("New Trade Entry")
 
 db = SessionLocal()
+
+trade_to_edit = None
+if "edit_trade_id" in st.session_state and st.session_state.edit_trade_id:
+    st.title("Edit Trade Entry")
+    trade_to_edit = db.query(Trade).filter(Trade.id == st.session_state.edit_trade_id).first()
+    if trade_to_edit and not st.session_state.get(f"loaded_{trade_to_edit.id}"):
+        st.session_state[f"loaded_{trade_to_edit.id}"] = True
+        st.session_state["ticker_val"] = trade_to_edit.ticker
+        st.session_state["name_val"] = trade_to_edit.underlying_name
+        st.session_state["strategy_val"] = trade_to_edit.strategy_type
+        st.session_state["move_val"] = trade_to_edit.expected_move
+        st.session_state["url_val"] = trade_to_edit.idea_url
+        st.session_state["date_val"] = trade_to_edit.date_opened
+        st.session_state["num_legs"] = len(trade_to_edit.legs) or 2
+        for i, leg in enumerate(trade_to_edit.legs):
+            st.session_state[f"action_val_{i}"] = leg.position
+            st.session_state[f"type_val_{i}"] = leg.option_type
+            st.session_state[f"strike_{i}"] = leg.strike
+            st.session_state[f"expiry_{i}"] = leg.expiry
+else:
+    st.title("New Trade Entry")
 
 col1, col2 = st.columns(2)
 
 with col1:
-    ticker = st.text_input("Underlying Ticker", value="MU").upper()
+    ticker = st.text_input("Underlying Ticker", value=st.session_state.get("ticker_val", "MU")).upper()
     if ticker:
         with st.spinner("Fetching data..."):
             info = get_ticker_info(ticker)
         
-        name = st.text_input("Name of Underlying", value=info['name'])
-        category = st.selectbox("Category", ["Stock", "ETF", "Index", "Futures", "Forex", "Crypto"], 
-                              index=["Stock", "ETF", "Index", "Futures", "Forex", "Crypto"].index(info['category'].capitalize()) if info['category'].capitalize() in ["Stock", "ETF", "Index", "Futures", "Forex", "Crypto"] else 0)
+        name = st.text_input("Name of Underlying", value=st.session_state.get("name_val", info['name']))
+        
+        cat_options = ["Stock", "ETF", "Index", "Futures", "Forex", "Crypto"]
+        default_cat = info['category'].capitalize() if info['category'].capitalize() in cat_options else "Stock"
+        category = st.selectbox("Category", cat_options, index=cat_options.index(default_cat))
+        
         current_price = st.number_input("Underlying Price", value=float(info['current_price']) if info.get('current_price') else 1151.38, format="%.2f")
         
-        strategy_type = st.selectbox("Strategy Type", ["Bull put spread", "Bear call spread", "Iron condor", "Long call", "Long put", "Custom"])
+        strat_options = ["Bull put spread", "Bear call spread", "Iron condor", "Long call", "Long put", "Custom"]
+        def_strat = st.session_state.get("strategy_val", "Bull put spread")
+        strat_idx = strat_options.index(def_strat) if def_strat in strat_options else 0
+        strategy_type = st.selectbox("Strategy Type", strat_options, index=strat_idx)
 
 with col2:
-    expected_move = st.selectbox("Expected Move", ["Bullish ↗", "Neutral →", "Bearish ↘", "High volatility"])
-    idea_url = st.text_input("Idea URL")
-    date_opened = st.date_input("Date Opened", value=datetime.today())
+    move_options = ["Bullish ↗", "Neutral →", "Bearish ↘", "High volatility"]
+    def_move = st.session_state.get("move_val", "Bullish ↗")
+    move_idx = move_options.index(def_move) if def_move in move_options else 0
+    expected_move = st.selectbox("Expected Move", move_options, index=move_idx)
+    
+    idea_url = st.text_input("Idea URL", value=st.session_state.get("url_val", ""))
+    date_opened = st.date_input("Date Opened", value=st.session_state.get("date_val", datetime.today()))
 
 st.subheader("Options")
 
@@ -78,7 +108,7 @@ observer.observe(window.parent.document.body, {childList: true, subtree: true});
 </script>
 """, height=0, width=0)
 
-num_legs = st.number_input("Number of Legs", min_value=1, max_value=8, value=2)
+num_legs = st.number_input("Number of Legs", min_value=1, max_value=8, value=st.session_state.get("num_legs", 2))
 legs_data = []
 
 hcol0, hcol1, hcol2, hcol3, hcol4, hcol5, hcol6, hcol7, hcol8 = st.columns([0.8, 1.2, 1, 2.5, 1.5, 1.2, 1.5, 1.5, 1.5])
@@ -104,8 +134,12 @@ for i in range(num_legs):
     col1.button(action, key=f"action_btn_{i}", on_click=toggle_action, args=(i,), use_container_width=True)
     
     qty = col2.number_input("Qty", min_value=1, value=1, key=f"qty_{i}", label_visibility="collapsed")
-    expiry = col3.date_input("Expiry", value=datetime(2026, 7, 17), key=f"expiry_{i}", label_visibility="collapsed")
-    strike = col4.number_input("Strike", value=840.0 if i==0 else 760.0, step=1.0, format="%.2f", key=f"strike_{i}", label_visibility="collapsed")
+    
+    default_expiry = st.session_state.get(f"expiry_{i}", datetime(2026, 7, 17))
+    expiry = col3.date_input("Expiry", value=default_expiry, key=f"expiry_input_{i}", label_visibility="collapsed")
+    
+    default_strike = st.session_state.get(f"strike_{i}", 840.0 if i==0 else 760.0)
+    strike = col4.number_input("Strike", value=float(default_strike), step=1.0, format="%.2f", key=f"strike_input_{i}", label_visibility="collapsed")
     
     opt_type = st.session_state[f"type_val_{i}"]
     col5.button(opt_type, key=f"type_btn_{i}", on_click=toggle_type, args=(i,), use_container_width=True)
@@ -204,44 +238,70 @@ if ticker and current_price > 0:
     
     st.divider()
     
-    if st.button("Save Trade"):
+    btn_label = "Update Trade" if trade_to_edit else "Save Trade"
+    if st.button(btn_label):
         # We need a consolidated cost if someone wants to track it
         cost = net_cost
         
-        new_trade = Trade(
-            ticker=ticker,
-            underlying_name=name,
-            category=category,
-            strategy_type=strategy_type,
-            expected_move=expected_move,
-            idea_url=idea_url,
-            date_opened=date_opened,
-            collateral=collateral_val
-        )
-        db.add(new_trade)
-        db.commit()
-        db.refresh(new_trade)
-        
+        if trade_to_edit:
+            trade_to_edit.ticker = ticker
+            trade_to_edit.underlying_name = name
+            trade_to_edit.category = category
+            trade_to_edit.strategy_type = strategy_type
+            trade_to_edit.expected_move = expected_move
+            trade_to_edit.idea_url = idea_url
+            trade_to_edit.date_opened = date_opened
+            trade_to_edit.collateral = float(collateral_val)
+            
+            db.query(Leg).filter(Leg.trade_id == trade_to_edit.id).delete()
+            open_tx = db.query(Transaction).filter(Transaction.trade_id == trade_to_edit.id, Transaction.action == "Open").first()
+            if open_tx:
+                open_tx.price = float(cost)
+                open_tx.commission = float(commissions)
+                open_tx.date = date_opened
+                
+            target_trade_id = trade_to_edit.id
+            db.commit()
+            st.success("Trade updated successfully!")
+            st.session_state.edit_trade_id = None
+        else:
+            new_trade = Trade(
+                ticker=ticker,
+                underlying_name=name,
+                category=category,
+                strategy_type=strategy_type,
+                expected_move=expected_move,
+                idea_url=idea_url,
+                date_opened=date_opened,
+                collateral=float(collateral_val)
+            )
+            db.add(new_trade)
+            db.commit()
+            db.refresh(new_trade)
+            target_trade_id = new_trade.id
+            
+            new_transaction = Transaction(
+                trade_id=target_trade_id,
+                date=date_opened,
+                action="Open",
+                quantity=1,
+                price=float(cost),
+                commission=float(commissions)
+            )
+            db.add(new_transaction)
+            db.commit()
+            st.success("Trade saved successfully!")
+            
         for leg in legs_data:
             new_leg = Leg(
-                trade_id=new_trade.id,
-                strike=leg['strike'],
+                trade_id=target_trade_id,
+                strike=float(leg['strike']),
                 expiry=leg['expiry'],
                 option_type=leg['type'],
                 position=leg['action']
             )
             db.add(new_leg)
             
-        new_transaction = Transaction(
-            trade_id=new_trade.id,
-            date=date_opened,
-            action="Open",
-            quantity=1,
-            price=cost,
-            commission=commissions
-        )
-        db.add(new_transaction)
         db.commit()
-        st.success("Trade saved successfully!")
 
 db.close()
