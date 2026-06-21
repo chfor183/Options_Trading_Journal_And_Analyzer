@@ -3,6 +3,18 @@ import pandas as pd
 import plotly.graph_objects as go
 from scipy.stats import norm
 
+def calculate_bs_delta(S, K, T, r, sigma, option_type):
+    if T <= 0 or sigma <= 0:
+        if option_type.lower() == 'call':
+            return 1.0 if S > K else 0.0
+        else:
+            return -1.0 if S < K else 0.0
+    d1 = (np.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
+    if option_type.lower() == 'call':
+        return norm.cdf(d1)
+    else:
+        return norm.cdf(d1) - 1.0
+
 def calculate_payoff_array(legs, spot_prices):
     total_payoff = np.zeros_like(spot_prices)
     for leg in legs:

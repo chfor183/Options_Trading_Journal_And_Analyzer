@@ -21,11 +21,13 @@ if trades:
     st.write("### All Trades")
     
     # Filtering logic
-    filter_col1, filter_col2, filter_col3 = st.columns(3)
+    filter_col1, filter_col2, filter_col3, filter_col4 = st.columns(4)
     filter_ticker = filter_col1.text_input("Filter by Ticker")
     filter_date = filter_col2.date_input("Filter by Date Opened", value=None)
     status_options = ["All"] + list(set([t.status for t in trades]))
     filter_status = filter_col3.selectbox("Filter by Status", status_options)
+    strategy_options = ["All"] + list(set([t.strategy_type for t in trades]))
+    filter_strategy = filter_col4.selectbox("Filter by Strategy", strategy_options)
 
     # Apply filters
     filtered_trades = trades
@@ -35,9 +37,37 @@ if trades:
         filtered_trades = [t for t in filtered_trades if t.date_opened.date() == filter_date]
     if filter_status != "All":
         filtered_trades = [t for t in filtered_trades if t.status == filter_status]
+    if filter_strategy != "All":
+        filtered_trades = [t for t in filtered_trades if t.strategy_type == filter_strategy]
         
     # Sort
     filtered_trades.sort(key=lambda x: x.date_opened, reverse=True)
+    
+    # Select All / Deselect All / Bulk Delete
+    sel_col1, sel_col2, sel_col3, _ = st.columns([1.5, 1, 1.5, 6])
+    if sel_col1.button("Select All Filtered"):
+        for t in filtered_trades:
+            st.session_state.selected_trades[t.id] = True
+            st.session_state[f"select_{t.id}"] = True
+        st.rerun()
+    if sel_col2.button("Deselect All"):
+        for t in trades:
+            st.session_state.selected_trades[t.id] = False
+            st.session_state[f"select_{t.id}"] = False
+        st.rerun()
+        
+    selected_ids = [k for k, v in st.session_state.selected_trades.items() if v]
+    if selected_ids:
+        if sel_col3.button("Delete all selected", type="primary"):
+            trades_to_delete = db.query(Trade).filter(Trade.id.in_(selected_ids)).all()
+            for td in trades_to_delete:
+                db.delete(td)
+            db.commit()
+            st.session_state.selected_trades = {}
+            st.success(f"Deleted {len(selected_ids)} trades!")
+            st.rerun()
+            
+    st.write("") # small spacing
     
     # Header row
     col_widths = [0.4, 0.7, 1.2, 1.0, 1.2, 1.0, 1.0, 1.2, 0.8, 0.8, 0.8, 0.7, 0.7, 0.7]
@@ -72,8 +102,21 @@ if trades:
                 pnl += tx.price - tx.commission
         
         # Checkbox for selection
-        selected = cols[0].checkbox(f"Select {t.id}", key=f"select_{t.id}", value=st.session_state.selected_trades.get(t.id, False), label_visibility="collapsed")
-        st.session_state.selected_trades[t.id] = selected
+        
+        def handle_checkbox_change(trade_id):
+            # The session state key matches the widget key "select_{trade_id}"
+            st.session_state.selected_trades[trade_id] = st.session_state[f"select_{trade_id}"]
+
+        if f"select_{t.id}" not in st.session_state:
+            st.session_state[f"select_{t.id}"] = st.session_state.selected_trades.get(t.id, False)
+            
+        cols[0].checkbox(
+            f"Select {t.id}", 
+            key=f"select_{t.id}", 
+            on_change=handle_checkbox_change,
+            args=(t.id,),
+            label_visibility="collapsed"
+        )
         
         cols[1].markdown(f"<div style='text-align: left;'>{t.ticker}</div>", unsafe_allow_html=True)
         cols[2].markdown(f"<div style='text-align: left;'>{t.underlying_name}</div>", unsafe_allow_html=True)
@@ -88,6 +131,7 @@ if trades:
         
         try:
             from src.options_math import calculate_metrics
+            from src.market_data import get_live_option_leg_data
             info = get_ticker_info(t.ticker)
             if info and info.get('current_price'):
                 cp = float(info['current_price'])
@@ -103,13 +147,31 @@ if trades:
                 cost_per_leg = open_tx.price / len(t.legs) if open_tx and t.legs else 0.0
                 
                 for leg in t.legs:
+                    price = cost_per_leg
+                    iv = 0.0
+                    expiry_str = pd.to_datetime(leg.expiry).strftime('%Y-%m-%d')
+                    leg_data = get_live_option_leg_data(t.ticker, expiry_str, leg.strike, leg.option_type)
+                    if leg_data:
+                        bid = leg_data.get('bid', 0.0)
+                        ask = leg_data.get('ask', 0.0)
+                        
+                        if leg.position == "Sell" and bid > 0:
+                            price = bid
+                        elif leg.position == "Buy" and ask > 0:
+                            price = ask
+                        else:
+                            price = leg_data.get('lastPrice', price)
+                            
+                        iv = leg_data.get('impliedVolatility', 0.0) * 100
+
                     legs_for_math.append({
                         "action": leg.position,
                         "qty": 1, # approx
                         "type": leg.option_type,
                         "strike": leg.strike,
-                        "price": cost_per_leg,
-                        "expiry": pd.to_datetime(leg.expiry)
+                        "price": price,
+                        "expiry": pd.to_datetime(leg.expiry),
+                        "iv": iv
                     })
                     
                 metrics = calculate_metrics(legs_for_math, cp)
@@ -208,19 +270,6 @@ if trades:
         st.session_state.current_page += 1
         st.rerun()
         
-    st.divider()
-    
-    # Bulk delete
-    selected_ids = [k for k, v in st.session_state.selected_trades.items() if v]
-    if selected_ids:
-        if st.button("Delete all selected", type="primary"):
-            trades_to_delete = db.query(Trade).filter(Trade.id.in_(selected_ids)).all()
-            for td in trades_to_delete:
-                db.delete(td)
-            db.commit()
-            st.session_state.selected_trades = {}
-            st.success(f"Deleted {len(selected_ids)} trades!")
-            st.rerun()
 else:
     st.info("No trades found in the journal.")
 

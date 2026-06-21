@@ -19,9 +19,9 @@ A local, Python-based web application built with Streamlit to track, journal, an
 - **Trade Management**: Edit open trades dynamically and easily record closing transactions (for profit, loss, rolling, or expiration).
 - **Journal & Ledger**: 
   - Save trades to a local PostgreSQL database (`finance` schema).
-  - View trades with pagination, sorting, and dynamic filtering (Ticker, Date, Status).
-  - Bulk delete functionality.
-  - Live "Current Price" and "Break-Even" columns to monitor active trades.
+  - View trades with pagination, sorting, and dynamic filtering (Ticker, Date, Status, Strategy).
+  - Bulk management with "Select All Filtered", "Deselect All", and bulk delete functionality.
+  - Live "Current Price", "Break-Even", and real-time Probability metrics comparison to monitor active trades.
 - **Dashboard**: Review your performance metrics (Under Development).
 
 ## Tech Stack
@@ -87,12 +87,21 @@ streamlit run Home.py
 - **Commissions**: Defaults to `$0.65` per options contract leg.
 
 ## Future Enhancements
-- Integration with live options chains to automatically pull leg prices, IV, and Delta.
-- Partial close tracking and rolling mechanisms.
+- Partial close tracking.
 - Historical equity curve generation on the Dashboard.
 - USD/CAD currency conversion toggle.
+- Make it possible to have multiple portfolios
 
 ## Recent Updates
+
+**Session Date: 2026-06-21**
+- **Live Options Data**: Integrated with `yfinance` to fetch live options chain data (bid, ask, last price, and IV) on-demand in the Trade menu.
+- **Realistic Pricing**: Upgraded the pricing logic to automatically use the current *bid* price for selling legs and the current *ask* price for buying legs, reflecting real-world market mechanics.
+- **Dynamic Delta**: Added real-time Black-Scholes Delta calculations for individual options legs.
+- **Journal Enhancements**: 
+  - Added a "Strategy" filter to quickly find specific types of trades.
+  - Implemented "Select All Filtered" and "Deselect All" capabilities to make bulk deletion seamless.
+  - Upgraded the Metrics Comparison tool in trade details to calculate current live probabilities (PoP, Max Profit, Max Loss) using real-time options data rather than approximated opening costs.
 
 **Session Date: 2026-06-20**
 - **Database Schema Update**: Added `underlying_price_at_open`, `probability_max_profit`, and `probability_max_loss` to the `Trade` model to capture and persist the exact state of the underlying asset and probabilities at the time the trade is opened.

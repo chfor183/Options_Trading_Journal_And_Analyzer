@@ -108,7 +108,46 @@ observer.observe(window.parent.document.body, {childList: true, subtree: true});
 </script>
 """, height=0, width=0)
 
-num_legs = st.number_input("Number of Legs", min_value=1, max_value=8, value=st.session_state.get("num_legs", 2))
+num_legs = st.number_input("Number of Legs", min_value=1, max_value=8, value=st.session_state.get("num_legs", 2), key="num_legs")
+
+col_btn1, col_btn2 = st.columns([2, 10])
+if col_btn1.button("Pull Live Data for All Legs"):
+    with st.spinner("Fetching live data from Yahoo Finance..."):
+        from src.market_data import get_live_option_leg_data
+        from src.options_math import calculate_bs_delta
+        for i in range(num_legs):
+            strike = st.session_state.get(f"strike_input_{i}") or st.session_state.get(f"strike_{i}")
+            expiry = st.session_state.get(f"expiry_input_{i}") or st.session_state.get(f"expiry_{i}")
+            opt_type = st.session_state.get(f"type_val_{i}", "Put")
+            
+            if expiry and strike and ticker:
+                expiry_str = pd.to_datetime(expiry).strftime('%Y-%m-%d')
+                data = get_live_option_leg_data(ticker, expiry_str, float(strike), opt_type)
+                if data:
+                    action = st.session_state.get(f"action_val_{i}", "Buy")
+                    bid = data.get('bid', 0.0)
+                    ask = data.get('ask', 0.0)
+                    
+                    if action == "Sell" and bid > 0:
+                        price = bid
+                    elif action == "Buy" and ask > 0:
+                        price = ask
+                    else:
+                        price = data.get('lastPrice', 0.0)
+                        
+                    iv_dec = data.get('impliedVolatility', 0.0)
+                    iv_pct = iv_dec * 100
+                    
+                    st.session_state[f"price_{i}"] = price
+                    st.session_state[f"iv_{i}"] = iv_pct
+                    
+                    # Calculate Delta
+                    T = (pd.to_datetime(expiry) - pd.Timestamp.now().normalize()).days / 365.0
+                    if T <= 0: T = 0.001
+                    delta = calculate_bs_delta(current_price, float(strike), T, 0.05, iv_dec, opt_type)
+                    st.session_state[f"delta_{i}"] = delta
+    st.rerun()
+
 legs_data = []
 
 hcol0, hcol1, hcol2, hcol3, hcol4, hcol5, hcol6, hcol7, hcol8 = st.columns([0.8, 1.2, 1, 2.5, 1.5, 1.2, 1.5, 1.5, 1.5])
