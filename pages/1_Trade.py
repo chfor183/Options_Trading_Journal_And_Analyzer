@@ -253,6 +253,14 @@ if ticker and current_price > 0:
             trade_to_edit.date_opened = date_opened
             trade_to_edit.collateral = float(collateral_val)
             
+            trade_to_edit.underlying_price_at_open = float(current_price)
+            trade_to_edit.probability_of_profit = float(metrics.get('pop', 0))
+            trade_to_edit.probability_max_profit = float(metrics.get('pop_max_profit', 0))
+            trade_to_edit.probability_max_loss = float(metrics.get('pop_max_loss', 0))
+            trade_to_edit.max_profit = float(metrics.get('max_profit', 0)) if metrics.get('max_profit', 0) != float('inf') else None
+            trade_to_edit.max_loss = float(metrics.get('max_loss', 0)) if metrics.get('max_loss', 0) != float('-inf') else None
+            trade_to_edit.expected_value = float(metrics.get('ev', 0))
+            
             db.query(Leg).filter(Leg.trade_id == trade_to_edit.id).delete()
             open_tx = db.query(Transaction).filter(Transaction.trade_id == trade_to_edit.id, Transaction.action == "Open").first()
             if open_tx:
@@ -273,7 +281,14 @@ if ticker and current_price > 0:
                 expected_move=expected_move,
                 idea_url=idea_url,
                 date_opened=date_opened,
-                collateral=float(collateral_val)
+                collateral=float(collateral_val),
+                underlying_price_at_open=float(current_price),
+                probability_of_profit=float(metrics.get('pop', 0)),
+                probability_max_profit=float(metrics.get('pop_max_profit', 0)),
+                probability_max_loss=float(metrics.get('pop_max_loss', 0)),
+                max_profit=float(metrics.get('max_profit', 0)) if metrics.get('max_profit', 0) != float('inf') else None,
+                max_loss=float(metrics.get('max_loss', 0)) if metrics.get('max_loss', 0) != float('-inf') else None,
+                expected_value=float(metrics.get('ev', 0))
             )
             db.add(new_trade)
             db.commit()

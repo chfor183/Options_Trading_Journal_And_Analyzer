@@ -91,3 +91,14 @@ streamlit run Home.py
 - Partial close tracking and rolling mechanisms.
 - Historical equity curve generation on the Dashboard.
 - USD/CAD currency conversion toggle.
+
+## Recent Updates
+
+**Session Date: 2026-06-20**
+- **Database Schema Update**: Added `underlying_price_at_open`, `probability_max_profit`, and `probability_max_loss` to the `Trade` model to capture and persist the exact state of the underlying asset and probabilities at the time the trade is opened.
+- **Data Persistence Fixes**: Ensured that Numpy types (`np.float64`) calculated by `scipy` are properly cast to standard Python `float` types before saving to PostgreSQL via SQLAlchemy, preventing `psycopg2` serialization schema errors.
+- **Journal UI Enhancements**:
+  - Replaced the static, bulky expander layout in the Journal with a compact "**Details**" toggle button.
+  - Clicking "Details" drops down a clear table of the trade's specific legs.
+  - Added a side-by-side **Metrics Comparison** component inside the details view that dynamically calculates the delta between the *current* metrics (POP, Max Profit/Loss probability, Underlying Price) and the *opening* metrics persisted in the database.
+  - Fixed a bug where total trade cost was incorrectly applied in full to every leg during current metric recalculation; net cost is now evenly distributed across legs to produce accurate current payoff metrics.

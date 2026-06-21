@@ -40,9 +40,9 @@ if trades:
     filtered_trades.sort(key=lambda x: x.date_opened, reverse=True)
     
     # Header row
-    col_widths = [0.4, 0.7, 1.2, 1.0, 1.2, 1.0, 1.0, 1.2, 0.8, 0.8, 0.8, 0.7, 0.7]
+    col_widths = [0.4, 0.7, 1.2, 1.0, 1.2, 1.0, 1.0, 1.2, 0.8, 0.8, 0.8, 0.7, 0.7, 0.7]
     cols = st.columns(col_widths)
-    headers = ["Select", "Ticker", "Name", "Date Opened", "Strategy", "Exp. Move", "Current Price", "Break-Even", "Cost", "PnL", "Status", "Edit", "Close"]
+    headers = ["Select", "Ticker", "Name", "Date Opened", "Strategy", "Exp. Move", "Current Price", "Break-Even", "Cost", "PnL", "Status", "Details", "Edit", "Close"]
     for col, header in zip(cols, headers):
         col.markdown(f"<div style='text-align: left; white-space: nowrap; font-weight: bold;'>{header}</div>", unsafe_allow_html=True)
     
@@ -84,6 +84,7 @@ if trades:
         # Try to get Current Price and Breakevens
         current_price = "N/A"
         breakevens = "N/A"
+        metrics = {}
         
         try:
             from src.options_math import calculate_metrics
@@ -94,15 +95,20 @@ if trades:
                 
                 # Format legs for options_math
                 legs_for_math = []
+                # Total trade open cost:
+                open_tx = next((tx for tx in t.transactions if tx.action == "Open"), None)
+                # Since we don't have individual leg prices stored, we divide the total cost by the number of legs as a rough approximation,
+                # or just assign the entire cost to one leg and 0 to others so the total sums correctly.
+                # Here we assign cost/num_legs to each leg to preserve the correct total net cost.
+                cost_per_leg = open_tx.price / len(t.legs) if open_tx and t.legs else 0.0
+                
                 for leg in t.legs:
-                    open_tx = next((tx for tx in t.transactions if tx.action == "Open"), None)
-                    price = open_tx.price if open_tx else 0.0
                     legs_for_math.append({
                         "action": leg.position,
                         "qty": 1, # approx
                         "type": leg.option_type,
                         "strike": leg.strike,
-                        "price": price,
+                        "price": cost_per_leg,
                         "expiry": pd.to_datetime(leg.expiry)
                     })
                     
@@ -122,13 +128,73 @@ if trades:
         
         cols[10].markdown(f"<div style='text-align: left;'>{t.status}</div>", unsafe_allow_html=True)
         
-        if cols[11].button("Edit", key=f"edit_{t.id}"):
+        # Initialize details visibility state
+        details_key = f"show_details_{t.id}"
+        if details_key not in st.session_state:
+            st.session_state[details_key] = False
+            
+        if cols[11].button("Details", key=f"details_btn_{t.id}"):
+            st.session_state[details_key] = not st.session_state[details_key]
+        
+        if cols[12].button("Edit", key=f"edit_{t.id}"):
             st.session_state.edit_trade_id = t.id
             st.switch_page("pages/1_Trade.py")
             
-        if cols[12].button("Close", key=f"close_{t.id}"):
+        if cols[13].button("Close", key=f"close_{t.id}"):
             st.session_state.close_trade_id = t.id
             st.switch_page("pages/4_Close Trade.py")
+            
+        if st.session_state[details_key]:
+            st.write("**Legs**")
+            legs_df = []
+            for leg in t.legs:
+                legs_df.append({
+                    "Action": leg.position,
+                    "Quantity": 1,
+                    "Type": leg.option_type,
+                    "Strike": f"${leg.strike:.2f}",
+                    "Expiry": leg.expiry,
+                })
+            st.table(pd.DataFrame(legs_df))
+            
+            st.write("**Metrics Comparison (Current vs. Opening)**")
+            comp_cols = st.columns(4)
+            
+            # Opening stats
+            open_up = f"${t.underlying_price_at_open:.2f}" if t.underlying_price_at_open else "N/A"
+            open_pop = f"{t.probability_of_profit*100:.1f}%" if t.probability_of_profit is not None else "N/A"
+            open_pmp = f"{t.probability_max_profit*100:.1f}%" if t.probability_max_profit is not None else "N/A"
+            open_pml = f"{t.probability_max_loss*100:.1f}%" if t.probability_max_loss is not None else "N/A"
+            
+            # Current stats from metrics dictionary calculated earlier
+            curr_up = current_price
+            
+            if metrics:
+                curr_pop = f"{metrics.get('pop', 0)*100:.1f}%"
+                curr_pmp = f"{metrics.get('pop_max_profit', 0)*100:.1f}%"
+                curr_pml = f"{metrics.get('pop_max_loss', 0)*100:.1f}%"
+            else:
+                curr_pop = "N/A"
+                curr_pmp = "N/A"
+                curr_pml = "N/A"
+            
+            def safe_delta(curr, open_val, is_currency=False):
+                if curr != "N/A" and open_val != "N/A":
+                    try:
+                        c_val = float(curr.replace('$', '').replace('%', ''))
+                        o_val = float(open_val.replace('$', '').replace('%', ''))
+                        diff = c_val - o_val
+                        return f"{diff:.2f}" if is_currency else f"{diff:.1f}%"
+                    except:
+                        return None
+                return None
+                
+            comp_cols[0].metric("Underlying Price", curr_up, delta=safe_delta(curr_up, open_up, True))
+            comp_cols[1].metric("Probability of Profit", curr_pop, delta=safe_delta(curr_pop, open_pop))
+            comp_cols[2].metric("Prob. of Max Profit", curr_pmp, delta=safe_delta(curr_pmp, open_pmp))
+            comp_cols[3].metric("Prob. of Max Loss", curr_pml, delta=safe_delta(curr_pml, open_pml), delta_color="inverse")
+            
+            st.write(f"*Opening values:* Price: {open_up} | POP: {open_pop} | Prob Max Profit: {open_pmp} | Prob Max Loss: {open_pml}")
             
     st.divider()
     

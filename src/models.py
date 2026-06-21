@@ -23,7 +23,10 @@ class Trade(Base):
     max_profit = Column(Float)
     max_loss = Column(Float)
     probability_of_profit = Column(Float)
+    probability_max_profit = Column(Float)
+    probability_max_loss = Column(Float)
     expected_value = Column(Float)
+    underlying_price_at_open = Column(Float)
     
     legs = relationship("Leg", back_populates="trade", cascade="all, delete-orphan")
     transactions = relationship("Transaction", back_populates="trade", cascade="all, delete-orphan")
