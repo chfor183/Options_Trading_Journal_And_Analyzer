@@ -312,7 +312,13 @@ if ticker and current_price > 0:
             st.success("Trade updated successfully!")
             st.session_state.edit_trade_id = None
         else:
+            active_portfolio_id = st.session_state.get("active_portfolio_id")
+            if not active_portfolio_id:
+                st.error("No active portfolio selected. Please select a portfolio in the sidebar.")
+                st.stop()
+                
             new_trade = Trade(
+                portfolio_id=active_portfolio_id,
                 ticker=ticker,
                 underlying_name=name,
                 category=category,

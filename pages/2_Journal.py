@@ -11,7 +11,12 @@ st.title("Trading Journal")
 
 db = SessionLocal()
 
-trades = db.query(Trade).all()
+active_portfolio_id = st.session_state.get("active_portfolio_id")
+if active_portfolio_id:
+    trades = db.query(Trade).filter(Trade.portfolio_id == active_portfolio_id).all()
+else:
+    trades = []
+    st.warning("No portfolio selected. Please select one from the sidebar.")
 
 if trades:
     # Initialize session state for checkboxes

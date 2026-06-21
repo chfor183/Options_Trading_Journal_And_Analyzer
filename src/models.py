@@ -6,9 +6,18 @@ from datetime import datetime
 metadata = MetaData(schema="finance")
 Base = declarative_base(metadata=metadata)
 
+class Portfolio(Base):
+    __tablename__ = 'portfolios'
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), nullable=False)
+    description = Column(String(255))
+    
+    trades = relationship("Trade", back_populates="portfolio", cascade="all, delete-orphan")
+
 class Trade(Base):
     __tablename__ = 'trades'
     id = Column(Integer, primary_key=True)
+    portfolio_id = Column(Integer, ForeignKey('portfolios.id'))
     ticker = Column(String(10), nullable=False)
     underlying_name = Column(String(100))
     category = Column(String(50))
@@ -28,6 +37,7 @@ class Trade(Base):
     expected_value = Column(Float)
     underlying_price_at_open = Column(Float)
     
+    portfolio = relationship("Portfolio", back_populates="trades")
     legs = relationship("Leg", back_populates="trade", cascade="all, delete-orphan")
     transactions = relationship("Transaction", back_populates="trade", cascade="all, delete-orphan")
 

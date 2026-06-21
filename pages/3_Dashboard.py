@@ -9,12 +9,18 @@ st.title("Performance Dashboard")
 
 db = SessionLocal()
 
-trades = db.query(Trade).all()
-transactions = db.query(Transaction).all()
-
-if not trades:
-    st.info("Not enough data to display dashboard. Add some trades first!")
+active_portfolio_id = st.session_state.get("active_portfolio_id")
+if active_portfolio_id:
+    trades = db.query(Trade).filter(Trade.portfolio_id == active_portfolio_id).all()
+    transactions = db.query(Transaction).join(Trade).filter(Trade.portfolio_id == active_portfolio_id).all()
 else:
+    trades = []
+    transactions = []
+    st.warning("No portfolio selected. Please select one from the sidebar.")
+
+if not trades and active_portfolio_id:
+    st.info("Not enough data to display dashboard. Add some trades first!")
+elif trades:
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:

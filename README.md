@@ -4,6 +4,7 @@ A local, Python-based web application built with Streamlit to track, journal, an
 
 ## Features
 
+- **Portfolio Management**: Create, switch between, and delete multiple distinct portfolios. Trades, journal entries, and dashboards are dynamically filtered based on the active portfolio.
 - **Strategy Builder**: Construct multi-leg options strategies (up to 8 legs).
 - **Interactive UI**: Custom styled toggle buttons for "Buy/Sell" and "Call/Put" to easily build spreads, condors, butterflies, etc.
 - **Payoff Visualization**: Generates interactive Plotly charts showing the expected profit and loss at expiration across varying underlying prices.
@@ -50,7 +51,7 @@ finance/
 └── src/
     ├── db.py               # Database connection, finance schema setup, and session management
     ├── market_data.py      # yfinance API wrappers
-    ├── models.py           # SQLAlchemy ORM models (Trade, Leg, Transaction)
+    ├── models.py           # SQLAlchemy ORM models (Portfolio, Trade, Leg, Transaction)
     └── options_math.py     # Payoff arrays, EV, and Probability calculations
 ```
 
@@ -87,14 +88,12 @@ streamlit run Home.py
 - **Commissions**: Defaults to `$0.65` per options contract leg.
 
 ## Future Enhancements
-- Partial close tracking.
 - Historical equity curve generation on the Dashboard.
-- USD/CAD currency conversion toggle.
-- Make it possible to have multiple portfolios
 
 ## Recent Updates
 
 **Session Date: 2026-06-21**
+- **Portfolio Management**: Implemented support for multiple portfolios. Users can now create, switch between, and delete entire portfolios from the sidebar. The Trade, Journal, and Dashboard pages now automatically filter their context to only display information corresponding to the actively selected portfolio.
 - **Live Options Data**: Integrated with `yfinance` to fetch live options chain data (bid, ask, last price, and IV) on-demand in the Trade menu.
 - **Realistic Pricing**: Upgraded the pricing logic to automatically use the current *bid* price for selling legs and the current *ask* price for buying legs, reflecting real-world market mechanics.
 - **Dynamic Delta**: Added real-time Black-Scholes Delta calculations for individual options legs.

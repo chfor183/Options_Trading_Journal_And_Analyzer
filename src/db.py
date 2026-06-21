@@ -19,6 +19,15 @@ def init_db():
         conn.execute(text("CREATE SCHEMA IF NOT EXISTS finance"))
         conn.commit()
     Base.metadata.create_all(bind=engine)
+    
+    # Create default portfolio if none exist
+    db = SessionLocal()
+    from src.models import Portfolio
+    if db.query(Portfolio).count() == 0:
+        default_portfolio = Portfolio(name="Default Portfolio", description="Automatically created default portfolio")
+        db.add(default_portfolio)
+        db.commit()
+    db.close()
 
 def get_db():
     db = SessionLocal()
