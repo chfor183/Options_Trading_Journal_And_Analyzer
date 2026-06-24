@@ -41,6 +41,29 @@ def generate_payoff_chart(legs, current_price, ticker=""):
     total_payoff = calculate_payoff_array(legs, spot_prices)
     
     fig = go.Figure()
+
+    try:
+        days_to_expiry = (pd.to_datetime(legs[0]['expiry']) - pd.Timestamp.now().normalize()).days
+        if days_to_expiry <= 0: days_to_expiry = 1
+    except:
+        days_to_expiry = 30
+        
+    t = days_to_expiry / 365.0
+    
+    ivs = [leg.get('iv', 0) for leg in legs if leg.get('iv', 0) > 0]
+    iv = np.mean(ivs) / 100.0 if ivs else 0.3
+    
+    expected_move = current_price * iv * np.sqrt(t)
+    em_lower = current_price - expected_move
+    em_upper = current_price + expected_move
+
+    # Add Expected Move range
+    fig.add_vrect(
+        x0=em_lower, x1=em_upper,
+        fillcolor="orange", opacity=0.1,
+        layer="below", line_width=1, line_dash="dash", line_color="orange",
+        annotation_text=f"Expected Move: ±${expected_move:.2f}", annotation_position="top left"
+    )
     
     # Add fill above and below 0
     fig.add_trace(go.Scatter(
