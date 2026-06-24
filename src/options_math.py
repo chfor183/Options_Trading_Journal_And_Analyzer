@@ -148,6 +148,7 @@ def calculate_metrics(legs, current_price):
     pdf = (1 / (spot_prices * sigma * np.sqrt(2 * np.pi))) * np.exp(- (np.log(spot_prices) - mu)**2 / (2 * sigma**2))
     
     pop = np.sum(pdf[payoff > 0]) * dx
+    pol = np.sum(pdf[payoff < 0]) * dx
     
     if max_profit != float('inf'):
         pop_max_profit = np.sum(pdf[np.isclose(payoff, max_profit, atol=2)]) * dx
@@ -171,6 +172,7 @@ def calculate_metrics(legs, current_price):
         "max_loss": max_loss,
         "breakevens": breakevens,
         "pop": pop,
+        "pol": pol,
         "pop_max_profit": pop_max_profit,
         "pop_max_loss": pop_max_loss,
         "ev": ev,

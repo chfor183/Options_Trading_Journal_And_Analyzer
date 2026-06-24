@@ -136,7 +136,7 @@ if trades:
         
         try:
             from src.options_math import calculate_metrics
-            from src.market_data import get_live_option_leg_data
+            from src.market_data import get_barchart_live_option_leg_data
             info = get_ticker_info(t.ticker)
             if info and info.get('current_price'):
                 cp = float(info['current_price'])
@@ -155,7 +155,7 @@ if trades:
                     price = cost_per_leg
                     iv = 0.0
                     expiry_str = pd.to_datetime(leg.expiry).strftime('%Y-%m-%d')
-                    leg_data = get_live_option_leg_data(t.ticker, expiry_str, leg.strike, leg.option_type)
+                    leg_data = get_barchart_live_option_leg_data(t.ticker, expiry_str, leg.strike, leg.option_type)
                     if leg_data:
                         bid = leg_data.get('bid', 0.0)
                         ask = leg_data.get('ask', 0.0)
@@ -225,11 +225,12 @@ if trades:
             st.table(pd.DataFrame(legs_df))
             
             st.write("**Metrics Comparison (Current vs. Opening)**")
-            comp_cols = st.columns(4)
+            comp_cols = st.columns(5)
             
             # Opening stats
             open_up = f"${t.underlying_price_at_open:.2f}" if t.underlying_price_at_open else "N/A"
             open_pop = f"{t.probability_of_profit*100:.1f}%" if t.probability_of_profit is not None else "N/A"
+            open_pol = f"{t.probability_of_loss*100:.1f}%" if t.probability_of_loss is not None else "N/A"
             open_pmp = f"{t.probability_max_profit*100:.1f}%" if t.probability_max_profit is not None else "N/A"
             open_pml = f"{t.probability_max_loss*100:.1f}%" if t.probability_max_loss is not None else "N/A"
             
@@ -238,19 +239,24 @@ if trades:
             
             if metrics:
                 curr_pop = f"{metrics.get('pop', 0)*100:.1f}%"
+                curr_pol = f"{metrics.get('pol', 0)*100:.1f}%"
                 curr_pmp = f"{metrics.get('pop_max_profit', 0)*100:.1f}%"
                 curr_pml = f"{metrics.get('pop_max_loss', 0)*100:.1f}%"
             else:
                 curr_pop = "N/A"
+                curr_pol = "N/A"
                 curr_pmp = "N/A"
                 curr_pml = "N/A"
             
-            def safe_delta(curr, open_val, is_currency=False):
+            def safe_delta(curr, open_val, is_currency=False, inverse=False):
                 if curr != "N/A" and open_val != "N/A":
                     try:
                         c_val = float(curr.replace('$', '').replace('%', ''))
                         o_val = float(open_val.replace('$', '').replace('%', ''))
                         diff = c_val - o_val
+                        color = "normal"
+                        if inverse:
+                            color = "inverse"
                         return f"{diff:.2f}" if is_currency else f"{diff:.1f}%"
                     except:
                         return None
@@ -258,10 +264,11 @@ if trades:
                 
             comp_cols[0].metric("Underlying Price", curr_up, delta=safe_delta(curr_up, open_up, True))
             comp_cols[1].metric("Probability of Profit", curr_pop, delta=safe_delta(curr_pop, open_pop))
-            comp_cols[2].metric("Prob. of Max Profit", curr_pmp, delta=safe_delta(curr_pmp, open_pmp))
-            comp_cols[3].metric("Prob. of Max Loss", curr_pml, delta=safe_delta(curr_pml, open_pml), delta_color="inverse")
+            comp_cols[2].metric("Probability of Loss", curr_pol, delta=safe_delta(curr_pol, open_pol, inverse=True), delta_color="inverse")
+            comp_cols[3].metric("Prob. of Max Profit", curr_pmp, delta=safe_delta(curr_pmp, open_pmp))
+            comp_cols[4].metric("Prob. of Max Loss", curr_pml, delta=safe_delta(curr_pml, open_pml, inverse=True), delta_color="inverse")
             
-            st.write(f"*Opening values:* Price: {open_up} | POP: {open_pop} | Prob Max Profit: {open_pmp} | Prob Max Loss: {open_pml}")
+            st.write(f"*Opening values:* Price: {open_up} | POP: {open_pop} | POL: {open_pol} | Prob Max Profit: {open_pmp} | Prob Max Loss: {open_pml}")
             
     st.divider()
     

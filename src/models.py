@@ -32,6 +32,7 @@ class Trade(Base):
     max_profit = Column(Float)
     max_loss = Column(Float)
     probability_of_profit = Column(Float)
+    probability_of_loss = Column(Float)
     probability_max_profit = Column(Float)
     probability_max_loss = Column(Float)
     expected_value = Column(Float)

@@ -11,12 +11,14 @@ A local, Python-based web application built with Streamlit to track, journal, an
 - **Advanced Metrics**: 
   - Maximum Profit & Maximum Loss
   - Breakeven Points
-  - Probability of Profit (PoP), Probability of Max Profit, Probability of Max Loss
+  - Probability of Profit (PoP), Probability of Loss (PoL), Probability of Max Profit, Probability of Max Loss
   - Expected Value (EV) & Expected Return
   - Risk to Reward Ratio
   - Dynamic Collateral Calculation (Max Loss * 1.6)
   - Auto-calculated commissions and net trade costs
-- **Market Data**: Integrates with `yfinance` to fetch live underlying prices and ticker metadata.
+  - Return on Investment (ROI)
+  - 1 Standard Deviation & 2 Standard Deviation Expected Move Overlays
+- **Market Data**: Integrates with `yfinance` to fetch live underlying prices and ticker metadata, and `Barchart` for highly-accurate real-time options chain data (Prices, Bid/Ask, and IV).
 - **Trade Management**: Edit open trades dynamically and easily record closing transactions (for profit, loss, rolling, or expiration).
 - **Journal & Ledger**: 
   - Save trades to a local PostgreSQL database (`finance` schema).
@@ -32,7 +34,7 @@ A local, Python-based web application built with Streamlit to track, journal, an
 - **Charting**: Plotly
 - **Database**: PostgreSQL
 - **ORM**: SQLAlchemy
-- **Market Data**: yfinance
+- **Market Data**: yfinance, Barchart API (via custom Python requests session with token generation)
 
 ## Project Structure
 

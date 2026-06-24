@@ -112,8 +112,8 @@ num_legs = st.number_input("Number of Legs", min_value=1, max_value=8, value=st.
 
 col_btn1, col_btn2 = st.columns([2, 10])
 if col_btn1.button("Pull Live Data for All Legs"):
-    with st.spinner("Fetching live data from Yahoo Finance..."):
-        from src.market_data import get_live_option_leg_data
+    with st.spinner("Fetching live data from Barchart..."):
+        from src.market_data import get_barchart_live_option_leg_data
         from src.options_math import calculate_bs_delta
         for i in range(num_legs):
             strike = st.session_state.get(f"strike_input_{i}") or st.session_state.get(f"strike_{i}")
@@ -122,7 +122,7 @@ if col_btn1.button("Pull Live Data for All Legs"):
             
             if expiry and strike and ticker:
                 expiry_str = pd.to_datetime(expiry).strftime('%Y-%m-%d')
-                data = get_live_option_leg_data(ticker, expiry_str, float(strike), opt_type)
+                data = get_barchart_live_option_leg_data(ticker, expiry_str, float(strike), opt_type)
                 if data:
                     action = st.session_state.get(f"action_val_{i}", "Buy")
                     bid = data.get('bid', 0.0)
@@ -146,7 +146,7 @@ if col_btn1.button("Pull Live Data for All Legs"):
                     if T <= 0: T = 0.001
                     delta = calculate_bs_delta(current_price, float(strike), T, 0.05, iv_dec, opt_type)
                     st.session_state[f"delta_{i}"] = delta
-    st.rerun()
+    # Removed st.rerun() because it aborts the run and destroys widget state below
 
 legs_data = []
 
@@ -262,10 +262,11 @@ if ticker and current_price > 0:
     tcol5.metric("ROI", roi_str, help="Calculated as Abs(Max profit / Max loss).")
     
     st.subheader("Probability analysis")
-    pcol1, pcol2, pcol3 = st.columns(3)
+    pcol1, pcol2, pcol3, pcol4 = st.columns(4)
     pcol1.metric("Probability of profit", f"{metrics.get('pop', 0)*100:.1f}%", help="The theoretical probability of making at least $0.01 on this trade at expiration.")
-    pcol2.metric("Probability of max profit", f"{metrics.get('pop_max_profit', 0)*100:.1f}%", help="The theoretical probability of achieving the maximum profit at expiration.")
-    pcol3.metric("Probability of max loss", f"{metrics.get('pop_max_loss', 0)*100:.1f}%", help="The theoretical probability of hitting the maximum loss at expiration.")
+    pcol2.metric("Probability of loss", f"{metrics.get('pol', 0)*100:.1f}%", help="The theoretical probability of losing money on this trade at expiration.")
+    pcol3.metric("Probability of max profit", f"{metrics.get('pop_max_profit', 0)*100:.1f}%", help="The theoretical probability of achieving the maximum profit at expiration.")
+    pcol4.metric("Probability of max loss", f"{metrics.get('pop_max_loss', 0)*100:.1f}%", help="The theoretical probability of hitting the maximum loss at expiration.")
     
     st.subheader("Risk reward analysis")
     rcol1, rcol2, rcol3 = st.columns(3)
@@ -302,6 +303,7 @@ if ticker and current_price > 0:
             
             trade_to_edit.underlying_price_at_open = float(current_price)
             trade_to_edit.probability_of_profit = float(metrics.get('pop', 0))
+            trade_to_edit.probability_of_loss = float(metrics.get('pol', 0))
             trade_to_edit.probability_max_profit = float(metrics.get('pop_max_profit', 0))
             trade_to_edit.probability_max_loss = float(metrics.get('pop_max_loss', 0))
             trade_to_edit.max_profit = float(metrics.get('max_profit', 0)) if metrics.get('max_profit', 0) != float('inf') else None
@@ -337,6 +339,7 @@ if ticker and current_price > 0:
                 collateral=float(collateral_val),
                 underlying_price_at_open=float(current_price),
                 probability_of_profit=float(metrics.get('pop', 0)),
+                probability_of_loss=float(metrics.get('pol', 0)),
                 probability_max_profit=float(metrics.get('pop_max_profit', 0)),
                 probability_max_loss=float(metrics.get('pop_max_loss', 0)),
                 max_profit=float(metrics.get('max_profit', 0)) if metrics.get('max_profit', 0) != float('inf') else None,
