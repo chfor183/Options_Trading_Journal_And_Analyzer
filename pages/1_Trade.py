@@ -240,7 +240,7 @@ if ticker and current_price > 0:
     scol2.metric("Breakeven price", be_str, help="The price(s) at which the strategy neither makes nor loses money at expiration.")
     
     st.subheader("Trade Details")
-    tcol1, tcol2, tcol3, tcol4 = st.columns(4)
+    tcol1, tcol2, tcol3, tcol4, tcol5 = st.columns(5)
     # Cost of Trade logic: net_cost is negative for debit (paid) and positive for credit (received).
     tcol1.metric("Cost of trade", f"${-net_cost:.2f}", help="Total cost of the transaction. Positive if premium is received, negative if premium is paid.")
     tcol2.metric("Collateral amount", collateral, help="Calculated as Maximum Loss * 1.6")
@@ -252,6 +252,14 @@ if ticker and current_price > 0:
     ml = metrics.get('max_loss', 0)
     ml_str = f"${ml:.2f}" if ml != float('-inf') else "Infinite"
     tcol4.metric("Maximum loss", ml_str, help="The maximum potential loss of the strategy.")
+    
+    if ml == 0:
+        roi_str = "Infinite"
+    elif mp == float('inf') or ml == float('-inf'):
+        roi_str = "N/A"
+    else:
+        roi_str = f"{abs(mp / ml) * 100:.2f}%"
+    tcol5.metric("ROI", roi_str, help="Calculated as Abs(Max profit / Max loss).")
     
     st.subheader("Probability analysis")
     pcol1, pcol2, pcol3 = st.columns(3)
