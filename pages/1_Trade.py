@@ -236,7 +236,7 @@ if ticker and current_price > 0:
     scol1.metric("Stock current price", f"${current_price:.2f}", help="The current market price of the underlying asset.")
     
     bes = metrics.get('breakevens', [])
-    be_str = ", ".join([f"${b:.2f}" for b in bes]) if bes else "N/A"
+    be_str = ", ".join([f"&#36;{b:.2f}" for b in bes]) if bes else "N/A"
     scol2.metric("Breakeven price", be_str, help="The price(s) at which the strategy neither makes nor loses money at expiration.")
     
     st.subheader("Trade Details")

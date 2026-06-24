@@ -94,6 +94,13 @@ streamlit run Home.py
 
 ## Recent Updates
 
+**Session Date: 2026-06-24**
+- **Dependency Resolution**: Fixed a compatibility issue between `uvicorn` and `websockets` that caused Streamlit to crash on startup. 
+- **UI Enhancements**: 
+  - Fixed a LaTeX rendering bug that caused multiple dollar signs (e.g., in breakeven prices) to render as math blocks in Streamlit.
+  - Revamped the Journal page loading sequence: a central spinner now displays while fetching live pricing and metrics, rendering the table all at once instead of loading row-by-row.
+  - Upgraded the Journal's "Details" button logic so opening a trade's details automatically closes any other expanded panels.
+
 **Session Date: 2026-06-21**
 - **Portfolio Management**: Implemented support for multiple portfolios. Users can now create, switch between, and delete entire portfolios from the sidebar. The Trade, Journal, and Dashboard pages now automatically filter their context to only display information corresponding to the actively selected portfolio.
 - **Live Options Data**: Integrated with `yfinance` to fetch live options chain data (bid, ask, last price, and IV) on-demand in the Trade menu.
