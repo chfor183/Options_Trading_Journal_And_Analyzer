@@ -296,6 +296,9 @@ if trades:
             
             st.write(f"*Opening values:* Price: {open_up} | POP: {open_pop} | POL: {open_pol} | Prob Max Profit: {open_pmp} | Prob Max Loss: {open_pml}")
             
+            if t.idea_url:
+                st.write(f"**Idea URL:** [{t.idea_url}]({t.idea_url})")
+            
     st.divider()
     
     # Pagination UI
