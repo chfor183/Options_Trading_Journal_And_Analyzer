@@ -79,7 +79,7 @@ docker-compose up -d
 ### 4. Run the Application
 Launch the Streamlit web interface:
 ```bash
-streamlit run Home.py
+streamlit run C:\Lab\finance\Home.py
 ```
 
 ## Calculations & Math
@@ -119,3 +119,13 @@ streamlit run Home.py
   - Clicking "Details" drops down a clear table of the trade's specific legs.
   - Added a side-by-side **Metrics Comparison** component inside the details view that dynamically calculates the delta between the *current* metrics (POP, Max Profit/Loss probability, Underlying Price) and the *opening* metrics persisted in the database.
   - Fixed a bug where total trade cost was incorrectly applied in full to every leg during current metric recalculation; net cost is now evenly distributed across legs to produce accurate current payoff metrics.
+
+**Session Date: 2026-06-26**
+- **High-Precision Data Persistence**: 
+  - Upgraded the database schema and `Leg` model to natively store exact values for `price` (3 decimal places), `delta` (4 decimal places), and `iv` (Implied Volatility).
+  - Executed a migration strategy to sanitize legacy database records, replacing missing (`NULL`) historical leg data with strict zeroes to prevent application crashes and UI rendering issues.
+- **Accurate Edit & Journal Workflows**: 
+  - Eradicated approximate math estimations (like dividing total cost by leg count). The app now strictly trusts and surfaces the exact database values.
+  - Expanding a trade in the Journal now precisely displays the stored Price, Delta, and IV for each leg.
+  - Editing a trade securely pulls these highly precise figures back into the UI. Legacy trades seamlessly fallback to `0.0` to allow the user to easily input their exact historical data and permanently save it.
+- **UI Precision Formatting**: Upgraded Streamlit number inputs across the Trade page to support, display, and capture the new fractional decimal precision.

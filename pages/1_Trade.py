@@ -36,6 +36,9 @@ if "edit_trade_id" in st.session_state and st.session_state.edit_trade_id:
             st.session_state[f"action_val_{i}"] = leg.position
             st.session_state[f"type_val_{i}"] = leg.option_type
             st.session_state[f"strike_{i}"] = leg.strike
+            st.session_state[f"price_{i}"] = float(leg.price)
+            st.session_state[f"delta_{i}"] = float(leg.delta)
+            st.session_state[f"iv_{i}"] = float(leg.iv)
             st.session_state[f"expiry_{i}"] = leg.expiry
 else:
     st.title("New Trade Entry")
@@ -183,9 +186,17 @@ for i in range(num_legs):
     opt_type = st.session_state[f"type_val_{i}"]
     col5.button(opt_type, key=f"type_btn_{i}", on_click=toggle_type, args=(i,), use_container_width=True)
     
-    price = col6.number_input("Price", value=26.23 if i==0 else 15.75, step=0.01, format="%.2f", key=f"price_{i}", label_visibility="collapsed")
-    delta = col7.number_input("Delta", value=-0.13 if i==0 else -0.08, step=0.01, format="%.2f", key=f"delta_{i}", label_visibility="collapsed")
-    iv = col8.number_input("IV", value=111.54 if i==0 else 117.19, step=0.01, format="%.2f", key=f"iv_{i}", label_visibility="collapsed")
+    if f"price_{i}" not in st.session_state:
+        st.session_state[f"price_{i}"] = 26.230 if i==0 else 15.750
+    price = col6.number_input("Price", step=0.001, format="%.3f", key=f"price_{i}", label_visibility="collapsed")
+    
+    if f"delta_{i}" not in st.session_state:
+        st.session_state[f"delta_{i}"] = -0.1300 if i==0 else -0.0800
+    delta = col7.number_input("Delta", step=0.0001, format="%.4f", key=f"delta_{i}", label_visibility="collapsed")
+    
+    if f"iv_{i}" not in st.session_state:
+        st.session_state[f"iv_{i}"] = 111.54 if i==0 else 117.19
+    iv = col8.number_input("IV", step=0.01, format="%.2f", key=f"iv_{i}", label_visibility="collapsed")
     
     legs_data.append({
         "action": action,
@@ -204,7 +215,7 @@ for leg in legs_data:
     color = "red" if leg['action'] == "Sell" else "green"
     sign = "-" if leg['action'] == "Sell" else "+"
     formatted_date = leg['expiry'].strftime("%b %d, %Y")
-    st.markdown(f"<span style='color:{color}; font-weight:bold;'>{leg['action'].upper()} {sign}{leg['qty']} {ticker} {formatted_date} {leg['strike']:.2f} {leg['type'].lower()} @${leg['price']:.2f}</span>", unsafe_allow_html=True)
+    st.markdown(f"<span style='color:{color}; font-weight:bold;'>{leg['action'].upper()} {sign}{leg['qty']} {ticker} {formatted_date} {leg['strike']:.2f} {leg['type'].lower()} @${leg['price']:.3f}</span>", unsafe_allow_html=True)
 
 st.divider()
 
@@ -320,6 +331,7 @@ if ticker and current_price > 0:
             target_trade_id = trade_to_edit.id
             db.commit()
             st.success("Trade updated successfully!")
+            st.session_state[f"loaded_{trade_to_edit.id}"] = False
             st.session_state.edit_trade_id = None
         else:
             active_portfolio_id = st.session_state.get("active_portfolio_id")
@@ -369,7 +381,10 @@ if ticker and current_price > 0:
                 strike=float(leg['strike']),
                 expiry=leg['expiry'],
                 option_type=leg['type'],
-                position=leg['action']
+                position=leg['action'],
+                price=float(leg['price']),
+                delta=float(leg['delta']),
+                iv=float(leg['iv'])
             )
             db.add(new_leg)
             

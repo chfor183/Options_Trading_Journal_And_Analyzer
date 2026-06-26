@@ -1,5 +1,5 @@
 import os
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, ForeignKey, Date, Boolean, MetaData
+from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, ForeignKey, Date, Boolean, MetaData, Numeric
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from datetime import datetime
 
@@ -50,6 +50,9 @@ class Leg(Base):
     expiry = Column(Date, nullable=False)
     option_type = Column(String(10), nullable=False) # 'Call' or 'Put'
     position = Column(String(10), nullable=False) # 'Long' or 'Short'
+    price = Column(Numeric(10, 3))
+    delta = Column(Numeric(10, 4))
+    iv = Column(Numeric(10, 4))
     
     trade = relationship("Trade", back_populates="legs")
 

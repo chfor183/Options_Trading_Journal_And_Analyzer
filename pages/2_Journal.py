@@ -129,8 +129,8 @@ if trades:
                     cost_per_leg = open_tx.price / len(t.legs) if open_tx and t.legs else 0.0
                     
                     for leg in t.legs:
-                        price = cost_per_leg
-                        iv = 0.0
+                        price = leg.price
+                        iv = leg.iv
                         expiry_str = pd.to_datetime(leg.expiry).strftime('%Y-%m-%d')
                         leg_data = get_barchart_live_option_leg_data(t.ticker, expiry_str, leg.strike, leg.option_type)
                         if leg_data:
@@ -226,6 +226,7 @@ if trades:
         
         if cols[12].button("Edit", key=f"edit_{t.id}"):
             st.session_state.edit_trade_id = t.id
+            st.session_state[f"loaded_{t.id}"] = False
             st.switch_page("pages/1_Trade.py")
             
         if cols[13].button("Close", key=f"close_{t.id}"):
@@ -235,12 +236,16 @@ if trades:
         if st.session_state.expanded_trade_id == t.id:
             st.write("**Legs**")
             legs_df = []
+            
             for leg in t.legs:
                 legs_df.append({
                     "Action": leg.position,
                     "Quantity": 1,
                     "Type": leg.option_type,
                     "Strike": f"${leg.strike:.2f}",
+                    "Price": f"${leg.price:.3f}",
+                    "Delta": f"{leg.delta:.4f}",
+                    "IV (%)": f"{leg.iv:.2f}",
                     "Expiry": leg.expiry,
                 })
             st.table(pd.DataFrame(legs_df))
