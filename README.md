@@ -20,12 +20,17 @@ A local, Python-based web application built with Streamlit to track, journal, an
   - 1 Standard Deviation & 2 Standard Deviation Expected Move Overlays
 - **Market Data**: Integrates with `yfinance` to fetch live underlying prices and ticker metadata, and `Barchart` for highly-accurate real-time options chain data (Prices, Bid/Ask, and IV).
 - **Trade Management**: Edit open trades dynamically and easily record closing transactions (for profit, loss, rolling, or expiration).
+  - **Reopen Trades**: Un-stack and reverse accidental or temporary closing transactions directly from the Journal, restoring the trade to its open state with full accuracy.
 - **Journal & Ledger**: 
   - Save trades to a local PostgreSQL database (`finance` schema).
   - View trades with pagination, sorting, and dynamic filtering (Ticker, Date, Status, Strategy).
   - Bulk management with "Select All Filtered", "Deselect All", and bulk delete functionality.
   - Live "Current Price", "Break-Even", and real-time Probability metrics comparison to monitor active trades.
-- **Dashboard**: Review your performance metrics (Under Development).
+- **Dashboard**: Advanced performance analytics based on actual closed and open trades.
+  - Interactive cumulative Net PnL equity curve over time.
+  - Key Aggregate Metrics: Win Rate, Average Win/Loss, Net PnL, Total Commission, Premium Collected vs Paid.
+  - Filterable by Date Interval (Last 7 days, 3 Months, YTD, etc.) and Trade Status.
+  - Detailed grouped breakdowns by Strategy, Category, Expected Move, and dynamic DTE (Days to Expiration) ranges.
 
 ## Tech Stack
 
@@ -88,11 +93,19 @@ streamlit run C:\Lab\finance\Home.py
 - **Expected Value (EV)**: The integral (sum across price steps) of the strategy's payoff multiplied by the theoretical probability of the underlying reaching that price.
 - **Collateral**: For net credit trades, the collateral is calculated as `Maximum Potential Loss * 1.6`. If the trade involves no potential loss or is a net debit, collateral evaluates to `$0.00`.
 - **Commissions**: Defaults to `$0.65` per options contract leg.
-
-## Future Enhancements
-- Historical equity curve generation on the Dashboard.
+- **DTE Categorization**: Automatically categorizes trades by Days to Expiration based on the earliest expiring leg into custom cohorts (`0 DTE`, `1-3 DTE`, `4-7 DTE`, `8-20 DTE`, `21-60 DTE`, `61-200 DTE`, `201+ DTE`).
 
 ## Recent Updates
+
+**Session Date: 2026-06-27**
+- **Dashboard & Analytics Implementation**: Fully built out the Dashboard tab to provide comprehensive performance insights.
+  - Interactive Plotly equity curve mapping cumulative PnL over time.
+  - High-level metrics tracking batting average, average win/loss sizes, net premium flow, and commissions.
+  - Grouped analysis tables allowing users to drill down performance by Strategy Type, Category, Expected Move, and dynamically calculated DTE cohorts.
+  - Fully reactive UI driven by granular Date Interval and Trade Status filters.
+- **Trade Lifecycle Controls**: 
+  - Overhauled the "Close Trade" view to prominently display immutable trade statistics, expected probabilities, legs, and entry metrics as a read-only receipt before confirming a close transaction.
+  - Engineered a "Reopen" workflow in the Journal. If a trade is erroneously closed, users can dynamically un-stack the closing transaction and instantly restore the trade to an active "Open" state without data loss.
 
 **Session Date: 2026-06-24**
 - **Dependency Resolution**: Fixed a compatibility issue between `uvicorn` and `websockets` that caused Streamlit to crash on startup. 

@@ -75,9 +75,9 @@ if trades:
     st.write("") # small spacing
     
     # Header row
-    col_widths = [0.4, 0.7, 1.2, 1.0, 1.2, 1.0, 1.0, 1.2, 0.8, 0.8, 0.8, 0.7, 0.7, 0.7]
+    col_widths = [0.4, 0.7, 1.2, 1.0, 1.2, 1.0, 1.0, 1.2, 0.8, 0.8, 0.8, 0.7, 0.7, 0.9]
     cols = st.columns(col_widths)
-    headers = ["Select", "Ticker", "Name", "Date Opened", "Strategy", "Exp. Move", "Current Price", "Break-Even", "Cost", "PnL", "Status", "Details", "Edit", "Close"]
+    headers = ["Select", "Ticker", "Name", "Date Opened", "Strategy", "Exp. Move", "Current Price", "Break-Even", "Cost", "PnL", "Status", "Details", "Edit", "Action"]
     for col, header in zip(cols, headers):
         col.markdown(f"<div style='text-align: left; white-space: nowrap; font-weight: bold;'>{header}</div>", unsafe_allow_html=True)
     
@@ -229,9 +229,20 @@ if trades:
             st.session_state[f"loaded_{t.id}"] = False
             st.switch_page("pages/1_Trade.py")
             
-        if cols[13].button("Close", key=f"close_{t.id}"):
-            st.session_state.close_trade_id = t.id
-            st.switch_page("pages/4_Close Trade.py")
+        if t.status == "Open":
+            if cols[13].button("Close", key=f"close_{t.id}"):
+                st.session_state.close_trade_id = t.id
+                st.switch_page("pages/4_Close Trade.py")
+        else:
+            if cols[13].button("Reopen", key=f"reopen_{t.id}"):
+                trade_to_reopen = db.query(Trade).filter(Trade.id == t.id).first()
+                if trade_to_reopen:
+                    trade_to_reopen.status = "Open"
+                    txs_to_delete = [tx for tx in trade_to_reopen.transactions if tx.action != "Open"]
+                    for tx in txs_to_delete:
+                        db.delete(tx)
+                    db.commit()
+                    st.rerun()
             
         if st.session_state.expanded_trade_id == t.id:
             st.write("**Legs**")
