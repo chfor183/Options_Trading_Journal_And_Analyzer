@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import math
+from datetime import datetime, timedelta
 from src.db import SessionLocal
 from src.models import Trade, Transaction
 from src.market_data import get_ticker_info
@@ -25,12 +26,38 @@ if trades:
     
     st.write("### All Trades")
     
+    # Custom CSS to prevent button text wrapping
+    st.markdown("""
+        <style>
+        div.stButton > button {
+            white-space: nowrap;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
     # Filtering logic
     filter_col1, filter_col2, filter_col3, filter_col4 = st.columns(4)
     filter_ticker = filter_col1.text_input("Filter by Ticker")
-    filter_date = filter_col2.date_input("Filter by Date Opened", value=None)
-    status_options = ["All"] + list(set([t.status for t in trades]))
-    filter_status = filter_col3.selectbox("Filter by Status", status_options)
+    
+    date_options = ["Last 7 days", "Last month", "Last 3 Months", "Last Year", "YTD", "All"]
+    date_filter = filter_col2.selectbox("Filter by Date", date_options, index=5)
+    
+    today = datetime.today().date()
+    if date_filter == "Last 7 days":
+        start_date = today - timedelta(days=7)
+    elif date_filter == "Last month":
+        start_date = today - timedelta(days=30)
+    elif date_filter == "Last 3 Months":
+        start_date = today - timedelta(days=90)
+    elif date_filter == "Last Year":
+        start_date = today - timedelta(days=365)
+    elif date_filter == "YTD":
+        start_date = datetime(today.year, 1, 1).date()
+    else:
+        start_date = datetime.min.date()
+        
+    filter_status = filter_col3.radio("Filter by Status", ["All", "Open Trades", "Closed Trades"], horizontal=True)
+    
     strategy_options = ["All"] + list(set([t.strategy_type for t in trades]))
     filter_strategy = filter_col4.selectbox("Filter by Strategy", strategy_options)
 
@@ -38,10 +65,23 @@ if trades:
     filtered_trades = trades
     if filter_ticker:
         filtered_trades = [t for t in filtered_trades if filter_ticker.upper() in t.ticker.upper()]
-    if filter_date:
-        filtered_trades = [t for t in filtered_trades if t.date_opened.date() == filter_date]
+    if date_filter != "All":
+        def get_reference_date(t):
+            if t.status == "Open":
+                return t.date_opened.date()
+            else:
+                close_dates = [tx.date for tx in t.transactions if tx.action != "Open"]
+                if close_dates:
+                    return max(close_dates).date()
+                return t.date_opened.date()
+                
+        filtered_trades = [t for t in filtered_trades if get_reference_date(t) >= start_date]
     if filter_status != "All":
-        filtered_trades = [t for t in filtered_trades if t.status == filter_status]
+        if filter_status == "Open Trades":
+            filtered_trades = [t for t in filtered_trades if t.status == "Open"]
+        elif filter_status == "Closed Trades":
+            filtered_trades = [t for t in filtered_trades if t.status != "Open"]
+            
     if filter_strategy != "All":
         filtered_trades = [t for t in filtered_trades if t.strategy_type == filter_strategy]
         
@@ -75,9 +115,10 @@ if trades:
     st.write("") # small spacing
     
     # Header row
-    col_widths = [0.4, 0.7, 1.2, 1.0, 1.2, 1.0, 1.0, 1.2, 0.8, 0.8, 0.8, 0.7, 0.7, 0.9]
+    # Adjusting column widths so Details/Edit/Action buttons have a bit more space
+    col_widths = [0.4, 0.6, 1.1, 1.0, 1.0, 1.1, 1.0, 1.0, 1.2, 0.8, 0.8, 0.8, 0.8, 0.7, 0.9]
     cols = st.columns(col_widths)
-    headers = ["Select", "Ticker", "Name", "Date Opened", "Strategy", "Exp. Move", "Current Price", "Break-Even", "Cost", "PnL", "Status", "Details", "Edit", "Action"]
+    headers = ["Select", "Ticker", "Name", "Date Opened", "Date Closed", "Strategy", "Exp. Move", "Current Price", "Break-Even", "Cost", "PnL", "Status", "Details", "Edit", "Action"]
     for col, header in zip(cols, headers):
         col.markdown(f"<div style='text-align: left; white-space: nowrap; font-weight: bold;'>{header}</div>", unsafe_allow_html=True)
     
@@ -98,6 +139,10 @@ if trades:
             open_tx = next((tx for tx in t.transactions if tx.action == "Open"), None)
             raw_cost = open_tx.price if open_tx else 0.0
             display_cost = -raw_cost # Positive for credit received, negative for debit paid
+            
+            # Find close date
+            close_dates = [tx.date for tx in t.transactions if tx.action != "Open"]
+            close_date_str = max(close_dates).strftime('%Y-%m-%d') if close_dates else "-"
             
             pnl = 0.0
             for tx in t.transactions:
@@ -169,7 +214,8 @@ if trades:
                 "pnl": pnl,
                 "current_price": current_price,
                 "breakevens": breakevens,
-                "metrics": metrics
+                "metrics": metrics,
+                "close_date_str": close_date_str
             })
 
     for item in trade_data_list:
@@ -179,6 +225,7 @@ if trades:
         current_price = item["current_price"]
         breakevens = item["breakevens"]
         metrics = item["metrics"]
+        close_date_str = item["close_date_str"]
         
         cols = st.columns(col_widths)
         
@@ -202,39 +249,40 @@ if trades:
         cols[1].markdown(f"<div style='text-align: left;'>{t.ticker}</div>", unsafe_allow_html=True)
         cols[2].markdown(f"<div style='text-align: left;'>{t.underlying_name}</div>", unsafe_allow_html=True)
         cols[3].markdown(f"<div style='text-align: left;'>{t.date_opened.strftime('%Y-%m-%d')}</div>", unsafe_allow_html=True)
-        cols[4].markdown(f"<div style='text-align: left;'>{t.strategy_type}</div>", unsafe_allow_html=True)
-        cols[5].markdown(f"<div style='text-align: left;'>{t.expected_move}</div>", unsafe_allow_html=True)
-        cols[6].markdown(f"<div style='text-align: left;'>{current_price}</div>", unsafe_allow_html=True)
-        cols[7].markdown(f"<div style='text-align: left;'>{breakevens}</div>", unsafe_allow_html=True)
-        cols[8].markdown(f"<div style='text-align: left;'>${display_cost:.2f}</div>", unsafe_allow_html=True)
+        cols[4].markdown(f"<div style='text-align: left;'>{close_date_str}</div>", unsafe_allow_html=True)
+        cols[5].markdown(f"<div style='text-align: left;'>{t.strategy_type}</div>", unsafe_allow_html=True)
+        cols[6].markdown(f"<div style='text-align: left;'>{t.expected_move}</div>", unsafe_allow_html=True)
+        cols[7].markdown(f"<div style='text-align: left;'>{current_price}</div>", unsafe_allow_html=True)
+        cols[8].markdown(f"<div style='text-align: left;'>{breakevens}</div>", unsafe_allow_html=True)
+        cols[9].markdown(f"<div style='text-align: left;'>${display_cost:.2f}</div>", unsafe_allow_html=True)
         
         color = "green" if pnl > 0 else "red" if pnl < 0 else "inherit"
-        cols[9].markdown(f"<div style='text-align: left; color: {color};'>${pnl:.2f}</div>", unsafe_allow_html=True)
+        cols[10].markdown(f"<div style='text-align: left; color: {color};'>${pnl:.2f}</div>", unsafe_allow_html=True)
         
-        cols[10].markdown(f"<div style='text-align: left;'>{t.status}</div>", unsafe_allow_html=True)
+        cols[11].markdown(f"<div style='text-align: left;'>{t.status}</div>", unsafe_allow_html=True)
         
         # Initialize details visibility state
         if "expanded_trade_id" not in st.session_state:
             st.session_state.expanded_trade_id = None
             
-        if cols[11].button("Details", key=f"details_btn_{t.id}"):
+        if cols[12].button("Details", key=f"details_btn_{t.id}"):
             if st.session_state.expanded_trade_id == t.id:
                 st.session_state.expanded_trade_id = None
             else:
                 st.session_state.expanded_trade_id = t.id
             st.rerun()
         
-        if cols[12].button("Edit", key=f"edit_{t.id}"):
+        if cols[13].button("Edit", key=f"edit_{t.id}"):
             st.session_state.edit_trade_id = t.id
             st.session_state[f"loaded_{t.id}"] = False
             st.switch_page("pages/1_Trade.py")
             
         if t.status == "Open":
-            if cols[13].button("Close", key=f"close_{t.id}"):
+            if cols[14].button("Close", key=f"close_{t.id}"):
                 st.session_state.close_trade_id = t.id
                 st.switch_page("pages/4_Close Trade.py")
         else:
-            if cols[13].button("Reopen", key=f"reopen_{t.id}"):
+            if cols[14].button("Reopen", key=f"reopen_{t.id}"):
                 trade_to_reopen = db.query(Trade).filter(Trade.id == t.id).first()
                 if trade_to_reopen:
                     trade_to_reopen.status = "Open"

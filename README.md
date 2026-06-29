@@ -62,6 +62,9 @@ finance/
     └── options_math.py     # Payoff arrays, EV, and Probability calculations
 ```
 
+## Future Improvements
+- **Automated Trade Input**: Implement a feature to automatically parse, import, and input trade information directly by copy-pasting raw text data straight from broker platforms.
+
 ## Installation & Setup
 
 ### 1. Prerequisites
@@ -96,6 +99,12 @@ streamlit run C:\Lab\finance\Home.py
 - **DTE Categorization**: Automatically categorizes trades by Days to Expiration based on the earliest expiring leg into custom cohorts (`0 DTE`, `1-3 DTE`, `4-7 DTE`, `8-20 DTE`, `21-60 DTE`, `61-200 DTE`, `201+ DTE`).
 
 ## Recent Updates
+
+**Session Date: 2026-06-29**
+- **Dynamic Research Hub**: Created a new compact, 3-column "Research" tab featuring dynamic URL generation for tickers (Barchart, MarketBeat, Yahoo Finance, etc.) alongside curated static links for screeners, earnings, and sentiment analysis tools.
+- **Reporting & Export**: Implemented a comprehensive `fpdf2` PDF Export engine. Users can now filter trades and generate a printable, landscape-oriented PDF that perfectly captures Key Metrics, Month-by-Month breakdowns, and full tabular data layouts with proper Unicode sanitization.
+- **Dashboard UI Optimization**: Overhauled the Dashboard styling by replacing raw text with compact, custom-styled CSS metric cards, dynamic colorization rules (red/yellow/green for batting averages and PnL), and shifting filters from the sidebar into a unified top-row header.
+- **Improved Visualizations**: Upgraded the Equity Curve graph to scale dynamically across minimum 1-year timelines, converted X-axis to clean Month/Year timestamps, and applied a visually soothing semi-transparent green styling.
 
 **Session Date: 2026-06-27**
 - **Dashboard & Analytics Implementation**: Fully built out the Dashboard tab to provide comprehensive performance insights.

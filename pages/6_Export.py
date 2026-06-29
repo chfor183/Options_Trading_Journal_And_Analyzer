@@ -1,0 +1,318 @@
+import streamlit as st
+import pandas as pd
+from datetime import datetime, timedelta
+import math
+from fpdf import FPDF
+from src.db import SessionLocal
+from src.models import Trade
+
+st.set_page_config(page_title="Export PDF", page_icon="📄", layout="wide")
+st.title("Export PDF")
+
+def analyze_trade(trade):
+    pnl = 0.0
+    premium_collected = 0.0
+    premium_paid = 0.0
+    total_commission = 0.0
+    close_date = None
+    
+    for tx in trade.transactions:
+        total_commission += tx.commission
+        if tx.action == "Open":
+            pnl -= tx.price
+            if tx.price > 0:
+                premium_paid += tx.price
+            else:
+                premium_collected += abs(tx.price)
+        else:
+            pnl += tx.price
+            if tx.price > 0:
+                premium_collected += tx.price
+            else:
+                premium_paid += abs(tx.price)
+            
+            if close_date is None or tx.date > close_date:
+                close_date = tx.date
+                
+    pnl -= total_commission
+            
+    return {
+        "pnl": pnl,
+        "premium_collected": premium_collected,
+        "premium_paid": premium_paid,
+        "total_commission": total_commission,
+        "close_date": close_date.date() if close_date else None,
+        "is_winner": pnl > 0,
+        "is_loser": pnl < 0
+    }
+
+class PDF(FPDF):
+    def header(self):
+        self.set_font('Arial', 'B', 16)
+        self.cell(0, 8, 'Trade Report', 0, 1, 'C')
+
+    def chapter_title(self, title):
+        self.set_font('Arial', 'B', 14)
+        # Give chapter titles a subtle dark blue color to stand out from text
+        self.set_text_color(20, 50, 90)
+        self.cell(0, 10, title, 0, 1, 'L')
+        self.set_text_color(0, 0, 0)
+        self.ln(1)
+
+def generate_pdf(filtered_trades, filter_info):
+    pdf = PDF(orientation='L') # Landscape for wide tables
+    pdf.add_page()
+    
+    # Subtitle for Filters
+    pdf.set_font('Arial', 'I', 10)
+    pdf.set_text_color(100, 100, 100)
+    filters_text = f"Filters Applied -> Ticker: {filter_info['Ticker']} | Date: {filter_info['Date']} | Status: {filter_info['Status']} | Strategy: {filter_info['Strategy']}"
+    pdf.cell(0, 6, filters_text, 0, 1, 'C')
+    pdf.set_text_color(0, 0, 0)
+    pdf.ln(5)
+    
+    pdf.set_font('Arial', '', 10)
+    
+    # 1. Key Metrics
+    total_trades = len(filtered_trades)
+    wins = 0
+    losses = 0
+    winning_pnls = []
+    losing_pnls = []
+    total_comm = 0.0
+    total_prem_col = 0.0
+    total_prem_paid = 0.0
+    total_pnl = 0.0
+    
+    analyzed_data = []
+    
+    for t in filtered_trades:
+        stats = analyze_trade(t)
+        if stats["is_winner"]:
+            wins += 1
+            winning_pnls.append(stats["pnl"])
+        if stats["is_loser"]:
+            losses += 1
+            losing_pnls.append(stats["pnl"])
+            
+        total_comm += stats["total_commission"]
+        total_prem_col += stats["premium_collected"]
+        total_prem_paid += stats["premium_paid"]
+        total_pnl += stats["pnl"]
+        
+        open_tx = next((tx for tx in t.transactions if tx.action == "Open"), None)
+        contracts = open_tx.quantity if open_tx else 1
+        cost = -open_tx.price if open_tx else 0.0
+        
+        close_dates = [tx.date for tx in t.transactions if tx.action != "Open"]
+        close_date_str = max(close_dates).strftime('%Y-%m-%d') if close_dates else "-"
+        
+        close_txs = [tx for tx in t.transactions if tx.action != "Open"]
+        close_price = sum(tx.price for tx in close_txs) if close_txs else 0.0
+        
+        analyzed_data.append({
+            "Month": t.date_opened.strftime("%b %Y"),
+            "Is Winner": stats["is_winner"],
+            "Is Loser": stats["is_loser"],
+            "PnL": stats["pnl"],
+            # Trade table data
+            "Ticker": t.ticker,
+            "Name": t.underlying_name or "-",
+            "Date Opened": t.date_opened.strftime("%Y-%m-%d"),
+            "Date Closed": close_date_str,
+            "Strategy": t.strategy_type or "-",
+            "Exp. Move": t.expected_move or "-",
+            "Contracts": str(contracts),
+            "Cost": f"${cost:.2f}",
+            "Close Price": f"${close_price:.2f}" if close_txs else "-",
+            "PnL_str": f"${stats['pnl']:.2f}",
+            "Comm": f"${stats['total_commission']:.2f}",
+            "Status": t.status
+        })
+
+    batting_avg = (wins / total_trades * 100) if total_trades > 0 else 0.0
+    avg_win = sum(winning_pnls) / len(winning_pnls) if winning_pnls else 0.0
+    avg_loss = sum(losing_pnls) / len(losing_pnls) if losing_pnls else 0.0
+
+    pdf.chapter_title("Key Metrics")
+    metrics_text = (
+        f"Total Trades: {total_trades}   |   Batting Avg: {batting_avg:.1f}%   |   Wins/Losses: {wins}/{losses}\n"
+        f"Average Win: ${avg_win:.2f}   |   Average Loss: ${avg_loss:.2f}\n"
+        f"Total Commission: ${total_comm:.2f}   |   Premium Collected: ${total_prem_col:.2f}   |   Premium Paid: ${total_prem_paid:.2f}\n"
+        f"Net PnL: ${total_pnl:.2f}"
+    )
+    pdf.set_font('Arial', '', 11)
+    # Adding a light gray fill for the metrics block
+    pdf.set_fill_color(245, 245, 245)
+    pdf.multi_cell(0, 8, metrics_text, fill=True)
+    pdf.ln(5)
+    
+    # 2. Detailed Breakdown by Month
+    pdf.chapter_title("Detailed Breakdown - By Month")
+    
+    if analyzed_data:
+        df = pd.DataFrame(analyzed_data)
+        grouped = df.groupby("Month").agg(
+            Trades=("Ticker", "count"),
+            Wins=("Is Winner", "sum"),
+            Losses=("Is Loser", "sum"),
+            Total_PnL=("PnL", "sum"),
+            Avg_Win=("PnL", lambda x: x[x > 0].mean() if len(x[x > 0]) > 0 else 0),
+            Avg_Loss=("PnL", lambda x: x[x < 0].mean() if len(x[x < 0]) > 0 else 0)
+        ).reset_index()
+        
+        grouped.fillna({
+            "Trades": 0, "Wins": 0, "Losses": 0, 
+            "Total_PnL": 0.0, "Avg_Win": 0.0, "Avg_Loss": 0.0
+        }, inplace=True)
+        
+        # Table Header
+        cols = ["Month", "Trades", "Batting Avg", "Wins", "Losses", "Avg Win", "Avg Loss", "Total PnL"]
+        widths = [30, 20, 25, 20, 20, 30, 30, 30]
+        
+        pdf.set_font('Arial', 'B', 10)
+        for col, w in zip(cols, widths):
+            pdf.cell(w, 8, col, 1, 0, 'C')
+        pdf.ln()
+        
+        pdf.set_font('Arial', '', 10)
+        for _, row in grouped.iterrows():
+            b_avg = (row['Wins'] / row['Trades'] * 100) if row['Trades'] > 0 else 0.0
+            
+            pdf.cell(widths[0], 8, str(row['Month']), 1, 0, 'C')
+            pdf.cell(widths[1], 8, str(row['Trades']), 1, 0, 'C')
+            pdf.cell(widths[2], 8, f"{b_avg:.1f}%", 1, 0, 'C')
+            pdf.cell(widths[3], 8, str(row['Wins']), 1, 0, 'C')
+            pdf.cell(widths[4], 8, str(row['Losses']), 1, 0, 'C')
+            pdf.cell(widths[5], 8, f"${row['Avg_Win']:.2f}", 1, 0, 'C')
+            pdf.cell(widths[6], 8, f"${row['Avg_Loss']:.2f}", 1, 0, 'C')
+            pdf.cell(widths[7], 8, f"${row['Total_PnL']:.2f}", 1, 0, 'C')
+            pdf.ln()
+    else:
+        pdf.cell(0, 10, "No trades to display.", 0, 1)
+
+    pdf.ln(5)
+    
+    # 3. Trades Table
+    pdf.chapter_title("Trades List")
+    if analyzed_data:
+        cols = ["Ticker", "Name", "Opened", "Closed", "Strategy", "Move", "Contr.", "Cost", "Close", "PnL", "Comm.", "Status"]
+        # Total width roughly 277 for Landscape A4 (margins are 10mm each side)
+        # Previous widths = [15, 30, 20, 20, 25, 15, 12, 15, 18, 18, 14, 75]
+        # Reducing Status by 35 (from 75 to 40)
+        # Distributing +35 to Name (+10), Strategy (+10), Cost (+5), Close (+5), PnL (+5)
+        widths = [15, 40, 20, 20, 35, 15, 12, 20, 23, 23, 14, 40]
+        
+        pdf.set_font('Arial', 'B', 8)
+        for col, w in zip(cols, widths):
+            pdf.cell(w, 8, col, 1, 0, 'C')
+        pdf.ln()
+        
+        def sanitize(text):
+            if text is None: return "-"
+            # Replace common unicode symbols manually, then ignore the rest to avoid FPDF errors
+            return str(text).replace('↗', '^').replace('↘', 'v').replace('±', '+/-').replace('—', '-').replace('–', '-').encode('latin-1', 'ignore').decode('latin-1')
+        
+        pdf.set_font('Arial', '', 8)
+        for data in analyzed_data:
+            pdf.cell(widths[0], 8, sanitize(data['Ticker'])[:8], 1, 0, 'C')
+            pdf.cell(widths[1], 8, sanitize(data['Name'])[:24], 1, 0, 'C')
+            pdf.cell(widths[2], 8, sanitize(data['Date Opened']), 1, 0, 'C')
+            pdf.cell(widths[3], 8, sanitize(data['Date Closed']), 1, 0, 'C')
+            pdf.cell(widths[4], 8, sanitize(data['Strategy'])[:20], 1, 0, 'C')
+            pdf.cell(widths[5], 8, sanitize(data['Exp. Move'])[:10], 1, 0, 'C')
+            pdf.cell(widths[6], 8, sanitize(data['Contracts']), 1, 0, 'C')
+            pdf.cell(widths[7], 8, sanitize(data['Cost']), 1, 0, 'C')
+            pdf.cell(widths[8], 8, sanitize(data['Close Price']), 1, 0, 'C')
+            pdf.cell(widths[9], 8, sanitize(data['PnL_str']), 1, 0, 'C')
+            pdf.cell(widths[10], 8, sanitize(data['Comm']), 1, 0, 'C')
+            pdf.cell(widths[11], 8, sanitize(data['Status']), 1, 0, 'C')
+            pdf.ln()
+    else:
+        pdf.cell(0, 10, "No trades to display.", 0, 1)
+
+    return pdf.output(dest='S')
+
+db = SessionLocal()
+
+active_portfolio_id = st.session_state.get("active_portfolio_id")
+if active_portfolio_id:
+    trades = db.query(Trade).filter(Trade.portfolio_id == active_portfolio_id).all()
+else:
+    trades = []
+    st.warning("No portfolio selected. Please select one from the sidebar.")
+
+if trades:
+    # Filtering logic matching Journal
+    filter_col1, filter_col2, filter_col3, filter_col4 = st.columns(4)
+    filter_ticker = filter_col1.text_input("Filter by Ticker")
+    
+    date_options = ["Last 7 days", "Last month", "Last 3 Months", "Last Year", "YTD", "All"]
+    date_filter = filter_col2.selectbox("Filter by Date", date_options, index=5)
+    
+    today = datetime.today().date()
+    if date_filter == "Last 7 days":
+        start_date = today - timedelta(days=7)
+    elif date_filter == "Last month":
+        start_date = today - timedelta(days=30)
+    elif date_filter == "Last 3 Months":
+        start_date = today - timedelta(days=90)
+    elif date_filter == "Last Year":
+        start_date = today - timedelta(days=365)
+    elif date_filter == "YTD":
+        start_date = datetime(today.year, 1, 1).date()
+    else:
+        start_date = datetime.min.date()
+        
+    filter_status = filter_col3.radio("Filter by Status", ["All", "Open Trades", "Closed Trades"], horizontal=True)
+    
+    strategy_options = ["All"] + list(set([t.strategy_type for t in trades]))
+    filter_strategy = filter_col4.selectbox("Filter by Strategy", strategy_options)
+
+    # Apply filters
+    filtered_trades = trades
+    if filter_ticker:
+        filtered_trades = [t for t in filtered_trades if filter_ticker.upper() in t.ticker.upper()]
+    if date_filter != "All":
+        def get_reference_date(t):
+            if t.status == "Open":
+                return t.date_opened.date()
+            else:
+                close_dates = [tx.date for tx in t.transactions if tx.action != "Open"]
+                if close_dates:
+                    return max(close_dates).date()
+                return t.date_opened.date()
+                
+        filtered_trades = [t for t in filtered_trades if get_reference_date(t) >= start_date]
+        
+    if filter_status != "All":
+        if filter_status == "Open Trades":
+            filtered_trades = [t for t in filtered_trades if t.status == "Open"]
+        elif filter_status == "Closed Trades":
+            filtered_trades = [t for t in filtered_trades if t.status != "Open"]
+            
+    if filter_strategy != "All":
+        filtered_trades = [t for t in filtered_trades if t.strategy_type == filter_strategy]
+        
+    # Sort
+    filtered_trades.sort(key=lambda x: x.date_opened, reverse=True)
+    
+    st.write(f"**{len(filtered_trades)} trades match the current filters.**")
+    
+    if st.button("Generate PDF Report", type="primary"):
+        with st.spinner("Generating PDF..."):
+            filter_info = {
+                "Ticker": filter_ticker if filter_ticker else "All",
+                "Date": date_filter,
+                "Status": filter_status,
+                "Strategy": filter_strategy
+            }
+            pdf_bytes = bytes(generate_pdf(filtered_trades, filter_info))
+            st.download_button(
+                label="⬇️ Download PDF",
+                data=pdf_bytes,
+                file_name=f"Trade_Report_{datetime.now().strftime('%Y%m%d')}.pdf",
+                mime="application/pdf"
+            )
+
+db.close()

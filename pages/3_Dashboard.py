@@ -6,7 +6,23 @@ from src.db import SessionLocal
 from src.models import Trade, Transaction
 
 st.set_page_config(page_title="Dashboard", page_icon="📊", layout="wide")
-st.title("Performance Dashboard")
+
+# Custom CSS to make the page more vertically compact
+st.markdown("""
+    <style>
+    .block-container {
+        padding-top: 2rem !important;
+        padding-bottom: 2rem !important;
+    }
+    hr {
+        margin: 1.5em 0px !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# Setup layout for title and filters on the same row
+title_col, f_col1, f_col2 = st.columns([1.5, 1, 1.5], vertical_alignment="bottom")
+title_col.title("Performance Dashboard")
 
 def get_dte_category(dte):
     if dte <= 0:
@@ -80,12 +96,10 @@ if not all_trades and active_portfolio_id:
     st.info("Not enough data to display dashboard. Add some trades first!")
 elif all_trades:
     
-    st.sidebar.header("Filters")
-    
     # Date Interval Filter
     date_options = ["Last 7 days", "Last month", "Last 3 Months", "Last Year", "YTD", "All"]
     # Select index 2 for "Last 3 Months"
-    date_filter = st.sidebar.selectbox("Date Interval", date_options, index=2)
+    date_filter = f_col1.selectbox("Date Interval", date_options, index=2, label_visibility="collapsed")
     
     today = datetime.today().date()
     if date_filter == "Last 7 days":
@@ -101,32 +115,28 @@ elif all_trades:
     else:
         start_date = datetime.min.date()
         
-    # Status Filter
-    status_filter = st.sidebar.selectbox("Trade Status", ["Both", "All Closed Trades", "All Open Trades"])
+    # Status Filter Note
+    f_col2.info("Showing data for Closed Trades only.", icon="ℹ️")
+    
+    st.divider()
     
     filtered_data = []
+    equity_data = []
     for t in all_trades:
+        # Permanently filter for closed trades only
+        if t.status == "Open":
+            continue
+            
         stats = analyze_trade(t)
         
         # Determine reference date
-        if t.status == "Open":
-            ref_date = t.date_opened.date()
-        else:
-            ref_date = stats['close_date'] if stats['close_date'] else t.date_opened.date()
-            
-        # Apply Date filter
-        if ref_date < start_date:
-            continue
-            
-        # Apply Status filter
-        if status_filter == "All Closed Trades" and t.status == "Open":
-            continue
-        if status_filter == "All Open Trades" and t.status != "Open":
-            continue
-            
-        filtered_data.append({
+        ref_date = stats['close_date'] if stats['close_date'] else t.date_opened.date()
+        
+        trade_dict = {
             "Trade": t,
             "Reference Date": ref_date,
+            "Month": t.date_opened.strftime("%b %Y"),
+            "Month Opened": t.date_opened.strftime("%B"),
             "PnL": stats["pnl"],
             "Premium Collected": stats["premium_collected"],
             "Premium Paid": stats["premium_paid"],
@@ -138,7 +148,16 @@ elif all_trades:
             "Type of Close": t.status,
             "Is Winner": stats["is_winner"],
             "Is Loser": stats["is_loser"]
-        })
+        }
+        
+        # Always add to equity data
+        equity_data.append(trade_dict)
+            
+        # Apply Date filter for key metrics and detailed breakdown
+        if ref_date < start_date:
+            continue
+            
+        filtered_data.append(trade_dict)
         
     if not filtered_data:
         st.warning("No trades match the selected filters.")
@@ -161,47 +180,76 @@ elif all_trades:
         
         st.subheader("Key Metrics")
         
+        def styled_metric(label, value, color="inherit"):
+            st.markdown(f"""
+                <div style="padding: 0.75rem; border-radius: 0.5rem; background-color: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); margin-bottom: 0.5rem;">
+                    <div style="font-size: 0.85rem; color: #aaa; margin-bottom: 0.2rem;">{label}</div>
+                    <div style="font-size: 1.6rem; font-weight: 600; color: {color}; line-height: 1.2;">{value}</div>
+                </div>
+            """, unsafe_allow_html=True)
+            
+        def get_currency_color(val):
+            return "#21c354" if val > 0 else "#ff4b4b" if val < 0 else "inherit"
+            
+        def get_batting_color(val):
+            return "#ff4b4b" if val <= 50 else "#faca2b" if val <= 75 else "#21c354"
+        
         m1, m2, m3, m4, m5 = st.columns(5)
-        m1.metric("Total Trades", total_trades)
-        m2.metric("Batting Avg", f"{batting_avg:.1f}%")
-        m3.metric("Wins / Losses", f"{wins} / {losses}")
-        m4.metric("Average Win", f"${avg_win:.2f}")
-        m5.metric("Average Loss", f"${avg_loss:.2f}")
+        with m1:
+            styled_metric("Total Trades", total_trades)
+        with m2:
+            styled_metric("Batting Avg", f"{batting_avg:.1f}%", get_batting_color(batting_avg))
+        with m3:
+            styled_metric("Wins / Losses", f"{wins} / {losses}")
+        with m4:
+            styled_metric("Average Win", f"${avg_win:.2f}", get_currency_color(avg_win))
+        with m5:
+            styled_metric("Average Loss", f"${avg_loss:.2f}", get_currency_color(avg_loss))
         
         m6, m7, m8, m9, m10 = st.columns(5)
-        m6.metric("Total Commission", f"${total_comm:.2f}")
-        m7.metric("Premium Collected", f"${total_prem_col:.2f}")
-        m8.metric("Premium Paid", f"${total_prem_paid:.2f}")
-        m9.metric("Net PnL", f"${total_pnl:.2f}")
+        with m6:
+            st.empty() # First column is now empty to center the row visually
+        with m7:
+            styled_metric("Total Commission", f"${total_comm:.2f}", get_currency_color(total_comm))
+        with m8:
+            styled_metric("Premium Collected", f"${total_prem_col:.2f}", get_currency_color(total_prem_col))
+        with m9:
+            styled_metric("Premium Paid", f"${total_prem_paid:.2f}", get_currency_color(total_prem_paid))
+        with m10:
+            styled_metric("Net PnL", f"${total_pnl:.2f}", get_currency_color(total_pnl))
         
-        st.divider()
-        
-        st.subheader("Equity Curve")
-        # Prepare Equity Curve Data
-        df_equity = pd.DataFrame([{ "Date": d["Reference Date"], "PnL": d["PnL"] } for d in filtered_data])
-        df_equity.sort_values(by="Date", inplace=True)
-        # Combine PnL for trades closed/opened on the same date
-        df_equity = df_equity.groupby("Date").sum().reset_index()
-        df_equity["Cumulative PnL"] = df_equity["PnL"].cumsum()
-        
-        if not df_equity.empty:
-            # We want to start the curve at 0 on the earliest date - 1 day, or just plot what we have
-            fig = px.line(df_equity, x="Date", y="Cumulative PnL", markers=True, 
-                          title="Cumulative PnL Over Time",
-                          labels={"Cumulative PnL": "Cumulative Net PnL ($)"})
-            fig.update_layout(yaxis_tickprefix="$", hovermode="x unified")
-            # Fill area below the line
-            fig.update_traces(fill='tozeroy')
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.info("No timeline data to display equity curve.")
-            
         st.divider()
         
         st.subheader("Detailed Breakdown")
         
-        breakdown_by = st.selectbox("Analyze Performance By:", 
-            ["Expected Move", "Strategy Type", "Category", "DTE Category", "Type of Close"])
+        st.write("Analyze Performance By:")
+        if "breakdown_by" not in st.session_state:
+            st.session_state.breakdown_by = "Expected Move"
+            
+        btn_cols = st.columns(7)
+        if btn_cols[0].button("Expected Move", use_container_width=True, type="primary" if st.session_state.breakdown_by == "Expected Move" else "secondary"):
+            st.session_state.breakdown_by = "Expected Move"
+            st.rerun()
+        if btn_cols[1].button("Strategy Type", use_container_width=True, type="primary" if st.session_state.breakdown_by == "Strategy Type" else "secondary"):
+            st.session_state.breakdown_by = "Strategy Type"
+            st.rerun()
+        if btn_cols[2].button("Category", use_container_width=True, type="primary" if st.session_state.breakdown_by == "Category" else "secondary"):
+            st.session_state.breakdown_by = "Category"
+            st.rerun()
+        if btn_cols[3].button("DTE Category", use_container_width=True, type="primary" if st.session_state.breakdown_by == "DTE Category" else "secondary"):
+            st.session_state.breakdown_by = "DTE Category"
+            st.rerun()
+        if btn_cols[4].button("Type of Close", use_container_width=True, type="primary" if st.session_state.breakdown_by == "Type of Close" else "secondary"):
+            st.session_state.breakdown_by = "Type of Close"
+            st.rerun()
+        if btn_cols[5].button("Month", use_container_width=True, type="primary" if st.session_state.breakdown_by == "Month" else "secondary"):
+            st.session_state.breakdown_by = "Month"
+            st.rerun()
+        if btn_cols[6].button("Month Opened", use_container_width=True, type="primary" if st.session_state.breakdown_by == "Month Opened" else "secondary"):
+            st.session_state.breakdown_by = "Month Opened"
+            st.rerun()
+            
+        breakdown_by = st.session_state.breakdown_by
             
         # Group data
         df_all = pd.DataFrame(filtered_data)
@@ -215,16 +263,97 @@ elif all_trades:
             Avg_Loss=("PnL", lambda x: x[x < 0].mean() if len(x[x < 0]) > 0 else 0)
         ).reset_index()
         
-        grouped["Batting Avg"] = (grouped["Wins"] / grouped["Trades"] * 100).round(1).astype(str) + "%"
+        # Fill any potential NaN values with 0
+        grouped.fillna({
+            "Trades": 0, "Wins": 0, "Losses": 0, 
+            "Total_PnL": 0.0, "Avg_Win": 0.0, "Avg_Loss": 0.0
+        }, inplace=True)
+        
+        # Calculate Batting Avg safely
+        grouped["Batting Avg"] = grouped.apply(
+            lambda row: f"{(row['Wins'] / row['Trades'] * 100):.1f}%" if row['Trades'] > 0 else "0.0%", 
+            axis=1
+        )
         
         # Formatting for display
-        grouped["Total PnL"] = grouped["Total_PnL"].apply(lambda x: f"${x:.2f}")
-        grouped["Avg Win"] = grouped["Avg_Win"].apply(lambda x: f"${x:.2f}")
-        grouped["Avg Loss"] = grouped["Avg_Loss"].apply(lambda x: f"${x:.2f}")
+        grouped["Total PnL"] = grouped["Total_PnL"].apply(lambda x: f"${float(x):.2f}")
+        grouped["Avg Win"] = grouped["Avg_Win"].apply(lambda x: f"${float(x):.2f}")
+        grouped["Avg Loss"] = grouped["Avg_Loss"].apply(lambda x: f"${float(x):.2f}")
         
         # Select columns to display
         display_df = grouped[[breakdown_by, "Trades", "Batting Avg", "Wins", "Losses", "Avg Win", "Avg Loss", "Total PnL"]]
         
-        st.dataframe(display_df, use_container_width=True, hide_index=True)
+        def style_batting(val):
+            try:
+                v = float(val.strip('%'))
+                color = "#ff4b4b" if v <= 50 else "#faca2b" if v <= 75 else "#21c354"
+                return f"color: {color}; font-weight: bold;"
+            except:
+                return ""
+
+        def style_currency(val):
+            try:
+                v = float(str(val).replace('$', '').replace(',', ''))
+                if v > 0:
+                    return "color: #21c354; font-weight: bold;"
+                elif v < 0:
+                    return "color: #ff4b4b; font-weight: bold;"
+                else:
+                    return ""
+            except:
+                return ""
+
+        # Apply styles
+        try:
+            styled_df = display_df.style.map(style_batting, subset=["Batting Avg"]).map(style_currency, subset=["Avg Win", "Avg Loss", "Total PnL"])
+        except AttributeError:
+            styled_df = display_df.style.applymap(style_batting, subset=["Batting Avg"]).applymap(style_currency, subset=["Avg Win", "Avg Loss", "Total PnL"])
+            
+        st.dataframe(styled_df, use_container_width=True, hide_index=True)
+        
+        st.divider()
+
+        st.subheader("Equity Curve (All-Time)")
+        # Prepare Equity Curve Data using unfiltered equity_data
+        df_equity = pd.DataFrame([{ "Date": d["Reference Date"], "PnL": d["PnL"] } for d in equity_data])
+        df_equity.sort_values(by="Date", inplace=True)
+        # Combine PnL for trades closed/opened on the same date
+        df_equity = df_equity.groupby("Date").sum().reset_index()
+        df_equity["Cumulative PnL"] = df_equity["PnL"].cumsum()
+        
+        if not df_equity.empty:
+            # Convert Date to datetime for proper offset calculations
+            df_equity["Date"] = pd.to_datetime(df_equity["Date"])
+            
+            first_date = df_equity["Date"].min()
+            last_date = df_equity["Date"].max()
+            # Ensure the graph shows at least 1 year span
+            end_date = max(last_date, first_date + pd.DateOffset(years=1))
+
+            fig = px.line(df_equity, x="Date", y="Cumulative PnL", markers=True, 
+                          title="Cumulative PnL Over Time",
+                          labels={"Cumulative PnL": "Cumulative Net PnL ($)"},
+                          color_discrete_sequence=["#21c354"]) # Using a pleasant green
+            
+            fig.update_layout(
+                yaxis_tickprefix="$", 
+                hovermode="x unified",
+                font=dict(size=14), # Increase overall font size for readability
+                margin=dict(l=20, r=20, t=40, b=20),
+                height=350 # Force a slightly smaller height to save space
+            )
+            
+            # Format x-axis to Month Year and set range
+            fig.update_xaxes(
+                tickformat="%b %Y",
+                range=[first_date, end_date]
+            )
+            
+            # Fill area below the line with a softer semi-transparent color
+            fig.update_traces(fill='tozeroy', fillcolor='rgba(33, 195, 84, 0.2)')
+            
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("No timeline data to display equity curve.")
 
 db.close()
