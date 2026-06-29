@@ -44,6 +44,50 @@ if "edit_trade_id" in st.session_state and st.session_state.edit_trade_id:
 else:
     st.title("New Trade Entry")
 
+st.write("### 📸 Auto-Fill from Clipboard")
+st.write("Take a screenshot of your broker's trade confirmation, then click the button below to paste it.")
+if st.button("Paste and Extract Trade Details", type="primary"):
+    with st.spinner("Reading clipboard and extracting text with OCR..."):
+        from src.ocr_parser import parse_trade_image
+        from PIL import ImageGrab, Image
+        
+        img = ImageGrab.grabclipboard()
+        
+        if img is None:
+            st.error("No image found on your clipboard. Please take a screenshot first (e.g., using Snipping Tool).")
+        else:
+            if isinstance(img, list):
+                try:
+                    img = Image.open(img[0])
+                except Exception as e:
+                    st.error("Found files in clipboard but could not load as an image.")
+                    img = None
+            
+            if img:
+                result = parse_trade_image(img)
+                if "error" in result:
+                    st.error(result["error"])
+                else:
+                    st.session_state["ticker_val"] = result["ticker"]
+                    legs = result["legs"]
+                    st.session_state["num_legs"] = len(legs)
+                    for i, leg in enumerate(legs):
+                        st.session_state[f"action_val_{i}"] = leg["action"]
+                        st.session_state[f"qty_{i}"] = leg["qty"]
+                        st.session_state[f"type_val_{i}"] = leg["type"]
+                        st.session_state[f"strike_input_{i}"] = leg["strike"]
+                        st.session_state[f"strike_{i}"] = leg["strike"]
+                        try:
+                            parsed_date = datetime.strptime(leg["expiry"], "%Y-%m-%d").date()
+                            st.session_state[f"expiry_input_{i}"] = parsed_date
+                            st.session_state[f"expiry_{i}"] = parsed_date
+                        except:
+                            pass # Let it fallback to default if parsing failed
+                        st.session_state[f"price_{i}"] = 0.0 # Force pulling live data or manual entry
+                        st.session_state[f"delta_{i}"] = 0.0
+                    st.rerun()
+st.divider()
+
 col1, col2 = st.columns(2)
 
 with col1:

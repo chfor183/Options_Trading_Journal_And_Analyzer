@@ -8,7 +8,7 @@ A local, Python-based web application built with Streamlit to track, journal, an
 - **Strategy Builder**: Construct multi-leg options strategies (up to 8 legs).
   - Comprehensive strategy classification with explicit Debit/Credit designations (e.g., *Bull Put Spread (credit)*, *Iron Condor (debit)*).
   - Flexible, accurate contract quantity sizing per leg.
-- **Interactive UI**: Custom styled toggle buttons for "Buy/Sell" and "Call/Put" to easily build spreads, condors, butterflies, etc.
+- **Automated Trade Input (OCR)**: Seamlessly copy a screenshot of your broker's trade confirmation to your clipboard and click one button to instantly extract the ticket data using Optical Character Recognition (Tesseract-OCR) and automatically populate all trade legs and pricing in the UI.
 - **Payoff Visualization**: Generates interactive Plotly charts showing the expected profit and loss at expiration across varying underlying prices.
 - **Advanced Metrics**: 
   - Maximum Profit & Maximum Loss
@@ -45,6 +45,7 @@ A local, Python-based web application built with Streamlit to track, journal, an
 - **Database**: PostgreSQL
 - **ORM**: SQLAlchemy
 - **Market Data**: yfinance, Barchart API (via custom Python requests session with token generation)
+- **OCR Processing**: `pytesseract` and `Pillow` (requires local Tesseract-OCR installation)
 
 ## Project Structure
 
@@ -66,17 +67,18 @@ finance/
     ├── db.py               # Database connection, finance schema setup, and session management
     ├── market_data.py      # yfinance API wrappers
     ├── models.py           # SQLAlchemy ORM models (Portfolio, Trade, Leg, Transaction)
-    └── options_math.py     # Payoff arrays, EV, and Probability calculations
+    └── ocr_parser.py       # Tesseract-OCR clipboard image processing and Regex pattern matching
 ```
 
 ## Future Improvements
-- **Automated Trade Input**: Implement a feature to automatically parse, import, and input trade information directly by copy-pasting raw text data straight from broker platforms.
+- Implement interactive paper-trading tracking to simulate portfolio margin utilization.
 
 ## Installation & Setup
 
 ### 1. Prerequisites
 - Python 3.10+
 - Docker & Docker Compose (for the PostgreSQL database)
+- **Tesseract-OCR**: Required for the clipboard image parsing feature. [Download the Windows installer here](https://github.com/UB-Mannheim/tesseract/wiki) and ensure it is added to your system PATH (or installed in the default `C:\Program Files\Tesseract-OCR\` directory).
 
 ### 2. Install Dependencies
 Create a virtual environment (recommended) and install the required packages:
