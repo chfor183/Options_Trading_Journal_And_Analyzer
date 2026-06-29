@@ -8,7 +8,7 @@ A local, Python-based web application built with Streamlit to track, journal, an
 - **Strategy Builder**: Construct multi-leg options strategies (up to 8 legs).
   - Comprehensive strategy classification with explicit Debit/Credit designations (e.g., *Bull Put Spread (credit)*, *Iron Condor (debit)*).
   - Flexible, accurate contract quantity sizing per leg.
-- **Automated Trade Input (OCR)**: Seamlessly copy a screenshot of your broker's trade confirmation to your clipboard and click one button to instantly extract the ticket data using Optical Character Recognition (Tesseract-OCR) and automatically populate all trade legs and pricing in the UI.
+- **Automated Trade Input (OCR)**: Seamlessly copy a screenshot of your broker's trade confirmation to your clipboard and click one button to instantly extract the ticket data using Optical Character Recognition (Tesseract-OCR) and automatically populate all trade legs and pricing in the UI. Supports parsing both complex multi-leg groupings (like Iron Condors) and detailed single-contract order screens.
 - **Payoff Visualization**: Generates interactive Plotly charts showing the expected profit and loss at expiration across varying underlying prices.
 - **Advanced Metrics**: 
   - Maximum Profit & Maximum Loss
@@ -46,6 +46,7 @@ A local, Python-based web application built with Streamlit to track, journal, an
 - **ORM**: SQLAlchemy
 - **Market Data**: yfinance, Barchart API (via custom Python requests session with token generation)
 - **OCR Processing**: `pytesseract` and `Pillow` (requires local Tesseract-OCR installation)
+- **PDF Generation**: `fpdf2`
 
 ## Project Structure
 

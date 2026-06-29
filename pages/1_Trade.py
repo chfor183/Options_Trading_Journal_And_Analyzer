@@ -45,10 +45,18 @@ else:
     st.title("New Trade Entry")
 
 st.write("### 📸 Auto-Fill from Clipboard")
-st.write("Take a screenshot of your broker's trade confirmation, then click the button below to paste it.")
-if st.button("Paste and Extract Trade Details", type="primary"):
+st.write("Take a screenshot of your broker's trade confirmation, then click one of the buttons below to paste it.")
+
+col_ocr1, col_ocr2 = st.columns(2)
+
+with col_ocr1:
+    btn_multi = st.button("Extract Multi-Leg Strategy", type="primary", use_container_width=True)
+with col_ocr2:
+    btn_single = st.button("Extract Single Contract Details", use_container_width=True)
+
+if btn_multi or btn_single:
     with st.spinner("Reading clipboard and extracting text with OCR..."):
-        from src.ocr_parser import parse_trade_image
+        from src.ocr_parser import parse_trade_image, parse_single_leg_image
         from PIL import ImageGrab, Image
         
         img = ImageGrab.grabclipboard()
@@ -64,7 +72,11 @@ if st.button("Paste and Extract Trade Details", type="primary"):
                     img = None
             
             if img:
-                result = parse_trade_image(img)
+                if btn_multi:
+                    result = parse_trade_image(img)
+                else:
+                    result = parse_single_leg_image(img)
+                    
                 if "error" in result:
                     st.error(result["error"])
                 else:
