@@ -74,7 +74,7 @@ legs_data = []
 for leg in trade.legs:
     legs_data.append({
         "Action": leg.position,
-        "Quantity": 1,
+        "Quantity": leg.quantity if leg.quantity else 1,
         "Type": leg.option_type,
         "Strike": f"${leg.strike:.2f}",
         "Price": f"${leg.price:.3f}",

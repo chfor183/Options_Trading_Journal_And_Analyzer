@@ -101,7 +101,7 @@ def generate_pdf(filtered_trades, filter_info):
         total_pnl += stats["pnl"]
         
         open_tx = next((tx for tx in t.transactions if tx.action == "Open"), None)
-        contracts = open_tx.quantity if open_tx else 1
+        contracts = max((leg.quantity for leg in t.legs if leg.quantity), default=1) if t.legs else (open_tx.quantity if open_tx else 1)
         cost = -open_tx.price if open_tx else 0.0
         
         close_dates = [tx.date for tx in t.transactions if tx.action != "Open"]
@@ -198,35 +198,42 @@ def generate_pdf(filtered_trades, filter_info):
     if analyzed_data:
         cols = ["Ticker", "Name", "Opened", "Closed", "Strategy", "Move", "Contr.", "Cost", "Close", "PnL", "Comm.", "Status"]
         # Total width roughly 277 for Landscape A4 (margins are 10mm each side)
-        # Previous widths = [15, 30, 20, 20, 25, 15, 12, 15, 18, 18, 14, 75]
-        # Reducing Status by 35 (from 75 to 40)
-        # Distributing +35 to Name (+10), Strategy (+10), Cost (+5), Close (+5), PnL (+5)
-        widths = [15, 40, 20, 20, 35, 15, 12, 20, 23, 23, 14, 40]
+        # Previous widths = [15, 40, 20, 20, 39, 21, 12, 20, 23, 23, 14, 30]
+        # Reducing Name by 6 and giving it to Strategy
+        widths = [15, 34, 20, 20, 45, 21, 12, 20, 23, 23, 14, 30]
         
-        pdf.set_font('Arial', 'B', 8)
-        for col, w in zip(cols, widths):
-            pdf.cell(w, 8, col, 1, 0, 'C')
-        pdf.ln()
+        def print_trades_header():
+            pdf.set_font('Arial', 'B', 8)
+            for col, w in zip(cols, widths):
+                pdf.cell(w, 8, col, 1, 0, 'C')
+            pdf.ln()
+            pdf.set_font('Arial', '', 8)
+
+        print_trades_header()
         
         def sanitize(text):
             if text is None: return "-"
             # Replace common unicode symbols manually, then ignore the rest to avoid FPDF errors
             return str(text).replace('↗', '^').replace('↘', 'v').replace('±', '+/-').replace('—', '-').replace('–', '-').encode('latin-1', 'ignore').decode('latin-1')
         
-        pdf.set_font('Arial', '', 8)
         for data in analyzed_data:
+            # Check if we are near the bottom of the page (Landscape A4 height is 210mm)
+            if pdf.get_y() > 180:
+                pdf.add_page()
+                print_trades_header()
+                
             pdf.cell(widths[0], 8, sanitize(data['Ticker'])[:8], 1, 0, 'C')
-            pdf.cell(widths[1], 8, sanitize(data['Name'])[:24], 1, 0, 'C')
+            pdf.cell(widths[1], 8, sanitize(data['Name'])[:20], 1, 0, 'C')
             pdf.cell(widths[2], 8, sanitize(data['Date Opened']), 1, 0, 'C')
             pdf.cell(widths[3], 8, sanitize(data['Date Closed']), 1, 0, 'C')
-            pdf.cell(widths[4], 8, sanitize(data['Strategy'])[:20], 1, 0, 'C')
-            pdf.cell(widths[5], 8, sanitize(data['Exp. Move'])[:10], 1, 0, 'C')
+            pdf.cell(widths[4], 8, sanitize(data['Strategy'])[:26], 1, 0, 'C')
+            pdf.cell(widths[5], 8, sanitize(data['Exp. Move'])[:15], 1, 0, 'C')
             pdf.cell(widths[6], 8, sanitize(data['Contracts']), 1, 0, 'C')
             pdf.cell(widths[7], 8, sanitize(data['Cost']), 1, 0, 'C')
             pdf.cell(widths[8], 8, sanitize(data['Close Price']), 1, 0, 'C')
             pdf.cell(widths[9], 8, sanitize(data['PnL_str']), 1, 0, 'C')
             pdf.cell(widths[10], 8, sanitize(data['Comm']), 1, 0, 'C')
-            pdf.cell(widths[11], 8, sanitize(data['Status']), 1, 0, 'C')
+            pdf.cell(widths[11], 8, sanitize(data['Status'])[:18], 1, 0, 'C')
             pdf.ln()
     else:
         pdf.cell(0, 10, "No trades to display.", 0, 1)
@@ -299,20 +306,21 @@ if trades:
     
     st.write(f"**{len(filtered_trades)} trades match the current filters.**")
     
-    if st.button("Generate PDF Report", type="primary"):
-        with st.spinner("Generating PDF..."):
-            filter_info = {
-                "Ticker": filter_ticker if filter_ticker else "All",
-                "Date": date_filter,
-                "Status": filter_status,
-                "Strategy": filter_strategy
-            }
-            pdf_bytes = bytes(generate_pdf(filtered_trades, filter_info))
-            st.download_button(
-                label="⬇️ Download PDF",
-                data=pdf_bytes,
-                file_name=f"Trade_Report_{datetime.now().strftime('%Y%m%d')}.pdf",
-                mime="application/pdf"
-            )
+    filter_info = {
+        "Ticker": filter_ticker if filter_ticker else "All",
+        "Date": date_filter,
+        "Status": filter_status,
+        "Strategy": filter_strategy
+    }
+    
+    pdf_bytes = bytes(generate_pdf(filtered_trades, filter_info))
+    
+    st.download_button(
+        label="Generate PDF Report",
+        data=pdf_bytes,
+        file_name=f"Trade_Report_{datetime.now().strftime('%Y%m%d')}.pdf",
+        mime="application/pdf",
+        type="primary"
+    )
 
 db.close()

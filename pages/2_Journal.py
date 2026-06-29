@@ -112,15 +112,13 @@ if trades:
             st.success(f"Deleted {len(selected_ids)} trades!")
             st.rerun()
             
-    st.write("") # small spacing
-    
     # Header row
     # Adjusting column widths so Details/Edit/Action buttons have a bit more space
-    col_widths = [0.4, 0.6, 1.1, 1.0, 1.0, 1.1, 1.0, 1.0, 1.2, 0.8, 0.8, 0.8, 0.8, 0.7, 0.9]
+    col_widths = [0.4, 0.6, 1.1, 1.0, 1.0, 1.1, 1.0, 1.0, 0.8, 1.0, 1.0, 0.8, 0.8, 0.7, 0.9]
     cols = st.columns(col_widths)
-    headers = ["Select", "Ticker", "Name", "Date Opened", "Date Closed", "Strategy", "Exp. Move", "Current Price", "Break-Even", "Cost", "PnL", "Status", "Details", "Edit", "Action"]
+    headers = ["", "Ticker", "Name", "Date Opened", "Date Closed", "Strategy", "Exp. Move", "Current or Closed Price", "Break-Even", "Cost", "PnL", "Status", "Details", "Edit", "Action"]
     for col, header in zip(cols, headers):
-        col.markdown(f"<div style='text-align: left; white-space: nowrap; font-weight: bold;'>{header}</div>", unsafe_allow_html=True)
+        col.markdown(f"<div style='text-align: left; white-space: normal; font-weight: bold; line-height: 1.2;'>{header}</div>", unsafe_allow_html=True)
     
     # Pagination Logic
     ROWS_PER_PAGE = 10
@@ -156,57 +154,88 @@ if trades:
             breakevens = "N/A"
             metrics = {}
             
-            try:
-                from src.options_math import calculate_metrics
-                from src.market_data import get_barchart_live_option_leg_data
-                info = get_ticker_info(t.ticker)
-                if info and info.get('current_price'):
-                    cp = float(info['current_price'])
-                    current_price = f"${cp:.2f}"
-                    
-                    # Format legs for options_math
-                    legs_for_math = []
-                    # Total trade open cost:
-                    open_tx = next((tx for tx in t.transactions if tx.action == "Open"), None)
-                    # Since we don't have individual leg prices stored, we divide the total cost by the number of legs as a rough approximation,
-                    # or just assign the entire cost to one leg and 0 to others so the total sums correctly.
-                    # Here we assign cost/num_legs to each leg to preserve the correct total net cost.
-                    cost_per_leg = open_tx.price / len(t.legs) if open_tx and t.legs else 0.0
-                    
-                    for leg in t.legs:
-                        price = leg.price
-                        iv = leg.iv
-                        expiry_str = pd.to_datetime(leg.expiry).strftime('%Y-%m-%d')
-                        leg_data = get_barchart_live_option_leg_data(t.ticker, expiry_str, leg.strike, leg.option_type)
-                        if leg_data:
-                            bid = leg_data.get('bid', 0.0)
-                            ask = leg_data.get('ask', 0.0)
-                            
-                            if leg.position == "Sell" and bid > 0:
-                                price = bid
-                            elif leg.position == "Buy" and ask > 0:
-                                price = ask
-                            else:
-                                price = leg_data.get('lastPrice', price)
+            if t.status == "Open":
+                try:
+                    from src.options_math import calculate_metrics
+                    from src.market_data import get_barchart_live_option_leg_data
+                    info = get_ticker_info(t.ticker)
+                    if info and info.get('current_price'):
+                        cp = float(info['current_price'])
+                        current_price = f"${cp:.2f}"
+                        
+                        # Format legs for options_math
+                        legs_for_math = []
+                        # Total trade open cost:
+                        open_tx = next((tx for tx in t.transactions if tx.action == "Open"), None)
+                        # Since we don't have individual leg prices stored, we divide the total cost by the number of legs as a rough approximation,
+                        # or just assign the entire cost to one leg and 0 to others so the total sums correctly.
+                        # Here we assign cost/num_legs to each leg to preserve the correct total net cost.
+                        cost_per_leg = open_tx.price / len(t.legs) if open_tx and t.legs else 0.0
+                        
+                        for leg in t.legs:
+                            price = leg.price
+                            iv = leg.iv
+                            expiry_str = pd.to_datetime(leg.expiry).strftime('%Y-%m-%d')
+                            leg_data = get_barchart_live_option_leg_data(t.ticker, expiry_str, leg.strike, leg.option_type)
+                            if leg_data:
+                                bid = leg_data.get('bid', 0.0)
+                                ask = leg_data.get('ask', 0.0)
                                 
-                            iv = leg_data.get('impliedVolatility', 0.0) * 100
-
+                                if leg.position == "Sell" and bid > 0:
+                                    price = bid
+                                elif leg.position == "Buy" and ask > 0:
+                                    price = ask
+                                else:
+                                    price = leg_data.get('lastPrice', price)
+                                    
+                                iv = leg_data.get('impliedVolatility', 0.0) * 100
+    
+                            legs_for_math.append({
+                                "action": leg.position,
+                                "qty": leg.quantity if leg.quantity else 1,
+                                "type": leg.option_type,
+                                "strike": leg.strike,
+                                "price": price,
+                                "expiry": pd.to_datetime(leg.expiry),
+                                "iv": iv
+                            })
+                            
+                        metrics = calculate_metrics(legs_for_math, cp)
+                        bes = metrics.get('breakevens', [])
+                        if bes:
+                            breakevens = ", ".join([f"&#36;{b:.2f}" for b in bes])
+                except Exception as e:
+                    pass
+            else:
+                close_tx = next((tx for tx in t.transactions if tx.action != "Open"), None)
+                if close_tx:
+                    if close_tx.price < 0:
+                        current_price = f"-${abs(close_tx.price):.2f}"
+                    else:
+                        current_price = f"${close_tx.price:.2f}"
+                else:
+                    current_price = "N/A"
+                
+                try:
+                    from src.options_math import calculate_metrics
+                    legs_for_math = []
+                    for leg in t.legs:
                         legs_for_math.append({
                             "action": leg.position,
-                            "qty": 1, # approx
+                            "qty": leg.quantity if leg.quantity else 1,
                             "type": leg.option_type,
                             "strike": leg.strike,
-                            "price": price,
+                            "price": float(leg.price),
                             "expiry": pd.to_datetime(leg.expiry),
-                            "iv": iv
+                            "iv": float(leg.iv)
                         })
-                        
+                    cp = t.underlying_price_at_open if t.underlying_price_at_open else (t.legs[0].strike if t.legs else 100.0)
                     metrics = calculate_metrics(legs_for_math, cp)
                     bes = metrics.get('breakevens', [])
                     if bes:
                         breakevens = ", ".join([f"&#36;{b:.2f}" for b in bes])
-            except Exception as e:
-                pass
+                except Exception as e:
+                    pass
                 
             trade_data_list.append({
                 "t": t,
@@ -299,7 +328,7 @@ if trades:
             for leg in t.legs:
                 legs_df.append({
                     "Action": leg.position,
-                    "Quantity": 1,
+                    "Quantity": leg.quantity if leg.quantity else 1,
                     "Type": leg.option_type,
                     "Strike": f"${leg.strike:.2f}",
                     "Price": f"${leg.price:.3f}",
@@ -322,7 +351,7 @@ if trades:
             # Current stats from metrics dictionary calculated earlier
             curr_up = current_price
             
-            if metrics:
+            if t.status == "Open" and metrics:
                 curr_pop = f"{metrics.get('pop', 0)*100:.1f}%"
                 curr_pol = f"{metrics.get('pol', 0)*100:.1f}%"
                 curr_pmp = f"{metrics.get('pop_max_profit', 0)*100:.1f}%"
@@ -347,7 +376,11 @@ if trades:
                         return None
                 return None
                 
-            comp_cols[0].metric("Underlying Price", curr_up, delta=safe_delta(curr_up, open_up, True))
+            if t.status == "Open":
+                comp_cols[0].metric("Underlying Price", curr_up, delta=safe_delta(curr_up, open_up, True))
+            else:
+                comp_cols[0].metric("Closing Price", curr_up)
+                
             comp_cols[1].metric("Probability of Profit", curr_pop, delta=safe_delta(curr_pop, open_pop))
             comp_cols[2].metric("Probability of Loss", curr_pol, delta=safe_delta(curr_pol, open_pol, inverse=True), delta_color="inverse")
             comp_cols[3].metric("Prob. of Max Profit", curr_pmp, delta=safe_delta(curr_pmp, open_pmp))

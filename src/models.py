@@ -50,6 +50,7 @@ class Leg(Base):
     expiry = Column(Date, nullable=False)
     option_type = Column(String(10), nullable=False) # 'Call' or 'Put'
     position = Column(String(10), nullable=False) # 'Long' or 'Short'
+    quantity = Column(Integer, default=1)
     price = Column(Numeric(10, 3))
     delta = Column(Numeric(10, 4))
     iv = Column(Numeric(10, 4))

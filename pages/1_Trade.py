@@ -34,6 +34,7 @@ if "edit_trade_id" in st.session_state and st.session_state.edit_trade_id:
         st.session_state["num_legs"] = len(trade_to_edit.legs) or 2
         for i, leg in enumerate(trade_to_edit.legs):
             st.session_state[f"action_val_{i}"] = leg.position
+            st.session_state[f"qty_{i}"] = leg.quantity if leg.quantity else 1
             st.session_state[f"type_val_{i}"] = leg.option_type
             st.session_state[f"strike_{i}"] = leg.strike
             st.session_state[f"price_{i}"] = float(leg.price)
@@ -59,8 +60,18 @@ with col1:
         
         current_price = st.number_input("Underlying Price", value=float(info['current_price']) if info.get('current_price') else 1151.38, format="%.2f")
         
-        strat_options = ["Bull put spread", "Bear call spread", "Iron condor", "Long call", "Long put", "Custom"]
-        def_strat = st.session_state.get("strategy_val", "Bull put spread")
+        strat_options = [
+            "Bull Put Spread (credit)",
+            "Bear Call Spread (credit)",
+            "Iron Condor (debit)",
+            "Short Iron Condor (credit)",
+            "Long Call (debit)",
+            "Long Put (debit)",
+            "Covered Call (credit)",
+            "Cash-Secured Put (credit)",
+            "Custom"
+        ]
+        def_strat = st.session_state.get("strategy_val", "Bull Put Spread (credit)")
         strat_idx = strat_options.index(def_strat) if def_strat in strat_options else 0
         strategy_type = st.selectbox("Strategy Type", strat_options, index=strat_idx)
 
@@ -382,6 +393,7 @@ if ticker and current_price > 0:
                 expiry=leg['expiry'],
                 option_type=leg['type'],
                 position=leg['action'],
+                quantity=leg['qty'],
                 price=float(leg['price']),
                 delta=float(leg['delta']),
                 iv=float(leg['iv'])

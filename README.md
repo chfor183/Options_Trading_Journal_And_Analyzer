@@ -6,6 +6,8 @@ A local, Python-based web application built with Streamlit to track, journal, an
 
 - **Portfolio Management**: Create, switch between, and delete multiple distinct portfolios. Trades, journal entries, and dashboards are dynamically filtered based on the active portfolio.
 - **Strategy Builder**: Construct multi-leg options strategies (up to 8 legs).
+  - Comprehensive strategy classification with explicit Debit/Credit designations (e.g., *Bull Put Spread (credit)*, *Iron Condor (debit)*).
+  - Flexible, accurate contract quantity sizing per leg.
 - **Interactive UI**: Custom styled toggle buttons for "Buy/Sell" and "Call/Put" to easily build spreads, condors, butterflies, etc.
 - **Payoff Visualization**: Generates interactive Plotly charts showing the expected profit and loss at expiration across varying underlying prices.
 - **Advanced Metrics**: 
@@ -25,12 +27,15 @@ A local, Python-based web application built with Streamlit to track, journal, an
   - Save trades to a local PostgreSQL database (`finance` schema).
   - View trades with pagination, sorting, and dynamic filtering (Ticker, Date, Status, Strategy).
   - Bulk management with "Select All Filtered", "Deselect All", and bulk delete functionality.
+  - Performance-optimized data fetching (bypasses live API calls for closed trades).
   - Live "Current Price", "Break-Even", and real-time Probability metrics comparison to monitor active trades.
-- **Dashboard**: Advanced performance analytics based on actual closed and open trades.
+  - Responsive table layout handling large dollar amounts seamlessly.
+- **Dashboard & Analytics**: Advanced performance analytics based on actual closed and open trades.
   - Interactive cumulative Net PnL equity curve over time.
   - Key Aggregate Metrics: Win Rate, Average Win/Loss, Net PnL, Total Commission, Premium Collected vs Paid.
   - Filterable by Date Interval (Last 7 days, 3 Months, YTD, etc.) and Trade Status.
   - Detailed grouped breakdowns by Strategy, Category, Expected Move, and dynamic DTE (Days to Expiration) ranges.
+- **PDF Export**: Instantly generate and download multi-page PDF performance reports summarizing your filtered trading statistics and individual trade logs, complete with responsive column layouts and automatic pagination.
 
 ## Tech Stack
 
@@ -54,7 +59,9 @@ finance/
 │   ├── 1_Trade.py          # Trade entry, editing, and payoff chart
 │   ├── 2_Journal.py        # Ledger of saved trades (pagination, filters, bulk delete)
 │   ├── 3_Dashboard.py      # High-level performance metrics
-│   └── 4_Close Trade.py    # Hidden navigation tab for executing closing transactions
+│   ├── 4_Close Trade.py    # Hidden navigation tab for executing closing transactions
+│   ├── 5_Research.py       # Market research tools and data integration
+│   └── 6_Export.py         # Dynamic PDF Report generation and downloading
 └── src/
     ├── db.py               # Database connection, finance schema setup, and session management
     ├── market_data.py      # yfinance API wrappers
