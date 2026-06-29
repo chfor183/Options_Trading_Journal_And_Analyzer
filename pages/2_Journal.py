@@ -35,12 +35,15 @@ if trades:
         </style>
     """, unsafe_allow_html=True)
     
+    def reset_page():
+        st.session_state.current_page = 1
+    
     # Filtering logic
     filter_col1, filter_col2, filter_col3, filter_col4 = st.columns(4)
-    filter_ticker = filter_col1.text_input("Filter by Ticker")
+    filter_ticker = filter_col1.text_input("Filter by Ticker", on_change=reset_page)
     
     date_options = ["Last 7 days", "Last month", "Last 3 Months", "Last Year", "YTD", "All"]
-    date_filter = filter_col2.selectbox("Filter by Date", date_options, index=5)
+    date_filter = filter_col2.selectbox("Filter by Date", date_options, index=5, on_change=reset_page)
     
     today = datetime.today().date()
     if date_filter == "Last 7 days":
@@ -56,10 +59,10 @@ if trades:
     else:
         start_date = datetime.min.date()
         
-    filter_status = filter_col3.radio("Filter by Status", ["All", "Open Trades", "Closed Trades"], horizontal=True)
+    filter_status = filter_col3.radio("Filter by Status", ["All", "Open Trades", "Closed Trades"], horizontal=True, on_change=reset_page)
     
     strategy_options = ["All"] + list(set([t.strategy_type for t in trades]))
-    filter_strategy = filter_col4.selectbox("Filter by Strategy", strategy_options)
+    filter_strategy = filter_col4.selectbox("Filter by Strategy", strategy_options, on_change=reset_page)
 
     # Apply filters
     filtered_trades = trades
@@ -125,6 +128,9 @@ if trades:
     total_pages = max(1, math.ceil(len(filtered_trades) / ROWS_PER_PAGE))
     if "current_page" not in st.session_state:
         st.session_state.current_page = 1
+        
+    if st.session_state.current_page > total_pages:
+        st.session_state.current_page = total_pages
         
     start_idx = (st.session_state.current_page - 1) * ROWS_PER_PAGE
     end_idx = start_idx + ROWS_PER_PAGE
