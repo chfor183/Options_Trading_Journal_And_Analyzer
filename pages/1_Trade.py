@@ -17,6 +17,10 @@ def toggle_type(i):
 
 st.set_page_config(page_title="Trade Entry", page_icon="📝", layout="wide")
 
+# Initialize default session state values safely
+if "num_legs" not in st.session_state:
+    st.session_state["num_legs"] = 2
+
 db = SessionLocal()
 
 trade_to_edit = None
@@ -178,7 +182,7 @@ observer.observe(window.parent.document.body, {childList: true, subtree: true});
 </script>
 """, height=0, width=0)
 
-num_legs = st.number_input("Number of Legs", min_value=1, max_value=8, value=st.session_state.get("num_legs", 2), key="num_legs")
+num_legs = st.number_input("Number of Legs", min_value=1, max_value=8, key="num_legs")
 
 col_btn1, col_btn2 = st.columns([2, 10])
 if col_btn1.button("Pull Live Data for All Legs"):
@@ -242,13 +246,18 @@ for i in range(num_legs):
     action = st.session_state[f"action_val_{i}"]
     col1.button(action, key=f"action_btn_{i}", on_click=toggle_action, args=(i,), use_container_width=True)
     
-    qty = col2.number_input("Qty", min_value=1, value=1, key=f"qty_{i}", label_visibility="collapsed")
+    # Initialize session state values dynamically to prevent duplicate default values warning
+    if f"qty_{i}" not in st.session_state:
+        st.session_state[f"qty_{i}"] = 1
+    qty = col2.number_input("Qty", min_value=1, key=f"qty_{i}", label_visibility="collapsed")
     
-    default_expiry = st.session_state.get(f"expiry_{i}", datetime(2026, 7, 17))
-    expiry = col3.date_input("Expiry", value=default_expiry, key=f"expiry_input_{i}", label_visibility="collapsed")
+    if f"expiry_input_{i}" not in st.session_state:
+        st.session_state[f"expiry_input_{i}"] = st.session_state.get(f"expiry_{i}", datetime(2026, 7, 17))
+    expiry = col3.date_input("Expiry", key=f"expiry_input_{i}", label_visibility="collapsed")
     
-    default_strike = st.session_state.get(f"strike_{i}", 840.0 if i==0 else 760.0)
-    strike = col4.number_input("Strike", value=float(default_strike), step=1.0, format="%.2f", key=f"strike_input_{i}", label_visibility="collapsed")
+    if f"strike_input_{i}" not in st.session_state:
+        st.session_state[f"strike_input_{i}"] = float(st.session_state.get(f"strike_{i}", 840.0 if i==0 else 760.0))
+    strike = col4.number_input("Strike", step=1.0, format="%.2f", key=f"strike_input_{i}", label_visibility="collapsed")
     
     opt_type = st.session_state[f"type_val_{i}"]
     col5.button(opt_type, key=f"type_btn_{i}", on_click=toggle_type, args=(i,), use_container_width=True)

@@ -63,7 +63,9 @@ finance/
 │   ├── 3_Dashboard.py      # High-level performance metrics
 │   ├── 4_Close Trade.py    # Hidden navigation tab for executing closing transactions
 │   ├── 5_Research.py       # Market research tools and data integration
-│   └── 6_Export.py         # Dynamic PDF Report generation and downloading
+│   ├── 6_Export.py         # Dynamic PDF Report generation and downloading
+│   ├── 7_Framework.py      # Interactive pre-trade checklists and mindset guidelines
+│   └── 8_Strategies.py     # Responsive reference tables and setup rules
 └── src/
     ├── db.py               # Database connection, finance schema setup, and session management
     ├── market_data.py      # yfinance API wrappers
@@ -109,6 +111,14 @@ streamlit run C:\Lab\finance\Home.py
 - **DTE Categorization**: Automatically categorizes trades by Days to Expiration based on the earliest expiring leg into custom cohorts (`0 DTE`, `1-3 DTE`, `4-7 DTE`, `8-20 DTE`, `21-60 DTE`, `61-200 DTE`, `201+ DTE`).
 
 ## Recent Updates
+
+**Session Date: 2026-06-30**
+- **Trade Close Types Expansion**: Added `"Closed by stop-loss"` to the closing options types. Adjusted the Landscape PDF layout width limit for the Status column from 18 to 20 characters to ensure the longer stop-loss labels do not undergo truncation in reports.
+- **Interactive Checklists (Framework)**: Built an interactive, state-preserving, and highly responsive Investment Checklist system (`pages/7_Framework.py`) featuring automated progress bars, real-time completeness percentage calculators, expandable category panels, and robust global reset controls ("Uncheck all" callbacks).
+- **Core Guidelines & Mindset**: Fully synthesized detailed, readable analyses on Cognitive Biases (Confirmation, Loss Aversion, Recency, Anchoring, Overconfidence), the Psychology of Money, and The Intelligent Investor key takeaways.
+- **Dynamic Options Curves**: Plotted a responsive, high-performance Plotly visualization mapping the exponential curve of Option Extrinsic Value against Days to Expiration (DTE), highlighting the 30-45 DTE acceleration and the structural Theta cliff.
+- **Option Strategies Playbook**: Created an interactive Strategies deck (`pages/8_Strategies.py`) compiling quick-reference summaries and exhaustive rulesets (Stock Picking, Risk Management, Exit Triggers, Take Profits, and Follow-ups) for spreads (Bull Call, Bear Put, Bear Call, Bull Put) and Iron Condors. Designed using responsive HTML/CSS layouts with adaptive dark/light forest green headers and credit/debit indicators.
+- **Streamlit Widget Session State Resolutions**: Resolved several widget warning messages occurring in the Trade and Journal pages caused by duplicate default value overrides on session-state-bound input keys.
 
 **Session Date: 2026-06-29**
 - **Dynamic Research Hub**: Created a new compact, 3-column "Research" tab featuring dynamic URL generation for tickers (Barchart, MarketBeat, Yahoo Finance, etc.) alongside curated static links for screeners, earnings, and sentiment analysis tools.

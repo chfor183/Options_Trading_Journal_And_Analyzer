@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
 import math
-from fpdf import FPDF
+from fpdf import FPDF, XPos, YPos
 from src.db import SessionLocal
 from src.models import Trade
 
@@ -48,14 +48,14 @@ def analyze_trade(trade):
 
 class PDF(FPDF):
     def header(self):
-        self.set_font('Arial', 'B', 16)
-        self.cell(0, 8, 'Trade Report', 0, 1, 'C')
+        self.set_font('helvetica', 'B', 16)
+        self.cell(0, 8, 'Trade Report', 0, new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='C')
 
     def chapter_title(self, title):
-        self.set_font('Arial', 'B', 14)
+        self.set_font('helvetica', 'B', 14)
         # Give chapter titles a subtle dark blue color to stand out from text
         self.set_text_color(20, 50, 90)
-        self.cell(0, 10, title, 0, 1, 'L')
+        self.cell(0, 10, title, 0, new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='L')
         self.set_text_color(0, 0, 0)
         self.ln(1)
 
@@ -64,14 +64,14 @@ def generate_pdf(filtered_trades, filter_info):
     pdf.add_page()
     
     # Subtitle for Filters
-    pdf.set_font('Arial', 'I', 10)
+    pdf.set_font('helvetica', 'I', 10)
     pdf.set_text_color(100, 100, 100)
     filters_text = f"Filters Applied -> Ticker: {filter_info['Ticker']} | Date: {filter_info['Date']} | Status: {filter_info['Status']} | Strategy: {filter_info['Strategy']}"
-    pdf.cell(0, 6, filters_text, 0, 1, 'C')
+    pdf.cell(0, 6, filters_text, 0, new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='C')
     pdf.set_text_color(0, 0, 0)
     pdf.ln(5)
     
-    pdf.set_font('Arial', '', 10)
+    pdf.set_font('helvetica', '', 10)
     
     # 1. Key Metrics
     total_trades = len(filtered_trades)
@@ -141,7 +141,7 @@ def generate_pdf(filtered_trades, filter_info):
         f"Total Commission: ${total_comm:.2f}   |   Premium Collected: ${total_prem_col:.2f}   |   Premium Paid: ${total_prem_paid:.2f}\n"
         f"Net PnL: ${total_pnl:.2f}"
     )
-    pdf.set_font('Arial', '', 11)
+    pdf.set_font('helvetica', '', 11)
     # Adding a light gray fill for the metrics block
     pdf.set_fill_color(245, 245, 245)
     pdf.multi_cell(0, 8, metrics_text, fill=True)
@@ -170,26 +170,26 @@ def generate_pdf(filtered_trades, filter_info):
         cols = ["Month", "Trades", "Batting Avg", "Wins", "Losses", "Avg Win", "Avg Loss", "Total PnL"]
         widths = [30, 20, 25, 20, 20, 30, 30, 30]
         
-        pdf.set_font('Arial', 'B', 10)
+        pdf.set_font('helvetica', 'B', 10)
         for col, w in zip(cols, widths):
-            pdf.cell(w, 8, col, 1, 0, 'C')
+            pdf.cell(w, 8, col, 1, align='C')
         pdf.ln()
         
-        pdf.set_font('Arial', '', 10)
+        pdf.set_font('helvetica', '', 10)
         for _, row in grouped.iterrows():
             b_avg = (row['Wins'] / row['Trades'] * 100) if row['Trades'] > 0 else 0.0
             
-            pdf.cell(widths[0], 8, str(row['Month']), 1, 0, 'C')
-            pdf.cell(widths[1], 8, str(row['Trades']), 1, 0, 'C')
-            pdf.cell(widths[2], 8, f"{b_avg:.1f}%", 1, 0, 'C')
-            pdf.cell(widths[3], 8, str(row['Wins']), 1, 0, 'C')
-            pdf.cell(widths[4], 8, str(row['Losses']), 1, 0, 'C')
-            pdf.cell(widths[5], 8, f"${row['Avg_Win']:.2f}", 1, 0, 'C')
-            pdf.cell(widths[6], 8, f"${row['Avg_Loss']:.2f}", 1, 0, 'C')
-            pdf.cell(widths[7], 8, f"${row['Total_PnL']:.2f}", 1, 0, 'C')
+            pdf.cell(widths[0], 8, str(row['Month']), 1, align='C')
+            pdf.cell(widths[1], 8, str(row['Trades']), 1, align='C')
+            pdf.cell(widths[2], 8, f"{b_avg:.1f}%", 1, align='C')
+            pdf.cell(widths[3], 8, str(row['Wins']), 1, align='C')
+            pdf.cell(widths[4], 8, str(row['Losses']), 1, align='C')
+            pdf.cell(widths[5], 8, f"${row['Avg_Win']:.2f}", 1, align='C')
+            pdf.cell(widths[6], 8, f"${row['Avg_Loss']:.2f}", 1, align='C')
+            pdf.cell(widths[7], 8, f"${row['Total_PnL']:.2f}", 1, align='C')
             pdf.ln()
     else:
-        pdf.cell(0, 10, "No trades to display.", 0, 1)
+        pdf.cell(0, 10, "No trades to display.", 0, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
     pdf.ln(5)
     
@@ -203,11 +203,11 @@ def generate_pdf(filtered_trades, filter_info):
         widths = [15, 34, 20, 20, 45, 21, 12, 20, 23, 23, 14, 30]
         
         def print_trades_header():
-            pdf.set_font('Arial', 'B', 8)
+            pdf.set_font('helvetica', 'B', 8)
             for col, w in zip(cols, widths):
-                pdf.cell(w, 8, col, 1, 0, 'C')
+                pdf.cell(w, 8, col, 1, align='C')
             pdf.ln()
-            pdf.set_font('Arial', '', 8)
+            pdf.set_font('helvetica', '', 8)
 
         print_trades_header()
         
@@ -222,23 +222,23 @@ def generate_pdf(filtered_trades, filter_info):
                 pdf.add_page()
                 print_trades_header()
                 
-            pdf.cell(widths[0], 8, sanitize(data['Ticker'])[:8], 1, 0, 'C')
-            pdf.cell(widths[1], 8, sanitize(data['Name'])[:20], 1, 0, 'C')
-            pdf.cell(widths[2], 8, sanitize(data['Date Opened']), 1, 0, 'C')
-            pdf.cell(widths[3], 8, sanitize(data['Date Closed']), 1, 0, 'C')
-            pdf.cell(widths[4], 8, sanitize(data['Strategy'])[:26], 1, 0, 'C')
-            pdf.cell(widths[5], 8, sanitize(data['Exp. Move'])[:15], 1, 0, 'C')
-            pdf.cell(widths[6], 8, sanitize(data['Contracts']), 1, 0, 'C')
-            pdf.cell(widths[7], 8, sanitize(data['Cost']), 1, 0, 'C')
-            pdf.cell(widths[8], 8, sanitize(data['Close Price']), 1, 0, 'C')
-            pdf.cell(widths[9], 8, sanitize(data['PnL_str']), 1, 0, 'C')
-            pdf.cell(widths[10], 8, sanitize(data['Comm']), 1, 0, 'C')
-            pdf.cell(widths[11], 8, sanitize(data['Status'])[:18], 1, 0, 'C')
+            pdf.cell(widths[0], 8, sanitize(data['Ticker'])[:8], 1, align='C')
+            pdf.cell(widths[1], 8, sanitize(data['Name'])[:20], 1, align='C')
+            pdf.cell(widths[2], 8, sanitize(data['Date Opened']), 1, align='C')
+            pdf.cell(widths[3], 8, sanitize(data['Date Closed']), 1, align='C')
+            pdf.cell(widths[4], 8, sanitize(data['Strategy'])[:26], 1, align='C')
+            pdf.cell(widths[5], 8, sanitize(data['Exp. Move'])[:15], 1, align='C')
+            pdf.cell(widths[6], 8, sanitize(data['Contracts']), 1, align='C')
+            pdf.cell(widths[7], 8, sanitize(data['Cost']), 1, align='C')
+            pdf.cell(widths[8], 8, sanitize(data['Close Price']), 1, align='C')
+            pdf.cell(widths[9], 8, sanitize(data['PnL_str']), 1, align='C')
+            pdf.cell(widths[10], 8, sanitize(data['Comm']), 1, align='C')
+            pdf.cell(widths[11], 8, sanitize(data['Status'])[:20], 1, align='C')
             pdf.ln()
     else:
-        pdf.cell(0, 10, "No trades to display.", 0, 1)
+        pdf.cell(0, 10, "No trades to display.", 0, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
-    return pdf.output(dest='S')
+    return pdf.output()
 
 db = SessionLocal()
 

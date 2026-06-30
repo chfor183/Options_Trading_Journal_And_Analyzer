@@ -394,6 +394,55 @@ if trades:
             
             st.write(f"*Opening values:* Price: {open_up} | POP: {open_pop} | POL: {open_pol} | Prob Max Profit: {open_pmp} | Prob Max Loss: {open_pml}")
             
+            # --- Copyable Trade Idea Feature ---
+            st.write("**Copyable Trade Idea**")
+            
+            if t.legs:
+                first_leg = min(t.legs, key=lambda l: l.expiry)
+                days_to_expiry = (first_leg.expiry - t.date_opened.date()).days
+                if days_to_expiry <= 0:
+                    days_to_expiry = 1
+            else:
+                days_to_expiry = 30
+                
+            term = days_to_expiry / 365.0
+            ivs = [float(leg.iv) for leg in t.legs if leg.iv and float(leg.iv) > 0]
+            avg_iv = (sum(ivs) / len(ivs)) / 100.0 if ivs else 0.3
+            
+            import numpy as np
+            em_pct = avg_iv * np.sqrt(term)
+            underlying_price = t.underlying_price_at_open if t.underlying_price_at_open else 100.0
+            em_range_val = underlying_price * em_pct
+            lower_bound = underlying_price - em_range_val
+            upper_bound = underlying_price + em_range_val
+            
+            legs_formatted_list = []
+            for leg in t.legs:
+                action_str = "SELL" if leg.position in ["Short", "Sell"] else "BUY"
+                qty_prefix = "-" if leg.position in ["Short", "Sell"] else "+"
+                qty_val = leg.quantity if leg.quantity else 1
+                leg_line = f"- {action_str} {qty_prefix}{qty_val} {t.ticker} {leg.expiry.strftime('%Y-%m-%d')} {float(leg.strike):.2f} {leg.option_type} @ ${float(leg.price):.3f} (Delta: {float(leg.delta):.4f}, IV: {float(leg.iv):.2f}%)"
+                legs_formatted_list.append(leg_line)
+            legs_text = "\n".join(legs_formatted_list)
+            
+            cost_suffix = "Net Credit" if display_cost >= 0 else "Net Debit"
+            cost_str = f"${abs(display_cost):.2f} {cost_suffix}"
+            pop_str = f"{t.probability_of_profit*100:.1f}%" if t.probability_of_profit is not None else "N/A"
+            
+            idea_text = f"Ticker : {t.ticker}\n" \
+                        f"Name : {t.underlying_name or 'N/A'}\n" \
+                        f"Date Opened : {t.date_opened.strftime('%Y-%m-%d')}\n" \
+                        f"Price of underlying at opening : {f'${t.underlying_price_at_open:.2f}' if t.underlying_price_at_open else 'N/A'}\n" \
+                        f"Expected Move : ±{em_pct*100:.1f}% [{lower_bound:.2f},{upper_bound:.2f}]\n" \
+                        f"Strategy : {t.strategy_type or 'N/A'}\n" \
+                        f"Legs : \n" \
+                        f"{legs_text}\n" \
+                        f"Cost of trade : {cost_str}\n" \
+                        f"Probability of profit : {pop_str}"
+            
+            st.code(idea_text, language="text")
+            # ------------------------------------
+            
             if t.idea_url:
                 st.write(f"**Idea URL:** [{t.idea_url}]({t.idea_url})")
             

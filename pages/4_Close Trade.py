@@ -96,6 +96,7 @@ with st.form("close_trade_form"):
     close_type = fcol2.selectbox("Type of Close", [
         "Closing for profit",
         "Closing for loss",
+        "Closed by stop-loss",
         "Rolling",
         "Expired",
         "Closed by broker"
