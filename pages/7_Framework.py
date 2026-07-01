@@ -5,9 +5,9 @@ import plotly.graph_objects as go
 st.set_page_config(page_title="Investment Framework", page_icon="🧠", layout="wide")
 st.title("🧠 Investment Framework")
 
-tabs = st.tabs(["📋 Checklists", "💰 Allocation & Notes", "📈 Options Theory", "⚖️ Rules & Mindset", "🧠 Psychology & Takeaways"])
+tabs = st.tabs(["💰 Allocation & Notes", "⚖️ Rules & Mindset", "🧠 Psychology & Takeaways", "📋 Analysis Checklists"])
 
-with tabs[0]:
+with tabs[3]:
     st.subheader("🔍 Interactive Investment Checklists")
     st.write("Use these interactive, state-perserving checklists to audit trade setups before committing capital.")
     
@@ -46,7 +46,7 @@ with tabs[0]:
             etf_breadth = st.checkbox("Market Breadth (% of stocks above 50/200 SMA) checked", key="etf_breadth")
             etf_seas = st.checkbox("Historical monthly/quarterly Seasonality checked", key="etf_seas")
             
-            with st.expander("📅 Key Macro Catalyst Schedule", expanded=False):
+            with st.expander("📅 Key Macro Catalyst Schedule", expanded=True):
                 etf_fomc = st.checkbox("FOMC Meetings & Interest Rate decisions checked", key="etf_fomc")
                 etf_cpi = st.checkbox("Inflation (CPI/PCI US) & economic calendar schedule checked", key="etf_cpi")
                 etf_unemp = st.checkbox("Unemployment rates & Jobs report timeline checked", key="etf_unemp")
@@ -97,7 +97,7 @@ with tabs[0]:
             st.progress(progress_pct2)
             st.metric("Company Checklist Score", f"{comp_score} / {comp_total}", delta=f"{int(progress_pct2*100)}% Complete")
 
-with tabs[1]:
+with tabs[0]:
     st.subheader("💵 Portfolio & Capital Allocation")
     
     st.markdown("""
@@ -119,107 +119,7 @@ with tabs[1]:
     - **Note 4 : ⚠️ POSITION SIZING is the ultimate key to survival in the markets!** Never risk too much on any single trade or ticker.
     """)
 
-with tabs[2]:
-    st.subheader("📈 Options Pricing & Theta Decay")
-    
-    col1, col2 = st.columns([1, 1.2])
-    
-    with col1:
-        st.markdown("### ⏳ Intrinsic vs. Extrinsic Value")
-        st.markdown("""
-        Every option premium is made of two components:
-        $$\\text{Total Premium} = \\text{Intrinsic Value} + \\text{Extrinsic Value}$$
-
-        - **Intrinsic Value (Real value):** The amount by which an option is in-the-money.
-          - For a Call: $\\max(0, S - K)$
-          - For a Put: $\\max(0, K - S)$
-        - **Extrinsic Value (Time & Volatility value):** The "hope" premium that decays towards zero as expiration approaches. Represented by Theta ($\\theta$).
-
-        #### ⚡ Core Pricing Concepts
-        - **Credit Strategies = Farming Extrinsic Value:** Selling premium to capture the natural decay of extrinsic value (time value erosion).
-        - **Debit Strategies = Intrinsic Value plays:** Buying deep-in-the-money options to gain high-delta exposure with minimal extrinsic premium decay.
-        """)
-        
-        st.markdown("#### 🎯 Option Moneyness Profiles")
-        st.markdown("""
-        | Moneyness | Delta Range | Risk Profile |
-        | :--- | :--- | :--- |
-        | **Out of The Money (OTM)** | **$10 - 30$ Delta** | Low risk to **SELL** |
-        | **At The Money (ATM)** | **$40 - 60$ Delta** | High risk to buy or sell |
-        | **In The Money (ITM)** | **$70 - 90$ Delta** | Low risk to **BUY** |
-        """)
-        
-    with col2:
-        st.markdown("### 📉 The Theta Decay Curve")
-        
-        # In the user's diagram, x is Time Remaining (DTE) from 120 Days down to 0 Days (reversing right to left is not standard;
-        # let's map the x-axis values cleanly to match the exact visual shape in the image).
-        # In the image, y is "Percent of Premium Remaining" (from 0% to 100%).
-        # x is "Time Remaining Until Expiration Date" from 120 Days (at 100% premium on the left) 
-        # down to 0 Days (at 0% premium on the right).
-        # The slope is flat at 120 days and falls off a steep cliff into 0 days, curving down and to the right!
-        # Curve function: y = 100 * sqrt(x / 120) fits the exact profile of the provided graph!
-        # Let's verify:
-        # At x = 120: y = 100 * sqrt(1) = 100%
-        # At x = 90:  y = 100 * sqrt(90/120) = 86.6%
-        # At x = 60:  y = 100 * sqrt(60/120) = 70.7%
-        # At x = 30:  y = 100 * sqrt(30/120) = 50.0%
-        # At x = 0:   y = 0%
-        # This matches the curve in the diagram exactly (y is around 85% at 90 days, 70% at 60 days, 50% at 30 days, 100% at 120 days).
-        
-        # To make the curve even more dramatic (flatter at 120-90, then collapsing down even steeper at the end):
-        # We can use: y = 100 * (x / 120) ** 0.45 or similar power fraction.
-        # Let's use y = 100 * (x / 120) ** 0.42. 
-        # This will hold a higher value early on (e.g. at 90 days, it is 88.6%, at 60 days, it is 74.7%, but collapses sharply below 30 days).
-        t_days = np.linspace(120, 0, 200)
-        ext_val = 100 * (t_days / 120) ** 0.42
-        
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=t_days, 
-            y=ext_val, 
-            mode='lines', 
-            fill='tozeroy',
-            fillcolor='rgba(255, 75, 75, 0.08)',
-            line=dict(color='#ff4b4b', width=4.5),
-            name='Extrinsic Premium'
-        ))
-        
-        fig.update_layout(
-            title="Option Extrinsic Value vs. Days to Expiration (DTE)",
-            xaxis_title="Time Remaining Until Expiration Date (Days)",
-            yaxis_title="Percent of Premium Remaining (%)",
-            xaxis=dict(
-                autorange="reversed",  # 120 on the left, 0 on the right
-                gridcolor='rgba(128,128,128,0.15)',
-                tickvals=[120, 90, 60, 30, 0],
-                ticktext=["120 Days", "90 Days", "60 Days", "30 Days", "0 Days"]
-            ),
-            yaxis=dict(
-                gridcolor='rgba(128,128,128,0.15)',
-                range=[0, 105],
-                tickvals=[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
-                ticktext=["0%", "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%"]
-            ),
-            plot_bgcolor='rgba(0,0,0,0)',
-            height=380,
-            margin=dict(l=20, r=20, t=40, b=20)
-        )
-        
-        # Gridlines matching the image divisions (120, 90, 60, 30)
-        for val in [90, 60, 30]:
-            fig.add_vline(x=val, line_dash="solid", line_color="rgba(128,128,128,0.25)", line_width=1)
-            
-        # Add labels matching the annotations in the picture.
-        fig.add_annotation(x=105, y=96, text="120 to 90 Days<br>(Least impact)", showarrow=True, arrowhead=1, arrowcolor="#0066cc", font=dict(size=9))
-        fig.add_annotation(x=75, y=86, text="90 to 60 Days<br>(Slightly greater)", showarrow=True, arrowhead=1, arrowcolor="#0066cc", font=dict(size=9))
-        fig.add_annotation(x=45, y=73, text="60 to 30 Days<br>(Greater still)", showarrow=True, arrowhead=1, arrowcolor="#0066cc", font=dict(size=9))
-        fig.add_annotation(x=15, y=48, text="Under 30 Days<br>(Most rapid)", showarrow=True, arrowhead=1, arrowcolor="#0066cc", font=dict(size=9), ax=30, ay=-50)
-        
-        st.plotly_chart(fig, use_container_width=True)
-        st.caption("Notice how extrinsic value decays exponentially. As an option seller, the sweet spot to capture the premium acceleration is around 30 to 45 DTE.")
-
-with tabs[3]:
+with tabs[1]:
     st.subheader("⚖️ Rules & Mindset")
     
     col_r1, col_r2 = st.columns(2)
@@ -241,7 +141,7 @@ with tabs[3]:
                 st.markdown("""
                 * **When in doubt, test.** Put the strategy in a paper account or run backtests first.
                 * **Look at what most people know to search for consensus.** Contrast general consensus with institutional flow.
-                * **SIMPLE IS ALWAYS BETTER (FIRST PRINCIPLES).** Avoid overly complex multi-tier adjustments; focus on liquidity, trend, and position sizing.
+                * **Simple is always better (first principles).** Avoid overly complex multi-tier adjustments; focus on liquidity, trend, and position sizing.
                 * **Always be objective about the market and companies.** Block out emotional bias; charts and books do not care about your beliefs.
                 * **Don't lose money (proper risk management).** Preserve capital first; performance yields will compound naturally.
                 * **Follow trends, price action, mean reversal, and gap fills.** Trade the actual market setup in front of you, not the hypothetical scenario you want.
@@ -262,7 +162,7 @@ with tabs[3]:
               - Adverse regulatory news, poor corporate performance, black swan disruptions, panic speculation, momentum trends, institutional dark pool liquidation, and emotional FOMO unwinding.
             """)
 
-with tabs[4]:
+with tabs[2]:
     st.subheader("🧠 Psychology & Key Takeaways")
     
     col_p1, col_p2 = st.columns(2)

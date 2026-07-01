@@ -66,6 +66,7 @@ with col2:
     with st.container(border=True):
         st.markdown('<div class="compact-header">🛠️ Tools</div>', unsafe_allow_html=True)
         st.markdown("<div class='link-item'><a href='https://simplywall.st/dashboard' target='_blank' style='text-decoration: none;'>🔗 Simply Wall St</a></div>", unsafe_allow_html=True)
+        st.markdown("<div class='link-item'><a href='https://streetstats.finance/' target='_blank' style='text-decoration: none;'>🔗 StreetStats</a></div>", unsafe_allow_html=True)
         st.markdown("<div class='link-item'><a href='https://optionstrat.com/' target='_blank' style='text-decoration: none;'>🔗 OptionStrat</a></div>", unsafe_allow_html=True)
         st.markdown("<div class='link-item'><a href='https://www.optionsprofitcalculator.com/' target='_blank' style='text-decoration: none;'>🔗 Options Profit Calculator</a></div>", unsafe_allow_html=True)
         st.markdown("<div class='link-item'><a href='https://www.dataroma.com/m/home.php' target='_blank' style='text-decoration: none;'>🔗 Dataroma</a></div>", unsafe_allow_html=True)
