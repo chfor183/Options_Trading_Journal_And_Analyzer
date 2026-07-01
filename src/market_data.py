@@ -1,6 +1,8 @@
+import streamlit as st
 import yfinance as yf
 import pandas as pd
 
+@st.cache_data(ttl=300)
 def get_ticker_info(ticker_symbol: str) -> dict:
     try:
         ticker = yf.Ticker(ticker_symbol)
@@ -13,14 +15,13 @@ def get_ticker_info(ticker_symbol: str) -> dict:
     except Exception as e:
         return {"name": "", "category": "", "current_price": 0.0}
 
+@st.cache_data(ttl=600)
 def get_options_chains(ticker_symbol: str):
     try:
         ticker = yf.Ticker(ticker_symbol)
         return ticker.options
     except Exception as e:
         return []
-
-import streamlit as st
 
 @st.cache_data(ttl=300)
 def get_option_chain_for_date(ticker_symbol: str, date: str):

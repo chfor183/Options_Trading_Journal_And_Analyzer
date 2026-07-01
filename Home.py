@@ -1,3 +1,12 @@
+import sys
+import asyncio
+import warnings
+
+if sys.platform == 'win32':
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 import streamlit as st
 from src.db import init_db, SessionLocal
 from src.models import Portfolio

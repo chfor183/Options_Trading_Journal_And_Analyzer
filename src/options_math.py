@@ -54,13 +54,8 @@ def generate_payoff_chart(legs, current_price, ticker=""):
         # Default fallback to strikes if no breakeven crossings are found
         lower_bound = max(0.0, min_strike * 0.8)
         upper_bound = max_strike * 1.2
-        
-    spot_prices = np.linspace(lower_bound, upper_bound, 1000)
-    
-    total_payoff = calculate_payoff_array(legs, spot_prices)
-    
-    fig = go.Figure()
 
+    # Calculate Expected Move range beforehand so we can use it for boundaries
     try:
         days_to_expiry = (pd.to_datetime(legs[0]['expiry']) - pd.Timestamp.now().normalize()).days
         if days_to_expiry <= 0: days_to_expiry = 1
@@ -75,6 +70,16 @@ def generate_payoff_chart(legs, current_price, ticker=""):
     expected_move = current_price * iv * np.sqrt(t)
     em_lower = current_price - expected_move
     em_upper = current_price + expected_move
+
+    # Ensure boundaries cover both current price and +/- 1 SD expected move
+    lower_bound = min(lower_bound, current_price * 0.95, em_lower * 0.95)
+    upper_bound = max(upper_bound, current_price * 1.05, em_upper * 1.05)
+        
+    spot_prices = np.linspace(lower_bound, upper_bound, 1000)
+    
+    total_payoff = calculate_payoff_array(legs, spot_prices)
+    
+    fig = go.Figure()
 
     # Add Expected Move range with a premium semi-transparent blue
     fig.add_vrect(
@@ -116,28 +121,48 @@ def generate_payoff_chart(legs, current_price, ticker=""):
         name='Loss'
     ))
     
+    # Find breakeven crossings for annotations
+    zero_crossings = np.where(np.diff(np.sign(total_payoff)))[0]
+    bes_list = [spot_prices[zc] for zc in zero_crossings]
+    
+    # Determine default anchor alignments based on relation to breakeven points
+    cp_anchor = "left"
+    be_anchor = "right"
+    if bes_list:
+        avg_be = np.mean(bes_list)
+        if current_price < avg_be:
+            cp_anchor = "right"
+            be_anchor = "left"
+        else:
+            cp_anchor = "left"
+            be_anchor = "right"
+
     fig.add_vline(x=current_price, line_dash="dot", line_color="#0066cc")
     # Annotate current price at the top of the chart to prevent overlap
     fig.add_annotation(
         x=current_price, y=0.85, yref="paper",
         text=f"<b>Current Price: {current_price:.2f}</b>", 
         textangle=90, showarrow=False, 
-        xanchor="left", yanchor="middle",
+        xanchor=cp_anchor, yanchor="middle",
         font=dict(size=12, color="#3b82f6", weight="bold"), # Bigger, bolder font matching theme
         bgcolor="rgba(15, 23, 42, 0.95)", # Highly opaque background
         bordercolor="#3b82f6", borderwidth=1.5, borderpad=5
     )
     
     # Breakevens annotated at the bottom of the chart
-    zero_crossings = np.where(np.diff(np.sign(total_payoff)))[0]
-    for i_zc, zc in enumerate(zero_crossings):
-        be_price = spot_prices[zc]
+    for i_zc, be_price in enumerate(bes_list):
         fig.add_vline(x=be_price, line_dash="dot", line_color="red")
+        
+        # Determine specific anchor per breakeven if there are multiple, or fall back to general rule
+        specific_be_anchor = be_anchor
+        if len(bes_list) > 1:
+            specific_be_anchor = "right" if be_price < current_price else "left"
+            
         fig.add_annotation(
             x=be_price, y=0.15 + (i_zc * 0.1), yref="paper",
             text=f"<b>Breakeven: {be_price:.2f}</b>", 
             textangle=90, showarrow=False, 
-            xanchor="right", yanchor="middle",
+            xanchor=specific_be_anchor, yanchor="middle",
             font=dict(size=12, color="#ef4444", weight="bold"), # Bigger, bolder red font
             bgcolor="rgba(15, 23, 42, 0.95)", # Highly opaque background
             bordercolor="#ef4444", borderwidth=1.5, borderpad=5
