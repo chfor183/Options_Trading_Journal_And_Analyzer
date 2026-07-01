@@ -26,11 +26,24 @@ if trades:
     
     st.write("### All Trades")
     
-    # Custom CSS to prevent button text wrapping
+    # Custom CSS to prevent button text wrapping and force perfect text centering
     st.markdown("""
         <style>
         div.stButton > button {
             white-space: nowrap;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            text-align: center !important;
+            padding: 0px 4px !important;
+        }
+        div.stButton > button * {
+            display: inline-flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            text-align: center !important;
+            margin: 0 !important;
+            padding: 0 !important;
         }
         </style>
     """, unsafe_allow_html=True)
@@ -117,9 +130,9 @@ if trades:
             
     # Header row
     # Adjusting column widths so Details/Edit/Action buttons have a bit more space
-    col_widths = [0.4, 0.6, 1.1, 1.0, 1.0, 1.1, 1.0, 1.0, 0.8, 1.0, 1.0, 0.8, 0.8, 0.7, 0.9]
+    col_widths = [0.4, 0.9, 1.8, 1.0, 1.0, 1.5, 0.5, 1.0, 1.1, 1.0, 1.0, 1.3, 0.8, 0.8, 0.7, 0.9]
     cols = st.columns(col_widths)
-    headers = ["", "Ticker", "Name", "Date Opened", "Date Closed", "Strategy", "Exp. Move", "Current or Closed Price", "Break-Even", "Cost", "PnL", "Status", "Details", "Edit", "Action"]
+    headers = ["", "Ticker", "Name", "Date Opened", "Date Closed", "Strategy", "DTE", "Exp. Move", "Current or Closed Price", "Break-Even", "Cost", "PnL", "Status", "Details", "Edit", "Action"]
     for col, header in zip(cols, headers):
         col.markdown(f"<div style='text-align: left; white-space: normal; font-weight: bold; line-height: 1.2;'>{header}</div>", unsafe_allow_html=True)
     
@@ -147,6 +160,16 @@ if trades:
             # Find close date
             close_dates = [tx.date for tx in t.transactions if tx.action != "Open"]
             close_date_str = max(close_dates).strftime('%Y-%m-%d') if close_dates else "-"
+            
+            # Calculate DTE (Days to Expiry at time of opening)
+            if t.legs:
+                first_leg = min(t.legs, key=lambda l: l.expiry)
+                dte_val = (first_leg.expiry - t.date_opened.date()).days
+                if dte_val <= 0:
+                    dte_val = 1
+                dte_str = str(dte_val)
+            else:
+                dte_str = "-"
             
             pnl = 0.0
             for tx in t.transactions:
@@ -250,7 +273,8 @@ if trades:
                 "current_price": current_price,
                 "breakevens": breakevens,
                 "metrics": metrics,
-                "close_date_str": close_date_str
+                "close_date_str": close_date_str,
+                "dte_str": dte_str
             })
 
     for item in trade_data_list:
@@ -261,6 +285,7 @@ if trades:
         breakevens = item["breakevens"]
         metrics = item["metrics"]
         close_date_str = item["close_date_str"]
+        dte_str = item["dte_str"]
         
         cols = st.columns(col_widths)
         
@@ -286,38 +311,39 @@ if trades:
         cols[3].markdown(f"<div style='text-align: left;'>{t.date_opened.strftime('%Y-%m-%d')}</div>", unsafe_allow_html=True)
         cols[4].markdown(f"<div style='text-align: left;'>{close_date_str}</div>", unsafe_allow_html=True)
         cols[5].markdown(f"<div style='text-align: left;'>{t.strategy_type}</div>", unsafe_allow_html=True)
-        cols[6].markdown(f"<div style='text-align: left;'>{t.expected_move}</div>", unsafe_allow_html=True)
-        cols[7].markdown(f"<div style='text-align: left;'>{current_price}</div>", unsafe_allow_html=True)
-        cols[8].markdown(f"<div style='text-align: left;'>{breakevens}</div>", unsafe_allow_html=True)
-        cols[9].markdown(f"<div style='text-align: left;'>${display_cost:.2f}</div>", unsafe_allow_html=True)
+        cols[6].markdown(f"<div style='text-align: left;'>{dte_str}</div>", unsafe_allow_html=True)
+        cols[7].markdown(f"<div style='text-align: left;'>{t.expected_move}</div>", unsafe_allow_html=True)
+        cols[8].markdown(f"<div style='text-align: left;'>{current_price}</div>", unsafe_allow_html=True)
+        cols[9].markdown(f"<div style='text-align: left;'>{breakevens}</div>", unsafe_allow_html=True)
+        cols[10].markdown(f"<div style='text-align: left;'>${display_cost:.2f}</div>", unsafe_allow_html=True)
         
         color = "green" if pnl > 0 else "red" if pnl < 0 else "inherit"
-        cols[10].markdown(f"<div style='text-align: left; color: {color};'>${pnl:.2f}</div>", unsafe_allow_html=True)
+        cols[11].markdown(f"<div style='text-align: left; color: {color};'>${pnl:.2f}</div>", unsafe_allow_html=True)
         
-        cols[11].markdown(f"<div style='text-align: left;'>{t.status}</div>", unsafe_allow_html=True)
+        cols[12].markdown(f"<div style='text-align: left;'>{t.status}</div>", unsafe_allow_html=True)
         
         # Initialize details visibility state
         if "expanded_trade_id" not in st.session_state:
             st.session_state.expanded_trade_id = None
             
-        if cols[12].button("Details", key=f"details_btn_{t.id}"):
+        if cols[13].button("Details", key=f"details_btn_{t.id}", use_container_width=True):
             if st.session_state.expanded_trade_id == t.id:
                 st.session_state.expanded_trade_id = None
             else:
                 st.session_state.expanded_trade_id = t.id
             st.rerun()
         
-        if cols[13].button("Edit", key=f"edit_{t.id}"):
+        if cols[14].button("Edit", key=f"edit_{t.id}", use_container_width=True):
             st.session_state.edit_trade_id = t.id
             st.session_state[f"loaded_{t.id}"] = False
             st.switch_page("pages/1_Trade.py")
             
         if t.status == "Open":
-            if cols[14].button("Close", key=f"close_{t.id}"):
+            if cols[15].button("Close", key=f"close_{t.id}", use_container_width=True):
                 st.session_state.close_trade_id = t.id
                 st.switch_page("pages/4_Close Trade.py")
         else:
-            if cols[14].button("Reopen", key=f"reopen_{t.id}"):
+            if cols[15].button("Reopen", key=f"reopen_{t.id}", use_container_width=True):
                 trade_to_reopen = db.query(Trade).filter(Trade.id == t.id).first()
                 if trade_to_reopen:
                     trade_to_reopen.status = "Open"
@@ -432,7 +458,8 @@ if trades:
             cost_str = f"${abs(display_cost):.2f} {cost_suffix}"
             pop_str = f"{t.probability_of_profit*100:.1f}%" if t.probability_of_profit is not None else "N/A"
             
-            idea_text = f"Ticker : {t.ticker}\n" \
+            idea_text = f"{t.ticker} - {t.strategy_type or 'N/A'} ({days_to_expiry} DTE) @ {cost_str} [POP: {pop_str}]\n" \
+                        f"Ticker : {t.ticker}\n" \
                         f"Name : {t.underlying_name or 'N/A'}\n" \
                         f"Date Opened : {t.date_opened.strftime('%Y-%m-%d')}\n" \
                         f"Price of underlying at opening : {f'${t.underlying_price_at_open:.2f}' if t.underlying_price_at_open else 'N/A'}\n" \

@@ -113,6 +113,19 @@ streamlit run C:\Lab\finance\Home.py
 ## Recent Updates
 
 **Session Date: 2026-07-01**
+- **Option Strategies Playbook & Interactive Explorer Overhaul**:
+  - **Dynamic Multi-Button Selector**: Replaced the previous `st.selectbox` strategy detail dropdown with an intuitive, interactive, and high-density horizontal 10-button selector organized into distinct category rows (Row 1 for **Debit Strategies**, Row 2 for **Credit Strategies**).
+  - **Active State Highlights**: Styled the selected active button to explicitly render in **Forest Green** (`#2e7d32`) with custom hover, active, and focus background animations, contrasting beautifully against secondary gray option buttons.
+  - **Symmetrical Covered Call Curve**: Overhauled the mathematical model for **Covered Call [Credit]** so it is a mirrored, synthetically identical equivalent to the **Cash-Secured Put [Credit]** but with its profit zone oriented properly to the left.
+  - **Premium Buyer Disadvantage Visualizer**: Adjusted the payoff bounds and formulas for both the **Bull Call Spread [Debit]** and **Bear Put Spread [Debit]** graphs to represent premium drag. The current price line now aligns flawlessly with the exact max loss pivot point of the expiration curve, clearly communicating that debit premium buyers start with a minor structural deficit.
+  - **Column Swap in Summary**: Swapped the columns inside the *Strategies Summary* markdown grid, moving **Strategy** to the first column position and **Category** to the second column position to emphasize action-oriented learning.
+  - **Deprecation Cleanups**: Replaced all 11 instances of the deprecated `use_container_width=True` with `width='stretch'` for the Plotly charts and `st.dataframe` to future-proof the application against upcoming Streamlit releases.
+- **Trading Journal Layout & Usability Improvements**:
+  - **DTE Column**: Added a dedicated **DTE** (Days to Expiry) column to the Trading Journal main table immediately following the **Strategy** column, allowing quick sorting and identification of trade lifespans at a glance.
+  - **Column Width Optimization**: Adjusted and expanded the overall journal table layout to make better use of widescreen layouts. Optimized columns specifically to increase breathing room for **Ticker** (+50%), **Strategy** (+36%), **PnL** (+62%), and **Name** (+63%) to prevent text overlapping and wrap-around.
+  - **Button Centering & Flexbox Styling**: Addressed an alignment issue where the text on actions buttons ("Details", "Edit", "Close", "Reopen") appeared off-center. Configured explicit CSS flex centering rules (`display: flex !important; justify-content: center !important;`) applied down the button hierarchy to ensure perfect text positioning.
+- **Copyable Trade Idea Refinements**:
+  - Overhauled the header line of the **Copyable Trade Idea** raw text output block to act as a highly informative, clean title structured as `[Ticker] - [Strategy Type] ([DTE] DTE) @ [Cost/Premium] [POP: [Probability of Profit]]` without any redundant `"Title :"` prefixes. This ensures the output can be cleanly shared with other tools/users immediately with all necessary high-density parameters intact.
 - **OCR Tutorial Modals**:
   - Overhauled the manual OCR help system, replacing the hover tooltips with Streamlit's native `@st.dialog` closable modal views for both the Multi-Leg Strategy extractor and the Single Contract Details extractor.
   - Implemented sleek "❓" help triggers that trigger centered modal overlays displaying high-fidelity screenshot tutorial guides (`Multileg_tutorial.png` and `Singleleg_tutorial.png`) paired with step-by-step usage workflows.

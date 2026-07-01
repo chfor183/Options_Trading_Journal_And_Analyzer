@@ -103,7 +103,7 @@ with tabs[0]:
         fig.add_annotation(x=45, y=73, text="60 to 30 Days<br>(Greater still)", showarrow=True, arrowhead=1, arrowcolor="#0066cc", font=dict(size=9))
         fig.add_annotation(x=15, y=48, text="Under 30 Days<br>(Most rapid)", showarrow=True, arrowhead=1, arrowcolor="#0066cc", font=dict(size=9), ax=30, ay=-50)
         
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
         st.caption("Notice how extrinsic value decays exponentially. As an option seller, the sweet spot to capture the premium acceleration is around 30 to 45 DTE.")
 
 with tabs[1]:
@@ -163,8 +163,8 @@ with tabs[1]:
     <table class="strategies-table">
         <thead>
             <tr>
-                <th style="width: 15%">Category</th>
                 <th style="width: 15%">Strategy</th>
+                <th style="width: 15%">Category</th>
                 <th style="width: 30%">Technique & Core Mechanics</th>
                 <th style="width: 12%">Time to Expiry</th>
                 <th style="width: 13%">Moneyness</th>
@@ -173,72 +173,72 @@ with tabs[1]:
         </thead>
         <tbody>
             <tr>
-                <td><b>Wheel Strategy</b><br><span class="badge badge-credit">Credit</span></td>
                 <td><b>Covered Call</b></td>
+                <td><b>Wheel Strategy</b><br><span class="badge badge-credit">Credit</span></td>
                 <td>Collecting premium based on probability of profit. Farming Theta decay. Looking to sell underlying at a key strike point or rolling over.</td>
                 <td>15 - 60 Days</td>
                 <td>OTM (Low delta, typically &lt;= 0.30)</td>
                 <td>Go further out in expiration (e.g., 45-60 DTE) for less maintenance work and proportional yield. You want to close your position in the underlying.</td>
             </tr>
             <tr>
-                <td><b>Wheel Strategy</b><br><span class="badge badge-credit">Credit</span></td>
                 <td><b>Cash-Secured Put</b></td>
+                <td><b>Wheel Strategy</b><br><span class="badge badge-credit">Credit</span></td>
                 <td>Collecting premium based on probability of profit. Farming Theta decay. Looking to buy underlying at a key strike point or rolling over.</td>
                 <td>15 - 60 Days</td>
                 <td>OTM (Low delta, typically &lt;= 0.30)</td>
                 <td>Go further out in expiration for less work and steady proportional yield. You want to own the underlying.</td>
             </tr>
             <tr>
-                <td><b>Credit Spread</b><br><span class="badge badge-credit">Credit</span></td>
                 <td><b>Bull Put Spread</b></td>
+                <td><b>Credit Spread</b><br><span class="badge badge-credit">Credit</span></td>
                 <td>Collecting premium based on probability of profit. Farming Theta decay. Sell outer put and buy deeper put to define risk.</td>
                 <td>15 - 60 Days</td>
                 <td>OTM (Low delta, typically &lt;= 0.25)</td>
                 <td>Go further out in expiration for less work and proportional yield if support holds.</td>
             </tr>
             <tr>
-                <td><b>Credit Spread</b><br><span class="badge badge-credit">Credit</span></td>
                 <td><b>Bear Call Spread</b></td>
+                <td><b>Credit Spread</b><br><span class="badge badge-credit">Credit</span></td>
                 <td>Collecting premium based on probability of profit. Farming Theta decay. Sell outer call and buy deeper call to define risk.</td>
                 <td>15 - 60 Days</td>
                 <td>OTM (Low delta, typically &lt;= 0.25)</td>
                 <td>Go further out in expiration for less work and proportional yield if resistance holds.</td>
             </tr>
             <tr>
-                <td><b>Debit</b><br><span class="badge badge-debit">Debit</span></td>
                 <td><b>LEAPS Call / Put</b></td>
+                <td><b>Debit</b><br><span class="badge badge-debit">Debit</span></td>
                 <td>Capitalizing on a predefined large directional move up or down. Farming intrinsic value. Reduces Theta decay drag.</td>
                 <td>6 Months - 1+ Years</td>
                 <td>Deep ITM (High delta, typically &gt;= 0.70)</td>
                 <td>Profit on move with less capital and not owning shares. Close as soon as decent profit targets are met.</td>
             </tr>
             <tr>
-                <td><b>Debit Spread</b><br><span class="badge badge-debit">Debit</span></td>
                 <td><b>Bull Call Spread</b></td>
+                <td><b>Debit Spread</b><br><span class="badge badge-debit">Debit</span></td>
                 <td>Same as LEAPS, but requires less capital and profits are capped. Buy lower call and sell higher call.</td>
                 <td>6 Months - 1+ Years</td>
                 <td>ATM or ITM (Average delta, 0.40 - 0.60)</td>
                 <td>Cheap Leaps. The short leg offsets decay but caps the maximum upside.</td>
             </tr>
             <tr>
-                <td><b>Debit Spread</b><br><span class="badge badge-debit">Debit</span></td>
                 <td><b>Bear Put Spread</b></td>
+                <td><b>Debit Spread</b><br><span class="badge badge-debit">Debit</span></td>
                 <td>Same as LEAPS, but requires less capital and profits are capped. Buy higher put and sell lower put.</td>
                 <td>6 Months - 1+ Years</td>
                 <td>ATM or ITM (Average delta, 0.40 - 0.60)</td>
                 <td>Cheap Leaps. Ideal for capturing downward moves in high-priced stocks with controlled risk.</td>
             </tr>
             <tr>
-                <td><b>High Volatility</b><br><span class="badge badge-credit">Credit</span></td>
                 <td><b>Short Iron Butterfly</b></td>
+                <td><b>High Volatility</b><br><span class="badge badge-credit">Credit</span></td>
                 <td>Maximizing premium collected based on tight price ranges. Farming Theta decay. Sell ATM Straddle and buy OTM protective wings.</td>
                 <td>15 - 60 Days</td>
                 <td>ATM Core (High ATM delta, low wing delta)</td>
                 <td>Demands a lot of attention (high maintenance). Highest risk but highest potential reward.</td>
             </tr>
             <tr>
-                <td><b>High Volatility</b><br><span class="badge badge-credit">Credit</span></td>
                 <td><b>Short Iron Condor</b></td>
+                <td><b>High Volatility</b><br><span class="badge badge-credit">Credit</span></td>
                 <td>Maximizing premium collected based on range-bound price channels. Farming Theta decay. Sell OTM Put spread and OTM Call spread.</td>
                 <td>15 - 60 Days</td>
                 <td>OTM Wings (Low delta, typically &lt;= 0.20)</td>
@@ -276,11 +276,12 @@ with tabs[2]:
             break_evens = [95]
             
         elif strategy == "Covered Call [Credit]":
-            current_price = 95
-            S = np.linspace(75, 115, 200)
-            y_expiry = (S - 95) - np.maximum(0, S - 100) + 5
-            y_t0 = (S - 95) + 5 - (np.log(1 + np.exp(0.35 * (S - 100))) / 0.35)
-            break_evens = [90]
+            K = 100
+            P = 5
+            y_expiry = -np.maximum(0, S - K) + P
+            y_t0 = P - (np.log(1 + np.exp(0.35 * (S - K))) / 0.35)
+            break_evens = [105]
+            current_price = 100
             
         elif strategy == "Cash-Secured Put [Credit]":
             K = 100
@@ -292,6 +293,7 @@ with tabs[2]:
         elif strategy == "Bull Call Spread [Debit]":
             K1, K2 = 95, 105
             D = 5
+            current_price = 95
             y_expiry = np.maximum(0, S - K1) - np.maximum(0, S - K2) - D
             y_t0 = (np.log(1 + np.exp(0.35 * (S - K1))) / 0.35) - (np.log(1 + np.exp(0.35 * (S - K2))) / 0.35) - D
             break_evens = [100]
@@ -299,6 +301,7 @@ with tabs[2]:
         elif strategy == "Bear Put Spread [Debit]":
             K1, K2 = 95, 105
             D = 5
+            current_price = 105
             y_expiry = np.maximum(0, K2 - S) - np.maximum(0, K1 - S) - D
             y_t0 = (np.log(1 + np.exp(0.35 * (K2 - S))) / 0.35) - (np.log(1 + np.exp(0.35 * (K1 - S))) / 0.35) - D
             break_evens = [100]
@@ -443,19 +446,83 @@ with tabs[2]:
         )
         return fig
 
-    # Selectbox updated with Credit/Debit tags and 4 new basic strategies
-    strat_details = st.selectbox("Select Strategy to Explore", [
+    # Group strategy list cleanly into Debit and Credit cohorts
+    debit_strategies = [
         "Long Call [Debit]",
         "Long Put [Debit]",
-        "Covered Call [Credit]",
-        "Cash-Secured Put [Credit]",
         "Bull Call Spread [Debit]",
         "Bear Put Spread [Debit]",
+        "Long Iron Condor [Debit]"
+    ]
+    
+    credit_strategies = [
+        "Covered Call [Credit]",
+        "Cash-Secured Put [Credit]",
         "Bear Call Spread [Credit]",
         "Bull Put Spread [Credit]",
-        "Short Iron Condor [Credit]",
-        "Long Iron Condor [Debit]"
-    ])
+        "Short Iron Condor [Credit]"
+    ]
+    
+    if "selected_strat_explore" not in st.session_state:
+        st.session_state.selected_strat_explore = "Long Call [Debit]"
+        
+    st.write("**Select Strategy to Explore**")
+    
+    # Render buttons in custom styled block grid
+    # Custom CSS for strategy selector button states (active/inactive)
+    # Styles the active primary button to be forest green (#2e7d32) instead of red
+    st.markdown("""
+        <style>
+        /* Force active primary buttons to be green */
+        button[data-testid="baseButton-primary"], 
+        .stButton button[kind="primary"],
+        div[data-testid="stColumn"] button[data-testid="baseButton-primary"] {
+            background-color: #2e7d32 !important;
+            color: white !important;
+            border-color: #2e7d32 !important;
+        }
+        button[data-testid="baseButton-primary"]:hover, 
+        .stButton button[kind="primary"]:hover,
+        div[data-testid="stColumn"] button[data-testid="baseButton-primary"]:hover {
+            background-color: #1b5e20 !important;
+            color: white !important;
+            border-color: #1b5e20 !important;
+        }
+        button[data-testid="baseButton-primary"]:focus,
+        button[data-testid="baseButton-primary"]:active {
+            background-color: #1b5e20 !important;
+            color: white !important;
+            border-color: #1b5e20 !important;
+            box-shadow: none !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    # We display Debit in the first row (5 columns) and Credit in the second row (5 columns)
+    st.markdown("##### 💳 Debit Strategies")
+    row1_cols = st.columns(5)
+    for idx, strat in enumerate(debit_strategies):
+        col = row1_cols[idx]
+        is_active = st.session_state.selected_strat_explore == strat
+        btn_type = "primary" if is_active else "secondary"
+        
+        if col.button(strat, key=f"strat_sel_debit_{idx}", type=btn_type, use_container_width=True):
+            st.session_state.selected_strat_explore = strat
+            st.rerun()
+            
+    st.write("")
+    st.markdown("##### 💵 Credit Strategies")
+    row2_cols = st.columns(5)
+    for idx, strat in enumerate(credit_strategies):
+        col = row2_cols[idx]
+        is_active = st.session_state.selected_strat_explore == strat
+        btn_type = "primary" if is_active else "secondary"
+        
+        if col.button(strat, key=f"strat_sel_credit_{idx}", type=btn_type, use_container_width=True):
+            st.session_state.selected_strat_explore = strat
+            st.rerun()
+            
+    strat_details = st.session_state.selected_strat_explore
     
     st.write("---")
     
@@ -477,7 +544,7 @@ with tabs[2]:
             """)
             S_data, y_exp, y_t0, curr, bes = get_payoff_data("Long Call [Debit]")
             fig = plot_payoff("Long Call [Debit]", S_data, y_exp, y_t0, curr, bes)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
             
         with col2:
             st.markdown("### 📜 Rules & Execution Guidelines")
@@ -515,7 +582,7 @@ with tabs[2]:
             """)
             S_data, y_exp, y_t0, curr, bes = get_payoff_data("Long Put [Debit]")
             fig = plot_payoff("Long Put [Debit]", S_data, y_exp, y_t0, curr, bes)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
             
         with col2:
             st.markdown("### 📜 Rules & Execution Guidelines")
@@ -552,7 +619,7 @@ with tabs[2]:
             """)
             S_data, y_exp, y_t0, curr, bes = get_payoff_data("Covered Call [Credit]")
             fig = plot_payoff("Covered Call [Credit]", S_data, y_exp, y_t0, curr, bes)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
             
         with col2:
             st.markdown("### 📜 Rules & Execution Guidelines")
@@ -589,7 +656,7 @@ with tabs[2]:
             """)
             S_data, y_exp, y_t0, curr, bes = get_payoff_data("Cash-Secured Put [Credit]")
             fig = plot_payoff("Cash-Secured Put [Credit]", S_data, y_exp, y_t0, curr, bes)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
             
         with col2:
             st.markdown("### 📜 Rules & Execution Guidelines")
@@ -625,7 +692,7 @@ with tabs[2]:
             """)
             S_data, y_exp, y_t0, curr, bes = get_payoff_data("Bull Call Spread [Debit]")
             fig = plot_payoff("Bull Call Spread [Debit]", S_data, y_exp, y_t0, curr, bes)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
             
         with col2:
             st.markdown("### 📜 Rules & Execution Guidelines")
@@ -672,7 +739,7 @@ with tabs[2]:
             """)
             S_data, y_exp, y_t0, curr, bes = get_payoff_data("Bear Put Spread [Debit]")
             fig = plot_payoff("Bear Put Spread [Debit]", S_data, y_exp, y_t0, curr, bes)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
             
         with col2:
             st.markdown("### 📜 Rules & Execution Guidelines")
@@ -719,7 +786,7 @@ with tabs[2]:
             """)
             S_data, y_exp, y_t0, curr, bes = get_payoff_data("Bear Call Spread [Credit]")
             fig = plot_payoff("Bear Call Spread [Credit]", S_data, y_exp, y_t0, curr, bes)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
             
         with col2:
             st.markdown("### 📜 Rules & Execution Guidelines")
@@ -768,7 +835,7 @@ with tabs[2]:
             """)
             S_data, y_exp, y_t0, curr, bes = get_payoff_data("Bull Put Spread [Credit]")
             fig = plot_payoff("Bull Put Spread [Credit]", S_data, y_exp, y_t0, curr, bes)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
             
         with col2:
             st.markdown("### 📜 Rules & Execution Guidelines")
@@ -816,7 +883,7 @@ with tabs[2]:
             """)
             S_data, y_exp, y_t0, curr, bes = get_payoff_data("Short Iron Condor [Credit]")
             fig = plot_payoff("Short Iron Condor [Credit]", S_data, y_exp, y_t0, curr, bes)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
             
         with col2:
             st.markdown("### 📜 Rules & Execution Guidelines")
@@ -859,7 +926,7 @@ with tabs[2]:
             """)
             S_data, y_exp, y_t0, curr, bes = get_payoff_data("Long Iron Condor [Debit]")
             fig = plot_payoff("Long Iron Condor [Debit]", S_data, y_exp, y_t0, curr, bes)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
             
         with col2:
             st.markdown("### 📜 Rules & Execution Guidelines")

@@ -309,7 +309,7 @@ elif all_trades:
         except AttributeError:
             styled_df = display_df.style.applymap(style_batting, subset=["Batting Avg"]).applymap(style_currency, subset=["Avg Win", "Avg Loss", "Total PnL"])
             
-        st.dataframe(styled_df, use_container_width=True, hide_index=True)
+        st.dataframe(styled_df, width='stretch', hide_index=True)
         
         st.divider()
 
@@ -352,7 +352,7 @@ elif all_trades:
             # Fill area below the line with a softer semi-transparent color
             fig.update_traces(fill='tozeroy', fillcolor='rgba(33, 195, 84, 0.2)')
             
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
         else:
             st.info("No timeline data to display equity curve.")
 

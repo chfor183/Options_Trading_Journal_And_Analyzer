@@ -103,11 +103,11 @@ with tabs[0]:
     st.markdown("""
     | Capital Tier | Primary Option Strategy | Tactical Note |
     | :--- | :--- | :--- |
-    | **\$3,000 - \$10,000** | Spreads + Iron Condor | **Credit > Debit**: Selling premium harnesses high-odds win rates through extrinsic value farming. |
-    | **\$10,000 - \$30,000** | Add Buying LEAPS | Utilize naked or spreads depending on available margin to gain leveraged directional exposure. |
-    | **\$30,000 - \$50,000** | Add Sell Cash-Secured Puts | Sell CSPs on high-quality companies; acquire the underlying stock if it closes In-The-Money (ITM) and you want ownership. |
-    | **\$50,000 - \$100,000** | Add Sell Covered Calls | Complete the loop by selling covered calls on stock positions if it moves ITM and you wish to exit. |
-    | **\$100,000+** | Diversify + Dividends + DCA + Buy the Dip | Consolidate wealth. Transition to dollar-cost averaging, blue-chip dividends, and dynamic risk management. |
+    | **\\$3,000 - \\$10,000** | Spreads + Iron Condor | **Credit > Debit**: Selling premium harnesses high-odds win rates through extrinsic value farming. |
+    | **\\$10,000 - \\$30,000** | Add Buying LEAPS | Utilize naked or spreads depending on available margin to gain leveraged directional exposure. |
+    | **\\$30,000 - \\$50,000** | Add Sell Cash-Secured Puts | Sell CSPs on high-quality companies; acquire the underlying stock if it closes In-The-Money (ITM) and you want ownership. |
+    | **\\$50,000 - \\$100,000** | Add Sell Covered Calls | Complete the loop by selling covered calls on stock positions if it moves ITM and you wish to exit. |
+    | **\\$100,000+** | Diversify + Dividends + DCA + Buy the Dip | Consolidate wealth. Transition to dollar-cost averaging, blue-chip dividends, and dynamic risk management. |
     """)
     
     st.write("")
@@ -174,7 +174,7 @@ with tabs[2]:
             1. **Confirmation Bias:**
                - Seeking only news and data that confirm your existing trade thesis while ignoring glaring negative signals.
             2. **Loss Aversion (Prospect Theory):**
-               - The pain of losing \$100 is felt twice as intensely as the joy of making $100. This leads traders to hold losing trades too long (hoping to break even) and cutting winners too early.
+               - The pain of losing \\$100 is felt twice as intensely as the joy of making $100. This leads traders to hold losing trades too long (hoping to break even) and cutting winners too early.
             3. **Recency Bias:**
                - Overweighting the importance of recent market actions (e.g., a 3-day drop) and losing track of the larger long-term structural trends.
             4. **Anchoring Bias:**

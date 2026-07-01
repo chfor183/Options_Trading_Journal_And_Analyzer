@@ -61,7 +61,7 @@ with col2:
         - **↔️ Spread**: The difference between the Bid and Ask (`Ask - Bid`).
         
         **Why we want a TIGHT spread:**
-        1. **Low Transaction Friction**: A narrow spread (such as \$0.01 - $0.05) ensures you don't immediately lose substantial value upon entering a trade.
+        1. **Low Transaction Friction**: A narrow spread (such as \\$0.01 - $0.05) ensures you don't immediately lose substantial value upon entering a trade.
         2. **High Liquidity**: Tight spreads signify high trading volume and plenty of active participants, making it simple to exit or adjust your trade instantly at fair prices without taking a haircut.
         """)
 

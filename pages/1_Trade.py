@@ -20,11 +20,10 @@ def show_multi_help():
     st.image("assets/Multileg_tutorial.png", use_container_width=True)
     st.markdown("""
     **How to use Extract Multi-Leg Strategy:**
-    1. Open your **Interactive Brokers Desktop App** (Trader Workstation / TWS).
+    1. Open your **Interactive Brokers Desktop App**.
     2. View the multi-leg order/trade confirmation.
     3. Take a screenshot of the area shown in the image above (e.g., using Windows Snipping Tool `Win + Shift + S`).
-    4. Copy it to your clipboard.
-    5. Click the **Extract Multi-Leg Strategy** button to automatically paste and parse it!
+    4. Click the **Extract Multi-Leg Strategy** button to automatically paste and parse it!
     """)
 
 @st.dialog("Extract Single Contract Details Help", width="large")
@@ -32,11 +31,10 @@ def show_single_help():
     st.image("assets/Singleleg_tutorial.png", use_container_width=True)
     st.markdown("""
     **How to use Extract Single Contract Details:**
-    1. Open your **Interactive Brokers Desktop App** (Trader Workstation / TWS).
+    1. Open your **Interactive Brokers Desktop App**.
     2. View the single contract details.
     3. Take a screenshot of the area shown in the image above (e.g., using Windows Snipping Tool `Win + Shift + S`).
-    4. Copy it to your clipboard.
-    5. Click the **Extract Single Contract Details** button to automatically paste and parse it!
+    4. Click the **Extract Single Contract Details** button to automatically paste and parse it!
     """)
 
 st.set_page_config(page_title="Trade Entry", page_icon="📝", layout="wide")
@@ -73,7 +71,7 @@ else:
     st.title("New Trade Entry")
 
 st.write("### 📸 Auto-Fill from Clipboard")
-st.info("💡 **Note:** This OCR feature is designed **only for the Interactive Brokers Desktop App** (Trader Workstation / TWS).")
+st.info("💡 **Note:** This OCR feature is designed **only for the Interactive Brokers Desktop App**.")
 st.write("Take a screenshot of your broker's trade confirmation, then click one of the buttons below to paste it.")
 
 # Use compact, native columns for the action and help buttons
