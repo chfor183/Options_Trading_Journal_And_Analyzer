@@ -113,8 +113,12 @@ streamlit run C:\Lab\finance\Home.py
 ## Recent Updates
 
 **Session Date: 2026-06-30**
+- **Home Page Redesign**:
+  - Overhauled the root welcome section with a custom-styled, forest-green sidebar hero callout box showcasing the application's central design philosophy.
+  - Relocated the database connection check, status, and active error warnings to the immediate top of the dashboard.
+  - Implemented an interactive, highly compact **Options Trading Core Basics** block outlining Calls, Puts, Intrinsic/Extrinsic valuation breakdowns, Bid/Ask spreads (with liquidity guidelines), and essential trading Greeks ($\Delta, \theta, \nu$).
 - **Option Strategies Playbook & Advanced Payoff Analysis**:
-  - Overhauled and shifted the **Options Theory** system from the Framework page (`pages/7_Framework.py`) to the dedicated Strategies Page (`pages/8_Strategies.py`) for better thematic grouping.
+  - Overhauled and shifted the **Options Theory** system from the Framework page (`pages/7_Framework.py`) to the dedicated Strategies Page (`pages/8_Strategies.py`) for better thematic grouping. Removed the "Barchart Option Filters" section to keep the module strictly focused on setups and analytics.
   - Implemented 4 new basic option strategies: **Long Call [Debit]**, **Long Put [Debit]**, **Covered Call [Credit]**, and **Cash-Secured Put [Credit]** inside the "Strategies Details" module, supporting full definitions, selection parameters, and exit setups.
   - Renamed advanced strategies to use explicit, clear transaction markers (**Short Iron Condor [Credit]** and **Long Iron Condor [Debit]**).
   - Developed a high-fidelity **Plotly Options Payoff Plotter** for all 10 strategies that includes realistic, custom mathematical curves for both *At Expiration* (solid green line) and *Current (T+0)* (dashed blue line) states.
