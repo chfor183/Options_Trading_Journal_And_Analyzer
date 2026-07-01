@@ -6,8 +6,8 @@ import plotly.graph_objects as go
 st.set_page_config(page_title="Option Strategies", page_icon="📈", layout="wide")
 st.title("📈 Option Strategies")
 
-# Define the tabs: Options Theory, Summary, Details, and Barchart Filters
-tabs = st.tabs(["📈 Options Theory", "📋 Strategies Summary", "🔍 Strategies Details", "🔎 Barchart Filters"])
+# Define the tabs: Options Theory, Summary, and Details
+tabs = st.tabs(["📈 Options Theory", "📋 Strategies Summary", "🔍 Strategies Details"])
 
 with tabs[0]:
     st.subheader("📈 Options Pricing & Theta Decay")
@@ -876,10 +876,3 @@ with tabs[2]:
                 - *Take Profit*: Close as soon as the price breaks outside the wings and premium surges. Avoid holding too close to expiration as decay will eat into profits.
                 - *Max Loss*: If the stock consolidates flat post-event, accept the loss and close out remaining premium.
                 """)
-
-with tabs[3]:
-    st.subheader("🔎 Barchart Option Filters")
-    st.write("Saved queries and filter constraints to run on Barchart.com or other scanners to source premium setups.")
-    
-    # Keeping it empty for now as requested
-    st.info("No filters currently configured. Add criteria to build automated trade scanners.")
