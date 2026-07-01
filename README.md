@@ -112,6 +112,13 @@ streamlit run C:\Lab\finance\Home.py
 
 ## Recent Updates
 
+**Session Date: 2026-07-01**
+- **OCR Tutorial Modals**:
+  - Overhauled the manual OCR help system, replacing the hover tooltips with Streamlit's native `@st.dialog` closable modal views for both the Multi-Leg Strategy extractor and the Single Contract Details extractor.
+  - Implemented sleek "❓" help triggers that trigger centered modal overlays displaying high-fidelity screenshot tutorial guides (`Multileg_tutorial.png` and `Singleleg_tutorial.png`) paired with step-by-step usage workflows.
+  - Added a distinct, prominent information banner stating that the clipboard OCR extractor feature is designed exclusively for the **Interactive Brokers Desktop App** (Trader Workstation / TWS).
+  - Streamlined and narrowed the OCR action buttons row using compact, theme-aware layout columns (`[2.6, 0.5, 2.8, 0.5, 5.6]`) to eliminate unnecessary wide whitespace and align flawlessly with the Streamlit theme's styling cues.
+
 **Session Date: 2026-06-30**
 - **Home Page Redesign**:
   - Overhauled the root welcome section with a custom-styled, forest-green sidebar hero callout box showcasing the application's central design philosophy.

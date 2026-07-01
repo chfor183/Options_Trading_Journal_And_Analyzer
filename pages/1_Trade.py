@@ -15,6 +15,30 @@ def toggle_type(i):
     current = st.session_state[f"type_val_{i}"]
     st.session_state[f"type_val_{i}"] = "Call" if current == "Put" else "Put"
 
+@st.dialog("Extract Multi-Leg Strategy Help", width="large")
+def show_multi_help():
+    st.image("assets/Multileg_tutorial.png", use_container_width=True)
+    st.markdown("""
+    **How to use Extract Multi-Leg Strategy:**
+    1. Open your **Interactive Brokers Desktop App** (Trader Workstation / TWS).
+    2. View the multi-leg order/trade confirmation.
+    3. Take a screenshot of the area shown in the image above (e.g., using Windows Snipping Tool `Win + Shift + S`).
+    4. Copy it to your clipboard.
+    5. Click the **Extract Multi-Leg Strategy** button to automatically paste and parse it!
+    """)
+
+@st.dialog("Extract Single Contract Details Help", width="large")
+def show_single_help():
+    st.image("assets/Singleleg_tutorial.png", use_container_width=True)
+    st.markdown("""
+    **How to use Extract Single Contract Details:**
+    1. Open your **Interactive Brokers Desktop App** (Trader Workstation / TWS).
+    2. View the single contract details.
+    3. Take a screenshot of the area shown in the image above (e.g., using Windows Snipping Tool `Win + Shift + S`).
+    4. Copy it to your clipboard.
+    5. Click the **Extract Single Contract Details** button to automatically paste and parse it!
+    """)
+
 st.set_page_config(page_title="Trade Entry", page_icon="📝", layout="wide")
 
 # Initialize default session state values safely
@@ -49,14 +73,23 @@ else:
     st.title("New Trade Entry")
 
 st.write("### 📸 Auto-Fill from Clipboard")
+st.info("💡 **Note:** This OCR feature is designed **only for the Interactive Brokers Desktop App** (Trader Workstation / TWS).")
 st.write("Take a screenshot of your broker's trade confirmation, then click one of the buttons below to paste it.")
 
-col_ocr1, col_ocr2 = st.columns(2)
+# Use compact, native columns for the action and help buttons
+col_btn1, col_help1, col_btn2, col_help2, _ = st.columns([2.6, 0.5, 2.8, 0.5, 5.6])
 
-with col_ocr1:
+with col_btn1:
     btn_multi = st.button("Extract Multi-Leg Strategy", type="primary", use_container_width=True)
-with col_ocr2:
+with col_help1:
+    if st.button("❓", key="multi_help", use_container_width=True, help="Show Multi-Leg Screenshot Tutorial"):
+        show_multi_help()
+
+with col_btn2:
     btn_single = st.button("Extract Single Contract Details", use_container_width=True)
+with col_help2:
+    if st.button("❓", key="single_help", use_container_width=True, help="Show Single Contract Screenshot Tutorial"):
+        show_single_help()
 
 if btn_multi or btn_single:
     with st.spinner("Reading clipboard and extracting text with OCR..."):
