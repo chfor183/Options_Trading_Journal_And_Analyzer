@@ -117,6 +117,16 @@ streamlit run C:\Lab\finance\Home.py
   - Overhauled the root welcome section with a custom-styled, forest-green sidebar hero callout box showcasing the application's central design philosophy.
   - Relocated the database connection check, status, and active error warnings to the immediate top of the dashboard.
   - Implemented an interactive, highly compact **Options Trading Core Basics** block outlining Calls, Puts, Intrinsic/Extrinsic valuation breakdowns, Bid/Ask spreads (with liquidity guidelines), and essential trading Greeks ($\Delta, \theta, \nu$).
+- **Advanced Payoff Plotter Layout Enhancements**:
+  - Overhauled the Options Payoff plot in `src/options_math.py` to prevent any vertical lines and labels from overlapping. Relocated the **Current Price** annotation to the top-right (`y=0.85` paper coordinates) and staggered **Breakeven** annotations sequentially along the bottom (`y=0.15 + (i * 0.1)`) with distinct alignment settings.
+  - Moved the **Expected Move (±1 SD)** metric label into a stylized, non-overlapping slate background overlay card located cleanly at the top-left of the chart canvas.
+  - Re-themed the Expected Move rectangle fill from orange to a high-contrast, premium **semi-transparent blue** (`rgba(59, 130, 246, 0.05)`) with dashed borders.
+  - Increased the legibility of all key annotation text strings by upgrading font sizing to **12px** and applying a solid **bold** weight.
+  - Tightened chart resolution by restricting the default x-axis boundaries to **±20% of the calculated Breakevens** (Lower: `min_be * 0.8`, Upper: `max_be * 1.2`), making setups highly readable and zoomed in on the active payoff channel.
+- **Journal Layout Polish**:
+  - Repositioned the **Idea URL** metadata link inside the Journal trade details dropdown directly above the **Copyable Trade Idea** block to create a better, more logical reading hierarchy.
+- **New Trade Entries Defaults**:
+  - Configured a high-probability **GLD Bull Put Spread** ($1.293 credit spread, 79.2% PoP, ±6.8% expected move) as the default layout on the Trade entry page (`pages/1_Trade.py`) to give users an instant high-quality strategy template.
 - **Option Strategies Playbook & Advanced Payoff Analysis**:
   - Overhauled and shifted the **Options Theory** system from the Framework page (`pages/7_Framework.py`) to the dedicated Strategies Page (`pages/8_Strategies.py`) for better thematic grouping. Removed the "Barchart Option Filters" section to keep the module strictly focused on setups and analytics.
   - Implemented 4 new basic option strategies: **Long Call [Debit]**, **Long Put [Debit]**, **Covered Call [Credit]**, and **Cash-Secured Put [Credit]** inside the "Strategies Details" module, supporting full definitions, selection parameters, and exit setups.

@@ -107,18 +107,18 @@ st.divider()
 col1, col2 = st.columns(2)
 
 with col1:
-    ticker = st.text_input("Underlying Ticker", value=st.session_state.get("ticker_val", "MU")).upper()
+    ticker = st.text_input("Underlying Ticker", value=st.session_state.get("ticker_val", "GLD")).upper()
     if ticker:
         with st.spinner("Fetching data..."):
             info = get_ticker_info(ticker)
         
-        name = st.text_input("Name of Underlying", value=st.session_state.get("name_val", info['name']))
+        name = st.text_input("Name of Underlying", value=st.session_state.get("name_val", "SPDR Gold Shares" if ticker == "GLD" else info['name']))
         
         cat_options = ["Stock", "ETF", "Index", "Futures", "Forex", "Crypto"]
-        default_cat = info['category'].capitalize() if info['category'].capitalize() in cat_options else "Stock"
+        default_cat = "ETF" if ticker == "GLD" else (info['category'].capitalize() if info['category'].capitalize() in cat_options else "Stock")
         category = st.selectbox("Category", cat_options, index=cat_options.index(default_cat))
         
-        current_price = st.number_input("Underlying Price", value=float(info['current_price']) if info.get('current_price') else 1151.38, format="%.2f")
+        current_price = st.number_input("Underlying Price", value=float(373.63) if ticker == "GLD" else (float(info['current_price']) if info.get('current_price') else 1151.38), format="%.2f")
         
         strat_options = [
             "Bull Put Spread (credit)",
@@ -131,18 +131,18 @@ with col1:
             "Cash-Secured Put (credit)",
             "Custom"
         ]
-        def_strat = st.session_state.get("strategy_val", "Bull Put Spread (credit)")
+        def_strat = st.session_state.get("strategy_val", "Bull Put Spread (credit)" if ticker == "GLD" else "Bull Put Spread (credit)")
         strat_idx = strat_options.index(def_strat) if def_strat in strat_options else 0
         strategy_type = st.selectbox("Strategy Type", strat_options, index=strat_idx)
 
 with col2:
     move_options = ["Bullish ↗", "Neutral →", "Bearish ↘", "High volatility"]
-    def_move = st.session_state.get("move_val", "Bullish ↗")
+    def_move = st.session_state.get("move_val", "Bullish ↗" if ticker == "GLD" else "Bullish ↗")
     move_idx = move_options.index(def_move) if def_move in move_options else 0
     expected_move = st.selectbox("Expected Move", move_options, index=move_idx)
     
     idea_url = st.text_input("Idea URL", value=st.session_state.get("url_val", ""))
-    date_opened = st.date_input("Date Opened", value=st.session_state.get("date_val", datetime.today()))
+    date_opened = st.date_input("Date Opened", value=st.session_state.get("date_val", datetime(2026, 6, 26) if ticker == "GLD" else datetime.today()))
 
 st.subheader("Options")
 
@@ -256,22 +256,22 @@ for i in range(num_legs):
     expiry = col3.date_input("Expiry", key=f"expiry_input_{i}", label_visibility="collapsed")
     
     if f"strike_input_{i}" not in st.session_state:
-        st.session_state[f"strike_input_{i}"] = float(st.session_state.get(f"strike_{i}", 840.0 if i==0 else 760.0))
+        st.session_state[f"strike_input_{i}"] = float(st.session_state.get(f"strike_{i}", 355.0 if i==0 else 345.0))
     strike = col4.number_input("Strike", step=1.0, format="%.2f", key=f"strike_input_{i}", label_visibility="collapsed")
     
     opt_type = st.session_state[f"type_val_{i}"]
     col5.button(opt_type, key=f"type_btn_{i}", on_click=toggle_type, args=(i,), use_container_width=True)
     
     if f"price_{i}" not in st.session_state:
-        st.session_state[f"price_{i}"] = 26.230 if i==0 else 15.750
+        st.session_state[f"price_{i}"] = 3.541 if i==0 else 2.248
     price = col6.number_input("Price", step=0.001, format="%.3f", key=f"price_{i}", label_visibility="collapsed")
     
     if f"delta_{i}" not in st.session_state:
-        st.session_state[f"delta_{i}"] = -0.1300 if i==0 else -0.0800
+        st.session_state[f"delta_{i}"] = -0.1956 if i==0 else -0.1129
     delta = col7.number_input("Delta", step=0.0001, format="%.4f", key=f"delta_{i}", label_visibility="collapsed")
     
     if f"iv_{i}" not in st.session_state:
-        st.session_state[f"iv_{i}"] = 111.54 if i==0 else 117.19
+        st.session_state[f"iv_{i}"] = 27.31 if i==0 else 29.28
     iv = col8.number_input("IV", step=0.01, format="%.2f", key=f"iv_{i}", label_visibility="collapsed")
     
     legs_data.append({

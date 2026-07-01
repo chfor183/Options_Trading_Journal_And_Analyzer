@@ -9,10 +9,10 @@ st.set_page_config(
 
 # Custom stylized banner / header
 st.markdown("""
-<div style="background-color: rgba(46, 125, 50, 0.1); border-left: 5px solid #2e7d32; padding: 20px; border-radius: 5px; margin-bottom: 25px;">
+<div style="background-color: rgba(0, 97, 252, 0.1); border-left: 5px solid #013382; padding: 20px; border-radius: 5px; margin-bottom: 25px;">
     <h1 style="margin: 0; color: #e0e0e0; font-family: inherit;">📈 Options Trading Journal & Analyzer</h1>
     <p style="margin: 8px 0 0 0; color: #b0b0b0; font-size: 1.1rem; line-height: 1.5;">
-        Welcome to your advanced local options trading companion. Track positions, model strategy payouts, audit setups, and build a consistent mathematical edge.
+        Welcome to your advanced local options trading companion.<br>Track positions, model strategy payouts, audit setups, and build a consistent mathematical edge.
     </p>
 </div>
 """, unsafe_allow_html=True)

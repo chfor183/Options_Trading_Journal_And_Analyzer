@@ -34,8 +34,27 @@ def generate_payoff_chart(legs, current_price, ticker=""):
     min_strike = min(strikes) if strikes else current_price
     max_strike = max(strikes) if strikes else current_price
     
-    lower_bound = max(0, min_strike * 0.5)
-    upper_bound = max_strike * 1.5
+    # Find exact breakeven points to determine custom chart boundaries
+    # We find where payoff transitions from negative to positive or vice versa
+    temp_prices = np.linspace(current_price * 0.05, current_price * 2.5, 5000)
+    temp_payoffs = calculate_payoff_array(legs, temp_prices)
+    crossings = np.where(np.diff(np.sign(temp_payoffs)))[0]
+    bes = [temp_prices[zc] for zc in crossings]
+    
+    if bes:
+        min_be, max_be = min(bes), max(bes)
+        # Handle cases where breakevens are extremely close or equal to prevent flat bounds
+        if max_be - min_be < 0.05 * current_price:
+            lower_bound = max(0.0, min_be * 0.8)
+            upper_bound = max_be * 1.2
+        else:
+            lower_bound = max(0.0, min_be * 0.8)
+            upper_bound = max_be * 1.2
+    else:
+        # Default fallback to strikes if no breakeven crossings are found
+        lower_bound = max(0.0, min_strike * 0.8)
+        upper_bound = max_strike * 1.2
+        
     spot_prices = np.linspace(lower_bound, upper_bound, 1000)
     
     total_payoff = calculate_payoff_array(legs, spot_prices)
@@ -57,12 +76,25 @@ def generate_payoff_chart(legs, current_price, ticker=""):
     em_lower = current_price - expected_move
     em_upper = current_price + expected_move
 
-    # Add Expected Move range
+    # Add Expected Move range with a premium semi-transparent blue
     fig.add_vrect(
         x0=em_lower, x1=em_upper,
-        fillcolor="orange", opacity=0.1,
-        layer="below", line_width=1, line_dash="dash", line_color="orange",
-        annotation_text=f"Expected Move: ±${expected_move:.2f}", annotation_position="top left"
+        fillcolor="rgba(59, 130, 246, 0.05)", opacity=1.0,
+        layer="below", line_width=1, line_dash="dash", line_color="rgba(59, 130, 246, 0.35)"
+    )
+    
+    # Beautiful non-overlapping box for the Expected Move metric
+    fig.add_annotation(
+        xref="paper", yref="paper",
+        x=0.02, y=0.98,
+        text=f"<b>Expected Move (±1 SD):</b> ±${expected_move:.2f} [${em_lower:.2f}, ${em_upper:.2f}]",
+        showarrow=False,
+        font=dict(size=12, color="#3b82f6", weight="bold"), # Bigger, bolder font
+        align="left",
+        bgcolor="rgba(15, 23, 42, 0.95)", # Darker, highly opaque slate background
+        bordercolor="rgba(59, 130, 246, 0.8)", # Stronger border opacity
+        borderwidth=1.5,
+        borderpad=6
     )
     
     # Add fill above and below 0
@@ -85,15 +117,31 @@ def generate_payoff_chart(legs, current_price, ticker=""):
     ))
     
     fig.add_vline(x=current_price, line_dash="dot", line_color="#0066cc")
-    # Annotate current price
-    fig.add_annotation(x=current_price, y=0, text=f"Current Price: {current_price:.2f}", textangle=90, showarrow=False, xanchor="left", yanchor="bottom", yshift=10)
+    # Annotate current price at the top of the chart to prevent overlap
+    fig.add_annotation(
+        x=current_price, y=0.85, yref="paper",
+        text=f"<b>Current Price: {current_price:.2f}</b>", 
+        textangle=90, showarrow=False, 
+        xanchor="left", yanchor="middle",
+        font=dict(size=12, color="#3b82f6", weight="bold"), # Bigger, bolder font matching theme
+        bgcolor="rgba(15, 23, 42, 0.95)", # Highly opaque background
+        bordercolor="#3b82f6", borderwidth=1.5, borderpad=5
+    )
     
-    # Breakevens
+    # Breakevens annotated at the bottom of the chart
     zero_crossings = np.where(np.diff(np.sign(total_payoff)))[0]
-    for zc in zero_crossings:
+    for i_zc, zc in enumerate(zero_crossings):
         be_price = spot_prices[zc]
         fig.add_vline(x=be_price, line_dash="dot", line_color="red")
-        fig.add_annotation(x=be_price, y=0, text=f"Breakeven: {be_price:.2f}", textangle=90, showarrow=False, xanchor="right", yanchor="bottom", yshift=10)
+        fig.add_annotation(
+            x=be_price, y=0.15 + (i_zc * 0.1), yref="paper",
+            text=f"<b>Breakeven: {be_price:.2f}</b>", 
+            textangle=90, showarrow=False, 
+            xanchor="right", yanchor="middle",
+            font=dict(size=12, color="#ef4444", weight="bold"), # Bigger, bolder red font
+            bgcolor="rgba(15, 23, 42, 0.95)", # Highly opaque background
+            bordercolor="#ef4444", borderwidth=1.5, borderpad=5
+        )
 
     fig.add_hline(y=0, line_color="black", line_width=1)
     

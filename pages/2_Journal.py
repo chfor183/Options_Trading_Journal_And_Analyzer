@@ -394,6 +394,9 @@ if trades:
             
             st.write(f"*Opening values:* Price: {open_up} | POP: {open_pop} | POL: {open_pol} | Prob Max Profit: {open_pmp} | Prob Max Loss: {open_pml}")
             
+            if t.idea_url:
+                st.write(f"**Idea URL:** [{t.idea_url}]({t.idea_url})")
+
             # --- Copyable Trade Idea Feature ---
             st.write("**Copyable Trade Idea**")
             
@@ -442,9 +445,6 @@ if trades:
             
             st.code(idea_text, language="text")
             # ------------------------------------
-            
-            if t.idea_url:
-                st.write(f"**Idea URL:** [{t.idea_url}]({t.idea_url})")
             
     st.divider()
     
