@@ -424,7 +424,7 @@ if trades:
                 st.write(f"**Idea URL:** [{t.idea_url}]({t.idea_url})")
 
             # --- Copyable Trade Idea Feature ---
-            st.write("**Copyable Trade Idea**")
+            idea_col1, idea_col2 = st.columns(2)
             
             if t.legs:
                 first_leg = min(t.legs, key=lambda l: l.expiry)
@@ -458,7 +458,7 @@ if trades:
             cost_str = f"${abs(display_cost):.2f} {cost_suffix}"
             pop_str = f"{t.probability_of_profit*100:.1f}%" if t.probability_of_profit is not None else "N/A"
             
-            idea_text = f"{t.ticker} - {t.strategy_type or 'N/A'} ({days_to_expiry} DTE) @ {cost_str} [POP: {pop_str}]\n" \
+            idea_text = f"{t.ticker} - {t.strategy_type or 'N/A'} ({days_to_expiry} DTE) @ {cost_str}\n" \
                         f"Ticker : {t.ticker}\n" \
                         f"Name : {t.underlying_name or 'N/A'}\n" \
                         f"Date Opened : {t.date_opened.strftime('%Y-%m-%d')}\n" \
@@ -470,7 +470,33 @@ if trades:
                         f"Cost of trade : {cost_str}\n" \
                         f"Probability of profit : {pop_str}"
             
-            st.code(idea_text, language="text")
+            # Formulate the JSON structure precisely as expected by the Pinescript
+            import json
+            sorted_strikes = sorted([float(leg.strike) for leg in t.legs if leg.strike])
+            pinescript_json_dict = {
+                "strategy": t.strategy_type or "N/A",
+                "underlying_open": float(t.underlying_price_at_open) if t.underlying_price_at_open else 0.0,
+                "premium": float(abs(display_cost)) / 100.0,
+                "open_date": t.date_opened.strftime('%Y-%m-%d'),
+                "expiry_date": first_leg.expiry.strftime('%Y-%m-%d') if t.legs else t.date_opened.strftime('%Y-%m-%d'),
+            }
+            if t.probability_of_profit is not None:
+                pinescript_json_dict["pop"] = round(float(t.probability_of_profit) * 100, 1)
+            else:
+                pinescript_json_dict["pop"] = 0.0
+                
+            for idx, strike in enumerate(sorted_strikes[:4], start=1):
+                pinescript_json_dict[f"strike{idx}"] = strike
+                
+            pinescript_json_str = json.dumps(pinescript_json_dict, indent=2)
+
+            with idea_col1:
+                st.write("**Copyable Trade Idea**")
+                st.code(idea_text, language="text")
+
+            with idea_col2:
+                st.write("**TradingView Pine Script JSON**")
+                st.code(pinescript_json_str, language="json")
             # ------------------------------------
             
     st.divider()

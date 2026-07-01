@@ -1,0 +1,456 @@
+//@version=5
+indicator("Option Strategy Visualizer (JSON Input)", overlay=true)
+
+// --- Preset Test Data Examples (Copy and paste any of these into the input text area) ---
+//
+// 1. MU - Bull Put Spread (credit)
+// {
+//   "strategy": "Bull Put Spread (credit)",
+//   "underlying_open": 1135.18,
+//   "premium": 10.48,
+//   "open_date": "2026-06-29 09:30",
+//   "expiry_date": "2026-07-17 16:00",
+//   "strike1": 760.0,
+//   "strike2": 840.0
+// }
+//
+// 2. TSLA - Short Iron Condor (credit)
+// {
+//   "strategy": "Short Iron Condor (credit)",
+//   "underlying_open": 379.71,
+//   "premium": 1.32,
+//   "open_date": "2026-06-27 09:30",
+//   "expiry_date": "2026-07-17 16:00",
+//   "strike1": 315.0,
+//   "strike2": 325.0,
+//   "strike3": 425.0,
+//   "strike4": 435.0
+// }
+//
+// 3. CADL - Long Call (debit)
+// {
+//   "strategy": "Long Call (debit)",
+//   "underlying_open": 9.79,
+//   "premium": 4.40,
+//   "open_date": "2026-06-27 09:30",
+//   "expiry_date": "2027-01-15 16:00",
+//   "strike1": 7.0
+// }
+
+// --- Default JSON Data Template ---
+default_json = '{\n' +
+  '  "strategy": "Short Iron Condor (credit)",\n' +
+  '  "underlying_open": 379.71,\n' +
+  '  "premium": 1.32,\n' +
+  '  "open_date": "2026-06-27",\n' +
+  '  "expiry_date": "2026-07-17",\n' +
+  '  "pop": 76.8,\n' +
+  '  "strike1": 315.0,\n' +
+  '  "strike2": 325.0,\n' +
+  '  "strike3": 425.0,\n' +
+  '  "strike4": 435.0\n' +
+  '}'
+
+// --- Inputs ---
+json_input = input.text_area(title="Option Strategy JSON", defval=default_json)
+
+// --- Helper JSON Extraction Functions ---
+get_string_value(string json, string key) =>
+    string search_key = "\"" + key + "\""
+    int pos = str.pos(json, search_key)
+    string val = ""
+    if not na(pos)
+        // Find the colon after key
+        int colon_pos = str.pos(str.substring(json, pos + str.length(search_key)), ":")
+        if not na(colon_pos)
+            int start_from = pos + str.length(search_key) + colon_pos + 1
+            if start_from < str.length(json)
+                // Now find the opening quote of the string value
+                string remaining = str.substring(json, start_from)
+                int quote1 = str.pos(remaining, "\"")
+                if not na(quote1) and quote1 + 1 < str.length(remaining)
+                    string value_rem = str.substring(remaining, quote1 + 1)
+                    int quote2 = str.pos(value_rem, "\"")
+                    if not na(quote2)
+                        val := str.substring(value_rem, 0, quote2)
+    val
+
+get_number_value(string json, string key) =>
+    string search_key = "\"" + key + "\""
+    int pos = str.pos(json, search_key)
+    float val = na
+    if not na(pos)
+        int colon_pos = str.pos(str.substring(json, pos + str.length(search_key)), ":")
+        if not na(colon_pos)
+            int start_from = pos + str.length(search_key) + colon_pos + 1
+            if start_from < str.length(json)
+                string remaining = str.substring(json, start_from)
+                string num_str = ""
+                bool found_digit_or_sign = false
+                for i = 0 to str.length(remaining) - 1
+                    string char = str.substring(remaining, i, i + 1)
+                    bool is_digit = (char == "0" or char == "1" or char == "2" or char == "3" or char == "4" or char == "5" or char == "6" or char == "7" or char == "8" or char == "9" or char == "." or char == "-")
+                    if is_digit
+                        num_str := num_str + char
+                        found_digit_or_sign := true
+                    else
+                        if found_digit_or_sign
+                            break
+                if num_str != ""
+                    val := str.tonumber(num_str)
+    val
+
+// --- Parse JSON Fields ---
+strategy_raw = get_string_value(json_input, "strategy")
+underlying_open = get_number_value(json_input, "underlying_open")
+raw_premium = get_number_value(json_input, "premium")
+open_date_str = get_string_value(json_input, "open_date")
+expiry_date_str = get_string_value(json_input, "expiry_date")
+pop = get_number_value(json_input, "pop")
+
+strike1 = get_number_value(json_input, "strike1")
+strike2 = get_number_value(json_input, "strike2")
+strike3 = get_number_value(json_input, "strike3")
+strike4 = get_number_value(json_input, "strike4")
+
+// Auto-scale premium if entered as total contract premium instead of per-share premium
+float premium = raw_premium
+if not na(underlying_open) and underlying_open > 0
+    if not na(raw_premium) and raw_premium > underlying_open
+        premium := raw_premium / 100.0
+    else if not na(raw_premium) and not na(strike1) and not na(strike2)
+        float width = math.abs(strike2 - strike1)
+        if width > 0 and raw_premium > width
+            premium := raw_premium / 100.0
+
+// --- Parse Dates (No Time Required) ---
+parse_date_time(string dt_str) =>
+    if str.length(dt_str) < 10
+        na
+    else
+        int y = int(str.tonumber(str.substring(dt_str, 0, 4)))
+        int m = int(str.tonumber(str.substring(dt_str, 5, 7)))
+        int d = int(str.tonumber(str.substring(dt_str, 8, 10)))
+        timestamp(syminfo.timezone, y, m, d, 0, 0, 0)
+
+open_time = parse_date_time(open_date_str)
+expiry_time = parse_date_time(expiry_date_str)
+
+// --- Drawing Object Storage (using var to keep track and replace) ---
+var line line_open = na
+var line line_expiry = na
+var line line_strike1 = na
+var line line_strike2 = na
+var line line_strike3 = na
+var line line_strike4 = na
+var line line_be1 = na
+var line line_be2 = na
+
+var box profit_box1 = na
+var box profit_box2 = na
+
+var label label_open = na
+var label label_expiry = na
+var label label_strike1 = na
+var label label_strike2 = na
+var label label_strike3 = na
+var label label_strike4 = na
+var label label_be1 = na
+var label label_be2 = na
+
+// Fixed Table initialized once and re-used
+var table info_table = table.new(position = position.top_right, columns = 2, rows = 5, bgcolor = color.new(color.black, 30), border_width = 1, border_color = color.gray)
+
+// --- Logic to Draw on Chart ---
+if barstate.islast and not na(open_time) and not na(expiry_time) and not na(underlying_open) and not na(premium)
+    // 1. Delete previous drawings to keep chart clean and avoid memory leaks
+    line.delete(line_open)
+    line.delete(line_expiry)
+    line.delete(line_strike1)
+    line.delete(line_strike2)
+    line.delete(line_strike3)
+    line.delete(line_strike4)
+    line.delete(line_be1)
+    line.delete(line_be2)
+    
+    box.delete(profit_box1)
+    box.delete(profit_box2)
+    
+    label.delete(label_open)
+    label.delete(label_expiry)
+    label.delete(label_strike1)
+    label.delete(label_strike2)
+    label.delete(label_strike3)
+    label.delete(label_strike4)
+    label.delete(label_be1)
+    label.delete(label_be2)
+
+    // 2. Classify strategy name (lowercase for easy matching)
+    strategy = strategy_raw == "" ? "Short Iron Condor" : strategy_raw
+    clean_strat = str.lower(strategy)
+    
+    is_credit = str.pos(clean_strat, "credit") >= 0 or clean_strat == "covered call" or clean_strat == "cash-secured put" or clean_strat == "bear call spread" or clean_strat == "bull put spread" or clean_strat == "short iron condor"
+    
+    // Determine bounds for drawing vertical lines and default boundaries
+    float max_strike = underlying_open
+    float min_strike = underlying_open
+    
+    if not na(strike1)
+        max_strike := math.max(max_strike, strike1)
+        min_strike := math.min(min_strike, strike1)
+    if not na(strike2)
+        max_strike := math.max(max_strike, strike2)
+        min_strike := math.min(min_strike, strike2)
+    if not na(strike3)
+        max_strike := math.max(max_strike, strike3)
+        min_strike := math.min(min_strike, strike3)
+    if not na(strike4)
+        max_strike := math.max(max_strike, strike4)
+        min_strike := math.min(min_strike, strike4)
+        
+    float spread_range = max_strike - min_strike
+    if spread_range == 0
+        spread_range := underlying_open * 0.10 // 10% default height
+        
+    float high_limit = max_strike + spread_range * 0.5 + premium
+    float low_limit = math.max(0, min_strike - spread_range * 0.5 - premium)
+
+    // Colors
+    color_green_fill = color.new(color.green, 85)
+    color_green_border = color.new(color.green, 50)
+    color_strike_line = color.blue
+    color_date_line = color.orange
+    color_be_line = color.yellow
+    
+    // 3. Draw Vertical Lines for Date Opened and Expiry Date
+    line_open := line.new(x1 = open_time, y1 = low_limit, x2 = open_time, y2 = high_limit, xloc = xloc.bar_time, color = color_date_line, style = line.style_dashed, width = 1)
+    line_expiry := line.new(x1 = expiry_time, y1 = low_limit, x2 = expiry_time, y2 = high_limit, xloc = xloc.bar_time, color = color_date_line, style = line.style_dashed, width = 1)
+    
+    // Date Labels placed at the underlying_open price level
+    label_open := label.new(x = open_time, y = high_limit, text = "Opened\n" + open_date_str, xloc = xloc.bar_time, color = color_date_line, textcolor = color.white, style = label.style_label_down, size = size.small)
+    label_expiry := label.new(x = expiry_time, y = high_limit, text = "Expiry\n" + expiry_date_str, xloc = xloc.bar_time, color = color_date_line, textcolor = color.white, style = label.style_label_down, size = size.small)
+
+    // 4. Identify Strategy Legs, draw strike lines, labels, breakeven lines and profit boxes
+    string leg1_lbl = ""
+    string leg2_lbl = ""
+    string leg3_lbl = ""
+    string leg4_lbl = ""
+    
+    float pbox_top1 = na
+    float pbox_bot1 = na
+    float pbox_top2 = na
+    float pbox_bot2 = na
+
+    float be1 = na
+    float be2 = na
+    
+    if clean_strat == "long call" or str.pos(clean_strat, "long call") >= 0
+        leg1_lbl := "Long Call (Buy) Strike"
+        line_strike1 := line.new(x1 = open_time, y1 = strike1, x2 = expiry_time, y2 = strike1, xloc = xloc.bar_time, color = color_strike_line, style = line.style_solid, width = 2)
+        label_strike1 := label.new(x = expiry_time, y = strike1, text = leg1_lbl + ": " + str.tostring(strike1), xloc = xloc.bar_time, color = color_strike_line, textcolor = color.white, style = label.style_label_left, size = size.small)
+        
+        be1 := strike1 + premium
+        line_be1 := line.new(x1 = open_time, y1 = be1, x2 = expiry_time, y2 = be1, xloc = xloc.bar_time, color = color_be_line, style = line.style_dotted, width = 2)
+        label_be1 := label.new(x = open_time, y = be1, text = "Breakeven: " + str.tostring(be1), xloc = xloc.bar_time, color = color_be_line, textcolor = color.black, style = label.style_label_right, size = size.small)
+
+        pbox_bot1 := be1
+        pbox_top1 := high_limit
+        profit_box1 := box.new(left = open_time, top = pbox_top1, right = expiry_time, bottom = pbox_bot1, bgcolor = color_green_fill, border_color = color_green_border, border_style = line.style_dotted, xloc = xloc.bar_time)
+
+    else if clean_strat == "long put" or str.pos(clean_strat, "long put") >= 0
+        leg1_lbl := "Long Put (Buy) Strike"
+        line_strike1 := line.new(x1 = open_time, y1 = strike1, x2 = expiry_time, y2 = strike1, xloc = xloc.bar_time, color = color_strike_line, style = line.style_solid, width = 2)
+        label_strike1 := label.new(x = expiry_time, y = strike1, text = leg1_lbl + ": " + str.tostring(strike1), xloc = xloc.bar_time, color = color_strike_line, textcolor = color.white, style = label.style_label_left, size = size.small)
+        
+        be1 := strike1 - premium
+        line_be1 := line.new(x1 = open_time, y1 = be1, x2 = expiry_time, y2 = be1, xloc = xloc.bar_time, color = color_be_line, style = line.style_dotted, width = 2)
+        label_be1 := label.new(x = open_time, y = be1, text = "Breakeven: " + str.tostring(be1), xloc = xloc.bar_time, color = color_be_line, textcolor = color.black, style = label.style_label_right, size = size.small)
+
+        pbox_bot1 := low_limit
+        pbox_top1 := be1
+        profit_box1 := box.new(left = open_time, top = pbox_top1, right = expiry_time, bottom = pbox_bot1, bgcolor = color_green_fill, border_color = color_green_border, border_style = line.style_dotted, xloc = xloc.bar_time)
+
+    else if clean_strat == "covered call" or str.pos(clean_strat, "covered call") >= 0
+        leg1_lbl := "Short Call (Sell) Strike"
+        line_strike1 := line.new(x1 = open_time, y1 = strike1, x2 = expiry_time, y2 = strike1, xloc = xloc.bar_time, color = color_strike_line, style = line.style_solid, width = 2)
+        label_strike1 := label.new(x = expiry_time, y = strike1, text = leg1_lbl + ": " + str.tostring(strike1), xloc = xloc.bar_time, color = color_strike_line, textcolor = color.white, style = label.style_label_left, size = size.small)
+        
+        be1 := underlying_open - premium
+        line_be1 := line.new(x1 = open_time, y1 = be1, x2 = expiry_time, y2 = be1, xloc = xloc.bar_time, color = color_be_line, style = line.style_dotted, width = 2)
+        label_be1 := label.new(x = open_time, y = be1, text = "Breakeven: " + str.tostring(be1), xloc = xloc.bar_time, color = color_be_line, textcolor = color.black, style = label.style_label_right, size = size.small)
+
+        pbox_bot1 := be1
+        pbox_top1 := high_limit
+        profit_box1 := box.new(left = open_time, top = pbox_top1, right = expiry_time, bottom = pbox_bot1, bgcolor = color_green_fill, border_color = color_green_border, border_style = line.style_dotted, xloc = xloc.bar_time)
+
+    else if clean_strat == "cash-secured put" or str.pos(clean_strat, "cash-secured put") >= 0 or clean_strat == "cash secured put" or str.pos(clean_strat, "cash secured put") >= 0
+        leg1_lbl := "Short Put (Sell) Strike"
+        line_strike1 := line.new(x1 = open_time, y1 = strike1, x2 = expiry_time, y2 = strike1, xloc = xloc.bar_time, color = color_strike_line, style = line.style_solid, width = 2)
+        label_strike1 := label.new(x = expiry_time, y = strike1, text = leg1_lbl + ": " + str.tostring(strike1), xloc = xloc.bar_time, color = color_strike_line, textcolor = color.white, style = label.style_label_left, size = size.small)
+        
+        be1 := strike1 - premium
+        line_be1 := line.new(x1 = open_time, y1 = be1, x2 = expiry_time, y2 = be1, xloc = xloc.bar_time, color = color_be_line, style = line.style_dotted, width = 2)
+        label_be1 := label.new(x = open_time, y = be1, text = "Breakeven: " + str.tostring(be1), xloc = xloc.bar_time, color = color_be_line, textcolor = color.black, style = label.style_label_right, size = size.small)
+
+        pbox_bot1 := be1
+        pbox_top1 := high_limit
+        profit_box1 := box.new(left = open_time, top = pbox_top1, right = expiry_time, bottom = pbox_bot1, bgcolor = color_green_fill, border_color = color_green_border, border_style = line.style_dotted, xloc = xloc.bar_time)
+
+    else if clean_strat == "bull call spread" or str.pos(clean_strat, "bull call spread") >= 0
+        leg1_lbl := "Long Call (Buy) Strike"
+        leg2_lbl := "Short Call (Sell) Strike"
+        
+        line_strike1 := line.new(x1 = open_time, y1 = strike1, x2 = expiry_time, y2 = strike1, xloc = xloc.bar_time, color = color_strike_line, style = line.style_solid, width = 2)
+        label_strike1 := label.new(x = expiry_time, y = strike1, text = leg1_lbl + ": " + str.tostring(strike1), xloc = xloc.bar_time, color = color_strike_line, textcolor = color.white, style = label.style_label_left, size = size.small)
+        
+        line_strike2 := line.new(x1 = open_time, y1 = strike2, x2 = expiry_time, y2 = strike2, xloc = xloc.bar_time, color = color_strike_line, style = line.style_solid, width = 2)
+        label_strike2 := label.new(x = expiry_time, y = strike2, text = leg2_lbl + ": " + str.tostring(strike2), xloc = xloc.bar_time, color = color_strike_line, textcolor = color.white, style = label.style_label_left, size = size.small)
+        
+        be1 := strike1 + premium
+        line_be1 := line.new(x1 = open_time, y1 = be1, x2 = expiry_time, y2 = be1, xloc = xloc.bar_time, color = color_be_line, style = line.style_dotted, width = 2)
+        label_be1 := label.new(x = open_time, y = be1, text = "Breakeven: " + str.tostring(be1), xloc = xloc.bar_time, color = color_be_line, textcolor = color.black, style = label.style_label_right, size = size.small)
+
+        pbox_bot1 := be1
+        pbox_top1 := high_limit
+        profit_box1 := box.new(left = open_time, top = pbox_top1, right = expiry_time, bottom = pbox_bot1, bgcolor = color_green_fill, border_color = color_green_border, border_style = line.style_dotted, xloc = xloc.bar_time)
+
+    else if clean_strat == "bear put spread" or str.pos(clean_strat, "bear put spread") >= 0
+        leg1_lbl := "Short Put (Sell) Strike"
+        leg2_lbl := "Long Put (Buy) Strike"
+        
+        line_strike1 := line.new(x1 = open_time, y1 = strike1, x2 = expiry_time, y2 = strike1, xloc = xloc.bar_time, color = color_strike_line, style = line.style_solid, width = 2)
+        label_strike1 := label.new(x = expiry_time, y = strike1, text = leg1_lbl + ": " + str.tostring(strike1), xloc = xloc.bar_time, color = color_strike_line, textcolor = color.white, style = label.style_label_left, size = size.small)
+        
+        line_strike2 := line.new(x1 = open_time, y1 = strike2, x2 = expiry_time, y2 = strike2, xloc = xloc.bar_time, color = color_strike_line, style = line.style_solid, width = 2)
+        label_strike2 := label.new(x = expiry_time, y = strike2, text = leg2_lbl + ": " + str.tostring(strike2), xloc = xloc.bar_time, color = color_strike_line, textcolor = color.white, style = label.style_label_left, size = size.small)
+        
+        be1 := strike2 - premium
+        line_be1 := line.new(x1 = open_time, y1 = be1, x2 = expiry_time, y2 = be1, xloc = xloc.bar_time, color = color_be_line, style = line.style_dotted, width = 2)
+        label_be1 := label.new(x = open_time, y = be1, text = "Breakeven: " + str.tostring(be1), xloc = xloc.bar_time, color = color_be_line, textcolor = color.black, style = label.style_label_right, size = size.small)
+
+        pbox_bot1 := low_limit
+        pbox_top1 := be1
+        profit_box1 := box.new(left = open_time, top = pbox_top1, right = expiry_time, bottom = pbox_bot1, bgcolor = color_green_fill, border_color = color_green_border, border_style = line.style_dotted, xloc = xloc.bar_time)
+
+    else if clean_strat == "bear call spread" or str.pos(clean_strat, "bear call spread") >= 0
+        leg1_lbl := "Short Call (Sell) Strike"
+        leg2_lbl := "Long Call (Buy) Strike"
+        
+        line_strike1 := line.new(x1 = open_time, y1 = strike1, x2 = expiry_time, y2 = strike1, xloc = xloc.bar_time, color = color_strike_line, style = line.style_solid, width = 2)
+        label_strike1 := label.new(x = expiry_time, y = strike1, text = leg1_lbl + ": " + str.tostring(strike1), xloc = xloc.bar_time, color = color_strike_line, textcolor = color.white, style = label.style_label_left, size = size.small)
+        
+        line_strike2 := line.new(x1 = open_time, y1 = strike2, x2 = expiry_time, y2 = strike2, xloc = xloc.bar_time, color = color_strike_line, style = line.style_solid, width = 2)
+        label_strike2 := label.new(x = expiry_time, y = strike2, text = leg2_lbl + ": " + str.tostring(strike2), xloc = xloc.bar_time, color = color_strike_line, textcolor = color.white, style = label.style_label_left, size = size.small)
+        
+        be1 := strike1 + premium
+        line_be1 := line.new(x1 = open_time, y1 = be1, x2 = expiry_time, y2 = be1, xloc = xloc.bar_time, color = color_be_line, style = line.style_dotted, width = 2)
+        label_be1 := label.new(x = open_time, y = be1, text = "Breakeven: " + str.tostring(be1), xloc = xloc.bar_time, color = color_be_line, textcolor = color.black, style = label.style_label_right, size = size.small)
+
+        pbox_bot1 := low_limit
+        pbox_top1 := be1
+        profit_box1 := box.new(left = open_time, top = pbox_top1, right = expiry_time, bottom = pbox_bot1, bgcolor = color_green_fill, border_color = color_green_border, border_style = line.style_dotted, xloc = xloc.bar_time)
+
+    else if clean_strat == "bull put spread" or str.pos(clean_strat, "bull put spread") >= 0
+        leg1_lbl := "Long Put (Buy) Strike"
+        leg2_lbl := "Short Put (Sell) Strike"
+        
+        line_strike1 := line.new(x1 = open_time, y1 = strike1, x2 = expiry_time, y2 = strike1, xloc = xloc.bar_time, color = color_strike_line, style = line.style_solid, width = 2)
+        label_strike1 := label.new(x = expiry_time, y = strike1, text = leg1_lbl + ": " + str.tostring(strike1), xloc = xloc.bar_time, color = color_strike_line, textcolor = color.white, style = label.style_label_left, size = size.small)
+        
+        line_strike2 := line.new(x1 = open_time, y1 = strike2, x2 = expiry_time, y2 = strike2, xloc = xloc.bar_time, color = color_strike_line, style = line.style_solid, width = 2)
+        label_strike2 := label.new(x = expiry_time, y = strike2, text = leg2_lbl + ": " + str.tostring(strike2), xloc = xloc.bar_time, color = color_strike_line, textcolor = color.white, style = label.style_label_left, size = size.small)
+        
+        be1 := strike2 - premium
+        line_be1 := line.new(x1 = open_time, y1 = be1, x2 = expiry_time, y2 = be1, xloc = xloc.bar_time, color = color_be_line, style = line.style_dotted, width = 2)
+        label_be1 := label.new(x = open_time, y = be1, text = "Breakeven: " + str.tostring(be1), xloc = xloc.bar_time, color = color_be_line, textcolor = color.black, style = label.style_label_right, size = size.small)
+
+        pbox_bot1 := be1
+        pbox_top1 := high_limit
+        profit_box1 := box.new(left = open_time, top = pbox_top1, right = expiry_time, bottom = pbox_bot1, bgcolor = color_green_fill, border_color = color_green_border, border_style = line.style_dotted, xloc = xloc.bar_time)
+
+    else if clean_strat == "short iron condor" or str.pos(clean_strat, "short iron condor") >= 0
+        leg1_lbl := "Long Put (Buy) Strike"
+        leg2_lbl := "Short Put (Sell) Strike"
+        leg3_lbl := "Short Call (Sell) Strike"
+        leg4_lbl := "Long Call (Buy) Strike"
+        
+        line_strike1 := line.new(x1 = open_time, y1 = strike1, x2 = expiry_time, y2 = strike1, xloc = xloc.bar_time, color = color_strike_line, style = line.style_solid, width = 2)
+        label_strike1 := label.new(x = expiry_time, y = strike1, text = leg1_lbl + ": " + str.tostring(strike1), xloc = xloc.bar_time, color = color_strike_line, textcolor = color.white, style = label.style_label_left, size = size.small)
+        
+        line_strike2 := line.new(x1 = open_time, y1 = strike2, x2 = expiry_time, y2 = strike2, xloc = xloc.bar_time, color = color_strike_line, style = line.style_solid, width = 2)
+        label_strike2 := label.new(x = expiry_time, y = strike2, text = leg2_lbl + ": " + str.tostring(strike2), xloc = xloc.bar_time, color = color_strike_line, textcolor = color.white, style = label.style_label_left, size = size.small)
+        
+        line_strike3 := line.new(x1 = open_time, y1 = strike3, x2 = expiry_time, y2 = strike3, xloc = xloc.bar_time, color = color_strike_line, style = line.style_solid, width = 2)
+        label_strike3 := label.new(x = expiry_time, y = strike3, text = leg3_lbl + ": " + str.tostring(strike3), xloc = xloc.bar_time, color = color_strike_line, textcolor = color.white, style = label.style_label_left, size = size.small)
+        
+        line_strike4 := line.new(x1 = open_time, y1 = strike4, x2 = expiry_time, y2 = strike4, xloc = xloc.bar_time, color = color_strike_line, style = line.style_solid, width = 2)
+        label_strike4 := label.new(x = expiry_time, y = strike4, text = leg4_lbl + ": " + str.tostring(strike4), xloc = xloc.bar_time, color = color_strike_line, textcolor = color.white, style = label.style_label_left, size = size.small)
+        
+        be1 := strike2 - premium
+        line_be1 := line.new(x1 = open_time, y1 = be1, x2 = expiry_time, y2 = be1, xloc = xloc.bar_time, color = color_be_line, style = line.style_dotted, width = 2)
+        label_be1 := label.new(x = open_time, y = be1, text = "Breakeven Down: " + str.tostring(be1), xloc = xloc.bar_time, color = color_be_line, textcolor = color.black, style = label.style_label_right, size = size.small)
+
+        be2 := strike3 + premium
+        line_be2 := line.new(x1 = open_time, y1 = be2, x2 = expiry_time, y2 = be2, xloc = xloc.bar_time, color = color_be_line, style = line.style_dotted, width = 2)
+        label_be2 := label.new(x = open_time, y = be2, text = "Breakeven Up: " + str.tostring(be2), xloc = xloc.bar_time, color = color_be_line, textcolor = color.black, style = label.style_label_right, size = size.small)
+
+        pbox_bot1 := be1
+        pbox_top1 := be2
+        profit_box1 := box.new(left = open_time, top = pbox_top1, right = expiry_time, bottom = pbox_bot1, bgcolor = color_green_fill, border_color = color_green_border, border_style = line.style_dotted, xloc = xloc.bar_time)
+
+    else if clean_strat == "long iron condor" or str.pos(clean_strat, "long iron condor") >= 0
+        leg1_lbl := "Short Put (Sell) Strike"
+        leg2_lbl := "Long Put (Buy) Strike"
+        leg3_lbl := "Long Call (Buy) Strike"
+        leg4_lbl := "Short Call (Sell) Strike"
+        
+        line_strike1 := line.new(x1 = open_time, y1 = strike1, x2 = expiry_time, y2 = strike1, xloc = xloc.bar_time, color = color_strike_line, style = line.style_solid, width = 2)
+        label_strike1 := label.new(x = expiry_time, y = strike1, text = leg1_lbl + ": " + str.tostring(strike1), xloc = xloc.bar_time, color = color_strike_line, textcolor = color.white, style = label.style_label_left, size = size.small)
+        
+        line_strike2 := line.new(x1 = open_time, y1 = strike2, x2 = expiry_time, y2 = strike2, xloc = xloc.bar_time, color = color_strike_line, style = line.style_solid, width = 2)
+        label_strike2 := label.new(x = expiry_time, y = strike2, text = leg2_lbl + ": " + str.tostring(strike2), xloc = xloc.bar_time, color = color_strike_line, textcolor = color.white, style = label.style_label_left, size = size.small)
+        
+        line_strike3 := line.new(x1 = open_time, y1 = strike3, x2 = expiry_time, y2 = strike3, xloc = xloc.bar_time, color = color_strike_line, style = line.style_solid, width = 2)
+        label_strike3 := label.new(x = expiry_time, y = strike3, text = leg3_lbl + ": " + str.tostring(strike3), xloc = xloc.bar_time, color = color_strike_line, textcolor = color.white, style = label.style_label_left, size = size.small)
+        
+        line_strike4 := line.new(x1 = open_time, y1 = strike4, x2 = expiry_time, y2 = strike4, xloc = xloc.bar_time, color = color_strike_line, style = line.style_solid, width = 2)
+        label_strike4 := label.new(x = expiry_time, y = strike4, text = leg4_lbl + ": " + str.tostring(strike4), xloc = xloc.bar_time, color = color_strike_line, textcolor = color.white, style = label.style_label_left, size = size.small)
+        
+        be1 := strike2 - premium
+        line_be1 := line.new(x1 = open_time, y1 = be1, x2 = expiry_time, y2 = be1, xloc = xloc.bar_time, color = color_be_line, style = line.style_dotted, width = 2)
+        label_be1 := label.new(x = open_time, y = be1, text = "Breakeven Down: " + str.tostring(be1), xloc = xloc.bar_time, color = color_be_line, textcolor = color.black, style = label.style_label_right, size = size.small)
+
+        be2 := strike3 + premium
+        line_be2 := line.new(x1 = open_time, y1 = be2, x2 = expiry_time, y2 = be2, xloc = xloc.bar_time, color = color_be_line, style = line.style_dotted, width = 2)
+        label_be2 := label.new(x = open_time, y = be2, text = "Breakeven Up: " + str.tostring(be2), xloc = xloc.bar_time, color = color_be_line, textcolor = color.black, style = label.style_label_right, size = size.small)
+
+        // Two profit zones for Long Iron Condor!
+        // Zone 1: Put profit zone (below strike2 - premium)
+        pbox_bot1 := low_limit
+        pbox_top1 := be1
+        profit_box1 := box.new(left = open_time, top = pbox_top1, right = expiry_time, bottom = pbox_bot1, bgcolor = color_green_fill, border_color = color_green_border, border_style = line.style_dotted, xloc = xloc.bar_time)
+        
+        // Zone 2: Call profit zone (above strike3 + premium)
+        pbox_bot2 := be2
+        pbox_top2 := high_limit
+        profit_box2 := box.new(left = open_time, top = pbox_top2, right = expiry_time, bottom = pbox_bot2, bgcolor = color_green_fill, border_color = color_green_border, border_style = line.style_dotted, xloc = xloc.bar_time)
+
+    // 5. Draw Information Table in the Top Right of the Screen (fixed position)
+    // Header Style Setup
+    color_hdr_bg = color.new(color.blue, 30)
+    
+    table.cell(info_table, 0, 0, "Option Strategy", text_color = color.white, text_size = size.small, bgcolor = color_hdr_bg)
+    table.cell(info_table, 1, 0, strategy, text_color = color.white, text_size = size.small)
+    
+    table.cell(info_table, 0, 1, "Underlying Open", text_color = color.white, text_size = size.small, bgcolor = color_hdr_bg)
+    table.cell(info_table, 1, 1, "$" + str.tostring(underlying_open, "#.##"), text_color = color.white, text_size = size.small)
+    
+    table.cell(info_table, 0, 2, "Premium Received", text_color = color.white, text_size = size.small, bgcolor = color_hdr_bg)
+    table.cell(info_table, 1, 2, "$" + str.tostring(premium, "#.##") + (is_credit ? " (Credit)" : " (Debit)"), text_color = color.white, text_size = size.small)
+
+    table.cell(info_table, 0, 3, "Trade Duration", text_color = color.white, text_size = size.small, bgcolor = color_hdr_bg)
+    table.cell(info_table, 1, 3, open_date_str + " to " + expiry_date_str, text_color = color.white, text_size = size.small)
+
+    pop_text = na(pop) ? "N/A" : str.tostring(pop, "#.#") + "%"
+    table.cell(info_table, 0, 4, "Probability of Profit (POP)", text_color = color.white, text_size = size.small, bgcolor = color_hdr_bg)
+    table.cell(info_table, 1, 4, pop_text, text_color = color.white, text_size = size.small)
