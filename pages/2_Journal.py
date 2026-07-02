@@ -479,7 +479,7 @@ if trades:
         if t.status == "Open":
             if cols[16].button("Close", key=f"close_{t.id}", use_container_width=True):
                 st.session_state.close_trade_id = t.id
-                st.switch_page("pages/4_Close Trade.py")
+                st.switch_page("pages/5_Close Trade.py")
         else:
             if cols[16].button("Reopen", key=f"reopen_{t.id}", use_container_width=True):
                 trade_to_reopen = db.query(Trade).filter(Trade.id == t.id).first()

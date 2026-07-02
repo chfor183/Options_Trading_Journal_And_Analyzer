@@ -62,12 +62,13 @@ finance/
 │   ├── 0_Home_Content.py   # Home page content
 │   ├── 1_Trade.py          # Trade entry, editing, and payoff chart
 │   ├── 2_Journal.py        # Ledger of saved trades (pagination, filters, bulk delete)
-│   ├── 3_Dashboard.py      # High-level performance metrics
-│   ├── 4_Close Trade.py    # Hidden navigation tab for executing closing transactions
-│   ├── 5_Research.py       # Market research tools and data integration
-│   ├── 6_Export.py         # Dynamic PDF Report generation and downloading
-│   ├── 7_Framework.py      # Interactive pre-trade checklists and mindset guidelines
-│   └── 8_Strategies.py     # Responsive reference tables and setup rules
+│   ├── 3_Open_Trades.py    # Live open trades tracker, P&L estimator, and health dashboard
+│   ├── 4_Dashboard.py      # High-level performance metrics
+│   ├── 5_Close Trade.py    # Hidden navigation tab for executing closing transactions
+│   ├── 6_Research.py       # Market research tools and data integration
+│   ├── 7_Export.py         # Dynamic PDF Report generation and downloading
+│   ├── 8_Framework.py      # Interactive pre-trade checklists and mindset guidelines
+│   └── 9_Strategies.py     # Responsive reference tables and setup rules
 └── src/
     ├── db.py               # Database connection, finance schema setup, and session management
     ├── market_data.py      # yfinance API wrappers
@@ -115,6 +116,13 @@ streamlit run C:\Lab\finance\Home.py
 ## Recent Updates
 
 **Session Date: 2026-07-02**
+- **CSV Data Export Integration**:
+  - **Comprehensive Data Export**: Added an **Export CSV Report** button to the Export page. The exported CSV contains all available data for the selected (filtered) trades, including chronological metadata, calculated metrics (collateral, expected values, max win/loss, probability metrics, etc.), and complete serialized lists of associated legs and transactions.
+  - **Dynamic Sidebar and Page Title Refactoring**: Renamed the Export page from "Export PDF" to **Export** in the sidebar navigation (`Home.py`) as well as in the page title (`pages/6_Export.py`).
+  - **Professional Button Theming**: Customized the Export page download actions using JavaScript styling injections to render a clean, high-contrast **Blue** theme for the *Generate PDF Report* button and a **Green** theme for the *Export CSV Report* button.
+- **Investment Framework Enhancements**:
+  - **Catalyst Checklists Update**: Added a check for **Financial target revisions** in the "3. Catalyst Checks" section under the Company Analysis checklist in `pages/7_Framework.py`. 
+  - **Dynamic Progress Calculation**: Integrated the new checkpoint into the state-preserving callback (`uncheck_company`) and updated the checklist's aggregate scores and progress bar dynamically to support 15 total items.
 - **PDF Export Enhancements**:
   - **Sequential Trade IDs in PDF**: Added the persistent sequential `trade_number` (`#`) column as the very first column of the "Trades List" section in the exported PDF reports.
   - **Grid Realignment & Precise Sizing**: Recalculated and optimized the horizontal column widths of the Landscape PDF layout (e.g. allocating `12` width to `#`) to prevent any overflow or boundary clipping.
