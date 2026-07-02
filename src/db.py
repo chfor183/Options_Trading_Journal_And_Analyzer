@@ -20,6 +20,27 @@ def init_db():
         conn.commit()
     Base.metadata.create_all(bind=engine)
     
+    # Check if trade_number column exists and alter table if not
+    with engine.connect() as conn:
+        res = conn.execute(text(
+            "SELECT 1 FROM information_schema.columns "
+            "WHERE table_schema = 'finance' AND table_name = 'trades' AND column_name = 'trade_number'"
+        )).fetchone()
+        if not res:
+            conn.execute(text("ALTER TABLE finance.trades ADD COLUMN trade_number INTEGER"))
+            conn.commit()
+            
+            # Populate existing trade numbers chronologically for all portfolios
+            db_session = SessionLocal()
+            from src.models import Portfolio, Trade
+            portfolios = db_session.query(Portfolio).all()
+            for port in portfolios:
+                trades = db_session.query(Trade).filter(Trade.portfolio_id == port.id).order_by(Trade.date_opened, Trade.id).all()
+                for idx, trade in enumerate(trades):
+                    trade.trade_number = idx + 1
+            db_session.commit()
+            db_session.close()
+
     # Create default portfolio if none exist
     db = SessionLocal()
     from src.models import Portfolio

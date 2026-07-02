@@ -53,6 +53,7 @@ if "edit_trade_id" in st.session_state and st.session_state.edit_trade_id:
         st.session_state[f"loaded_{trade_to_edit.id}"] = True
         st.session_state["ticker_val"] = trade_to_edit.ticker
         st.session_state["name_val"] = trade_to_edit.underlying_name
+        st.session_state["last_ticker"] = trade_to_edit.ticker
         st.session_state["strategy_val"] = trade_to_edit.strategy_type
         st.session_state["move_val"] = trade_to_edit.expected_move
         st.session_state["url_val"] = trade_to_edit.idea_url
@@ -144,6 +145,11 @@ with col1:
         with st.spinner("Fetching data..."):
             info = get_ticker_info(ticker)
         
+        # Check if the ticker has changed to fetch and update name_val
+        if "last_ticker" not in st.session_state or st.session_state["last_ticker"] != ticker:
+            st.session_state["last_ticker"] = ticker
+            st.session_state["name_val"] = "SPDR Gold Shares" if ticker == "GLD" else info['name']
+        
         st.markdown("<span style='background-color: #cbd5e1; color: #000000; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 14px;'>Name of Underlying</span>", unsafe_allow_html=True)
         name = st.text_input("Name of Underlying", value=st.session_state.get("name_val", "SPDR Gold Shares" if ticker == "GLD" else info['name']), label_visibility="collapsed")
         
@@ -192,7 +198,45 @@ st.subheader("Options")
 components.html("""
 <script>
 const observer = new MutationObserver(() => {
-    const buttons = window.parent.document.querySelectorAll('.stButton button');
+    const parentDoc = window.parent.document;
+    
+    // Inject stylesheet if it doesn't exist
+    if (!parentDoc.getElementById('custom-trade-styles')) {
+        const styleEl = parentDoc.createElement('style');
+        styleEl.id = 'custom-trade-styles';
+        styleEl.textContent = `
+            .fixed-save-button {
+                position: fixed !important;
+                bottom: 24px !important;
+                right: 24px !important;
+                width: 190px !important;
+                z-index: 99999 !important;
+                background-color: #2e7d32 !important; /* Nice Material green 800 */
+                color: #ffffff !important;
+                border: 1px solid #1b5e20 !important;
+                border-radius: 8px !important;
+                padding: 10px 24px !important;
+                font-weight: 600 !important;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
+                transition: background-color 0.2s, transform 0.1s !important;
+            }
+            .fixed-save-button:hover {
+                background-color: #1b5e20 !important;
+                transform: scale(1.03) !important;
+                cursor: pointer !important;
+            }
+            .fixed-save-button:active {
+                transform: scale(0.97) !important;
+            }
+            .fixed-save-button p {
+                color: #ffffff !important;
+                font-weight: 600 !important;
+            }
+        `;
+        parentDoc.head.appendChild(styleEl);
+    }
+
+    const buttons = parentDoc.querySelectorAll('.stButton button');
     buttons.forEach(b => {
         // Base styling for these specific toggle buttons
         if (['Buy', 'Sell', 'Call', 'Put'].includes(b.innerText)) {
@@ -217,6 +261,11 @@ const observer = new MutationObserver(() => {
                 b.style.color = '#c5221f';
                 b.style.borderColor = '#fad2cf';
             }
+        }
+        
+        // Style Save/Update Trade buttons
+        if (['Save Trade', 'Update Trade'].includes(b.innerText)) {
+            b.classList.add('fixed-save-button');
         }
     });
 });
@@ -458,8 +507,13 @@ if ticker and current_price > 0:
                 st.error("No active portfolio selected. Please select a portfolio in the sidebar.")
                 st.stop()
                 
+            from sqlalchemy import func
+            max_num = db.query(func.max(Trade.trade_number)).filter(Trade.portfolio_id == active_portfolio_id).scalar()
+            next_trade_num = (max_num or 0) + 1
+            
             new_trade = Trade(
                 portfolio_id=active_portfolio_id,
+                trade_number=next_trade_num,
                 ticker=ticker,
                 underlying_name=name,
                 category=category,
@@ -509,5 +563,6 @@ if ticker and current_price > 0:
             db.add(new_leg)
             
         db.commit()
+        st.switch_page("pages/2_Journal.py")
 
 db.close()

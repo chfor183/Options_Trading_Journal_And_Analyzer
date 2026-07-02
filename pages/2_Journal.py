@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import numpy as np
 import math
@@ -11,6 +12,11 @@ st.set_page_config(page_title="Trading Journal", page_icon="📓", layout="wide"
 st.title("Trading Journal")
 
 db = SessionLocal()
+
+if "sort_column" not in st.session_state:
+    st.session_state.sort_column = "Date Opened"
+if "sort_desc" not in st.session_state:
+    st.session_state.sort_desc = True
 
 active_portfolio_id = st.session_state.get("active_portfolio_id")
 if active_portfolio_id:
@@ -47,6 +53,39 @@ if trades:
         }
         </style>
     """, unsafe_allow_html=True)
+    
+    components.html("""
+    <script>
+    const observer = new MutationObserver(() => {
+        const parentDoc = window.parent.document;
+        const buttons = parentDoc.querySelectorAll('.stButton button');
+        const sortableHeaders = ["#", "Ticker", "Name", "Date Opened", "Date Closed", "Strategy", "DTE", "Exp. Move", "Cost", "PnL", "Status"];
+        buttons.forEach(b => {
+            const text = b.innerText.trim();
+            if (sortableHeaders.includes(text)) {
+                b.style.backgroundColor = 'transparent';
+                b.style.border = 'none';
+                b.style.boxShadow = 'none';
+                b.style.padding = '0';
+                b.style.fontWeight = 'bold';
+                b.style.textAlign = 'left';
+                b.style.justifyContent = 'flex-start';
+                b.style.minHeight = 'unset';
+                b.style.height = 'auto';
+                b.style.color = 'inherit';
+                
+                const p = b.querySelector('p');
+                if (p) {
+                    p.style.fontWeight = 'bold';
+                    p.style.color = 'inherit';
+                    p.style.margin = '0';
+                }
+            }
+        });
+    });
+    observer.observe(window.parent.document.body, {childList: true, subtree: true});
+    </script>
+    """, height=0, width=0)
     
     def reset_page():
         st.session_state.current_page = 1
@@ -101,8 +140,53 @@ if trades:
     if filter_strategy != "All":
         filtered_trades = [t for t in filtered_trades if t.strategy_type == filter_strategy]
         
+    def get_sort_value(t, col_name):
+        if col_name == "#":
+            return t.trade_number or 0
+        elif col_name == "Ticker":
+            return t.ticker or ""
+        elif col_name == "Name":
+            return t.underlying_name or ""
+        elif col_name == "Date Opened":
+            return t.date_opened or datetime.min
+        elif col_name == "Date Closed":
+            close_dates = [tx.date for tx in t.transactions if tx.action != "Open"]
+            return max(close_dates) if close_dates else datetime.min
+        elif col_name == "Strategy":
+            return t.strategy_type or ""
+        elif col_name == "DTE":
+            if t.legs:
+                first_leg = min(t.legs, key=lambda l: l.expiry)
+                return (first_leg.expiry - t.date_opened.date()).days
+            return -1
+        elif col_name == "Exp. Move":
+            return t.expected_move or ""
+        elif col_name == "Cost":
+            open_tx = next((tx for tx in t.transactions if tx.action == "Open"), None)
+            return open_tx.price if open_tx else 0.0
+        elif col_name == "PnL":
+            val = 0.0
+            for tx in t.transactions:
+                if tx.action == "Open":
+                    val += -tx.price - tx.commission
+                else:
+                    val += tx.price - tx.commission
+            return val
+        elif col_name == "Status":
+            return t.status or ""
+        return 0
+
     # Sort
-    filtered_trades.sort(key=lambda x: x.date_opened, reverse=True)
+    reverse_sort = st.session_state.sort_desc
+    sort_col = st.session_state.sort_column
+
+    def sorting_key(trade):
+        val = get_sort_value(trade, sort_col)
+        if isinstance(val, str):
+            return val.lower()
+        return val
+
+    filtered_trades.sort(key=sorting_key, reverse=reverse_sort)
     
     # Select All / Deselect All / Bulk Delete
     sel_col1, sel_col2, sel_col3, _ = st.columns([1.5, 1, 1.5, 6])
@@ -130,11 +214,41 @@ if trades:
             
     # Header row
     # Adjusting column widths so Details/Edit/Action buttons have a bit more space
-    col_widths = [0.4, 0.9, 1.8, 1.0, 1.0, 1.5, 0.5, 1.0, 1.1, 1.0, 1.0, 1.3, 0.8, 0.8, 0.7, 0.9]
+    # PnL was index 12 with width 1.3 -> reduced to 0.9 (reduced by 0.4)
+    # Status was index 13 with width 0.8 -> increased to 1.2 (increased by 0.4)
+    col_widths = [0.4, 0.5, 0.9, 1.8, 1.0, 1.0, 1.5, 0.5, 1.0, 1.1, 1.0, 1.0, 0.9, 1.2, 0.8, 0.7, 0.9]
     cols = st.columns(col_widths)
-    headers = ["", "Ticker", "Name", "Date Opened", "Date Closed", "Strategy", "DTE", "Exp. Move", "Current or Closed Price", "Break-Even", "Cost", "PnL", "Status", "Details", "Edit", "Action"]
-    for col, header in zip(cols, headers):
-        col.markdown(f"<div style='text-align: left; white-space: normal; font-weight: bold; line-height: 1.2;'>{header}</div>", unsafe_allow_html=True)
+    headers_config = [
+        ("", False),
+        ("#", True),
+        ("Ticker", True),
+        ("Name", True),
+        ("Date Opened", True),
+        ("Date Closed", True),
+        ("Strategy", True),
+        ("DTE", True),
+        ("Exp. Move", True),
+        ("Current or Closed Price", False),
+        ("Break-Even", False),
+        ("Cost", True),
+        ("PnL", True),
+        ("Status", True),
+        ("Details", False),
+        ("Edit", False),
+        ("Action", False)
+    ]
+    
+    for col, (header, sortable) in zip(cols, headers_config):
+        if sortable:
+            if col.button(header, key=f"hdr_{header}", use_container_width=True):
+                if st.session_state.sort_column == header:
+                    st.session_state.sort_desc = not st.session_state.sort_desc
+                else:
+                    st.session_state.sort_column = header
+                    st.session_state.sort_desc = False
+                st.rerun()
+        else:
+            col.markdown(f"<div style='text-align: left; white-space: normal; font-weight: bold; font-size: 13px; line-height: 1.2;'>{header}</div>", unsafe_allow_html=True)
     
     # Pagination Logic
     ROWS_PER_PAGE = 10
@@ -287,6 +401,28 @@ if trades:
         close_date_str = item["close_date_str"]
         dte_str = item["dte_str"]
         
+        # Calculate Expected Move value numerically for the pinescript
+        em_val = 0.0
+        try:
+            if t.expected_move:
+                # Expected move might be e.g. "Bullish ↗" or "Neutral →", let's parse actual expected move width
+                # Let's extract numeric expected move from some standard calculation or if average IV is available
+                if t.legs:
+                    first_leg = min(t.legs, key=lambda l: l.expiry)
+                    days_to_expiry = (first_leg.expiry - t.date_opened.date()).days
+                    if days_to_expiry <= 0:
+                        days_to_expiry = 1
+                else:
+                    days_to_expiry = 30
+                term = days_to_expiry / 365.0
+                ivs = [float(leg.iv) for leg in t.legs if leg.iv and float(leg.iv) > 0]
+                avg_iv = (sum(ivs) / len(ivs)) / 100.0 if ivs else 0.3
+                em_pct = avg_iv * np.sqrt(term)
+                underlying_price = t.underlying_price_at_open if t.underlying_price_at_open else 100.0
+                em_val = float(underlying_price * em_pct)
+        except Exception as e:
+            pass
+
         cols = st.columns(col_widths)
         
         # Checkbox for selection
@@ -306,44 +442,46 @@ if trades:
             label_visibility="collapsed"
         )
         
-        cols[1].markdown(f"<div style='text-align: left;'>{t.ticker}</div>", unsafe_allow_html=True)
-        cols[2].markdown(f"<div style='text-align: left;'>{t.underlying_name}</div>", unsafe_allow_html=True)
-        cols[3].markdown(f"<div style='text-align: left;'>{t.date_opened.strftime('%Y-%m-%d')}</div>", unsafe_allow_html=True)
-        cols[4].markdown(f"<div style='text-align: left;'>{close_date_str}</div>", unsafe_allow_html=True)
-        cols[5].markdown(f"<div style='text-align: left;'>{t.strategy_type}</div>", unsafe_allow_html=True)
-        cols[6].markdown(f"<div style='text-align: left;'>{dte_str}</div>", unsafe_allow_html=True)
-        cols[7].markdown(f"<div style='text-align: left;'>{t.expected_move}</div>", unsafe_allow_html=True)
-        cols[8].markdown(f"<div style='text-align: left;'>{current_price}</div>", unsafe_allow_html=True)
-        cols[9].markdown(f"<div style='text-align: left;'>{breakevens}</div>", unsafe_allow_html=True)
-        cols[10].markdown(f"<div style='text-align: left;'>${display_cost:.2f}</div>", unsafe_allow_html=True)
+        trade_num = t.trade_number if t.trade_number is not None else ""
+        cols[1].markdown(f"<div style='text-align: left;'>{trade_num}</div>", unsafe_allow_html=True)
+        cols[2].markdown(f"<div style='text-align: left;'>{t.ticker}</div>", unsafe_allow_html=True)
+        cols[3].markdown(f"<div style='text-align: left;'>{t.underlying_name}</div>", unsafe_allow_html=True)
+        cols[4].markdown(f"<div style='text-align: left;'>{t.date_opened.strftime('%Y-%m-%d')}</div>", unsafe_allow_html=True)
+        cols[5].markdown(f"<div style='text-align: left;'>{close_date_str}</div>", unsafe_allow_html=True)
+        cols[6].markdown(f"<div style='text-align: left;'>{t.strategy_type}</div>", unsafe_allow_html=True)
+        cols[7].markdown(f"<div style='text-align: left;'>{dte_str}</div>", unsafe_allow_html=True)
+        cols[8].markdown(f"<div style='text-align: left;'>{t.expected_move}</div>", unsafe_allow_html=True)
+        cols[9].markdown(f"<div style='text-align: left;'>{current_price}</div>", unsafe_allow_html=True)
+        cols[10].markdown(f"<div style='text-align: left;'>{breakevens}</div>", unsafe_allow_html=True)
+        cols[11].markdown(f"<div style='text-align: left;'>${display_cost:.2f}</div>", unsafe_allow_html=True)
         
         color = "green" if pnl > 0 else "red" if pnl < 0 else "inherit"
-        cols[11].markdown(f"<div style='text-align: left; color: {color};'>${pnl:.2f}</div>", unsafe_allow_html=True)
+        cols[12].markdown(f"<div style='text-align: left; color: {color};'>${pnl:.2f}</div>", unsafe_allow_html=True)
         
-        cols[12].markdown(f"<div style='text-align: left;'>{t.status}</div>", unsafe_allow_html=True)
+        cols[13].markdown(f"<div style='text-align: left;'>{t.status}</div>", unsafe_allow_html=True)
         
         # Initialize details visibility state
         if "expanded_trade_id" not in st.session_state:
             st.session_state.expanded_trade_id = None
             
-        if cols[13].button("Details", key=f"details_btn_{t.id}", use_container_width=True):
+        if cols[14].button("Details", key=f"details_btn_{t.id}", use_container_width=True):
             if st.session_state.expanded_trade_id == t.id:
                 st.session_state.expanded_trade_id = None
             else:
                 st.session_state.expanded_trade_id = t.id
             st.rerun()
         
-        if cols[14].button("Edit", key=f"edit_{t.id}", use_container_width=True):
+        if cols[15].button("Edit", key=f"edit_{t.id}", use_container_width=True):
             st.session_state.edit_trade_id = t.id
             st.session_state[f"loaded_{t.id}"] = False
             st.switch_page("pages/1_Trade.py")
             
         if t.status == "Open":
-            if cols[15].button("Close", key=f"close_{t.id}", use_container_width=True):
+            if cols[16].button("Close", key=f"close_{t.id}", use_container_width=True):
                 st.session_state.close_trade_id = t.id
                 st.switch_page("pages/4_Close Trade.py")
         else:
-            if cols[15].button("Reopen", key=f"reopen_{t.id}", use_container_width=True):
+            if cols[16].button("Reopen", key=f"reopen_{t.id}", use_container_width=True):
                 trade_to_reopen = db.query(Trade).filter(Trade.id == t.id).first()
                 if trade_to_reopen:
                     trade_to_reopen.status = "Open"
@@ -479,6 +617,7 @@ if trades:
                 "premium": float(abs(display_cost)) / 100.0,
                 "open_date": t.date_opened.strftime('%Y-%m-%d'),
                 "expiry_date": first_leg.expiry.strftime('%Y-%m-%d') if t.legs else t.date_opened.strftime('%Y-%m-%d'),
+                "expected_move": round(float(em_range_val), 2),
             }
             if t.probability_of_profit is not None:
                 pinescript_json_dict["pop"] = round(float(t.probability_of_profit) * 100, 1)

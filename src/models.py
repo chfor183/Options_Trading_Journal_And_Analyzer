@@ -18,6 +18,7 @@ class Trade(Base):
     __tablename__ = 'trades'
     id = Column(Integer, primary_key=True)
     portfolio_id = Column(Integer, ForeignKey('portfolios.id'))
+    trade_number = Column(Integer)
     ticker = Column(String(10), nullable=False)
     underlying_name = Column(String(100))
     category = Column(String(50))

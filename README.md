@@ -26,6 +26,8 @@ A local, Python-based web application built with Streamlit to track, journal, an
 - **Journal & Ledger**: 
   - Save trades to a local PostgreSQL database (`finance` schema).
   - View trades with pagination, sorting, and dynamic filtering (Ticker, Date, Status, Strategy).
+  - **Single-Column Sorting**: Column headers in the Trading Journal can be clicked to toggle sorting (Ascending/Descending), with a clean, flat aesthetic.
+  - **Sequential Trade Numbering**: Dynamically maps and permanently stores a chronological trade number (`#`) for every trade per-portfolio, displaying it as the first column after the select boxes.
   - Bulk management with "Select All Filtered", "Deselect All", and bulk delete functionality.
   - Performance-optimized data fetching (bypasses live API calls for closed trades).
   - Live "Current Price", "Break-Even", and real-time Probability metrics comparison to monitor active trades.
@@ -111,6 +113,26 @@ streamlit run C:\Lab\finance\Home.py
 - **DTE Categorization**: Automatically categorizes trades by Days to Expiration based on the earliest expiring leg into custom cohorts (`0 DTE`, `1-3 DTE`, `4-7 DTE`, `8-20 DTE`, `21-60 DTE`, `61-200 DTE`, `201+ DTE`).
 
 ## Recent Updates
+
+**Session Date: 2026-07-02**
+- **Trade Page Auto-Fill Improvements**:
+  - Resolved an issue on the Trade page where changing the ticker input did not automatically update the **Name of Underlying** box. Configured an active state comparison check against `st.session_state["last_ticker"]` to programmatically trigger metadata fetches and update `"name_val"` reactively.
+- **Journal Layout & Navigation Overhauls**:
+  - Overhauled **Save Trade** and **Update Trade** buttons to follow the bottom-right corner of the viewport using a fixed overlay style (`position: fixed`) and styled them in a professional Forest Green (`#2e7d32`) theme with a clean drop shadow and hover scaling effects. Configured the buttons with a standard width of exactly `190px`.
+  - Added seamless post-save routing: after successfully saving or updating a trade, the application automatically redirects the trader to the **Journal** page via `st.switch_page`.
+- **Trading Journal Persistent Sequential IDs**:
+  - Added a permanent chronological `trade_number` attribute to the `Trade` model in SQL database storage.
+  - Implemented an automated schema migration in `src/db.py` to auto-detect and append the new column safely, alongside a chronological sequence backfill script for existing historical records.
+  - Configured automatic incremental sequence assignment on save based on the highest existing trade number in that portfolio.
+  - Placed the `#` column in the journal table header directly following the bulk select checkboxes.
+- **Dynamic Multi-Column Header Sorting**:
+  - Implemented single-column sorting for the Trading Journal by clicking directly on the column headers (e.g. Ticker, Name, Date Opened, Strategy, DTE, Cost, PnL, Status).
+  - Designed flat, borderless, bold clickable header text using native Streamlit buttons styled via dynamic CSS overrides inside a parent document observer.
+  - Retained clean reading by making the font size of other columns' sorting indicators look subtle, and further reduced the font size of non-sortable columns (such as Break-Even, Current/Closed Price, Details, Edit, and Action) to a highly distinct `13px` weight.
+- **Expected Move Pine Script Visualization**:
+  - Enhanced the Pine Script v5 trading visualizer with parsed `"expected_move"` inputs from your copied Streamlit trade details.
+  - Displays upper and lower expected move standard deviation boundary lines along with translucent purple shaded channel fills directly inside TradingView.
+  - Automatically exports `"expected_move"` in the TradingView Pine Script JSON panel of the expandable Details card in your journal.
 
 **Session Date: 2026-07-01**
 - **Option Strategies Playbook & Interactive Explorer Overhaul**:

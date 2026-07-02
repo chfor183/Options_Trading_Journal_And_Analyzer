@@ -45,6 +45,7 @@ default_json = '{\n' +
   '  "open_date": "2026-06-27",\n' +
   '  "expiry_date": "2026-07-17",\n' +
   '  "pop": 76.8,\n' +
+  '  "expected_move": 25.5,\n' +
   '  "strike1": 315.0,\n' +
   '  "strike2": 325.0,\n' +
   '  "strike3": 425.0,\n' +
@@ -107,6 +108,7 @@ raw_premium = get_number_value(json_input, "premium")
 open_date_str = get_string_value(json_input, "open_date")
 expiry_date_str = get_string_value(json_input, "expiry_date")
 pop = get_number_value(json_input, "pop")
+expected_move = get_number_value(json_input, "expected_move") // Expected Move (e.g. 15.5 or percentage like 5.0)
 
 strike1 = get_number_value(json_input, "strike1")
 strike2 = get_number_value(json_input, "strike2")
@@ -145,9 +147,12 @@ var line line_strike3 = na
 var line line_strike4 = na
 var line line_be1 = na
 var line line_be2 = na
+var line line_em_up = na
+var line line_em_down = na
 
 var box profit_box1 = na
 var box profit_box2 = na
+var box em_box = na
 
 var label label_open = na
 var label label_expiry = na
@@ -157,9 +162,11 @@ var label label_strike3 = na
 var label label_strike4 = na
 var label label_be1 = na
 var label label_be2 = na
+var label label_em_up = na
+var label label_em_down = na
 
 // Fixed Table initialized once and re-used
-var table info_table = table.new(position = position.top_right, columns = 2, rows = 5, bgcolor = color.new(color.black, 30), border_width = 1, border_color = color.gray)
+var table info_table = table.new(position = position.top_right, columns = 2, rows = 6, bgcolor = color.new(color.black, 30), border_width = 1, border_color = color.gray)
 
 // --- Logic to Draw on Chart ---
 if barstate.islast and not na(open_time) and not na(expiry_time) and not na(underlying_open) and not na(premium)
@@ -172,9 +179,12 @@ if barstate.islast and not na(open_time) and not na(expiry_time) and not na(unde
     line.delete(line_strike4)
     line.delete(line_be1)
     line.delete(line_be2)
+    line.delete(line_em_up)
+    line.delete(line_em_down)
     
     box.delete(profit_box1)
     box.delete(profit_box2)
+    box.delete(em_box)
     
     label.delete(label_open)
     label.delete(label_expiry)
@@ -184,6 +194,8 @@ if barstate.islast and not na(open_time) and not na(expiry_time) and not na(unde
     label.delete(label_strike4)
     label.delete(label_be1)
     label.delete(label_be2)
+    label.delete(label_em_up)
+    label.delete(label_em_down)
 
     // 2. Classify strategy name (lowercase for easy matching)
     strategy = strategy_raw == "" ? "Short Iron Condor" : strategy_raw
@@ -229,6 +241,33 @@ if barstate.islast and not na(open_time) and not na(expiry_time) and not na(unde
     // Date Labels placed at the underlying_open price level
     label_open := label.new(x = open_time, y = high_limit, text = "Opened\n" + open_date_str, xloc = xloc.bar_time, color = color_date_line, textcolor = color.white, style = label.style_label_down, size = size.small)
     label_expiry := label.new(x = expiry_time, y = high_limit, text = "Expiry\n" + expiry_date_str, xloc = xloc.bar_time, color = color_date_line, textcolor = color.white, style = label.style_label_down, size = size.small)
+
+    // --- Draw Expected Move (EM) Bounds if available ---
+    if not na(expected_move) and expected_move > 0
+        // Calculate EM Price Bounds (Percentage vs. Absolute Points based on value range)
+        float em_val = expected_move
+        if expected_move < 100.0 and expected_move > 0.0 and (expected_move / 100.0) * underlying_open > 0.5 and expected_move < underlying_open * 0.5
+            // It might be entered as a percentage like 5.5 (%)
+            // Let's check: if the user explicitly enters a number < 100 on a high price stock, it can be a % or points.
+            // If it is small, assume absolute points unless standard practice implies percentage. Let's support both:
+            // For safety, let's treat it as percentage if the stock is high price or points.
+            // Actually, let's just draw the absolute range if it is reasonably sized, or let it be absolute points (Standard Trading Broker format is Absolute Points).
+            // Standard IB and option chain expected move is absolute points (e.g. +/- 15.5 points). So we assume absolute points first.
+            em_val := expected_move
+            
+        float em_high = underlying_open + em_val
+        float em_low = math.max(0, underlying_open - em_val)
+        
+        color_em_line = color.new(color.purple, 30)
+        color_em_fill = color.new(color.purple, 93)
+        
+        line_em_up := line.new(x1 = open_time, y1 = em_high, x2 = expiry_time, y2 = em_high, xloc = xloc.bar_time, color = color_em_line, style = line.style_dashed, width = 1)
+        line_em_down := line.new(x1 = open_time, y1 = em_low, x2 = expiry_time, y2 = em_low, xloc = xloc.bar_time, color = color_em_line, style = line.style_dashed, width = 1)
+        
+        label_em_up := label.new(x = open_time, y = em_high, text = "EM Upper: " + str.tostring(em_high, "#.##"), xloc = xloc.bar_time, color = color_em_line, textcolor = color.white, style = label.style_label_lower_right, size = size.small)
+        label_em_down := label.new(x = open_time, y = em_low, text = "EM Lower: " + str.tostring(em_low, "#.##"), xloc = xloc.bar_time, color = color_em_line, textcolor = color.white, style = label.style_label_upper_right, size = size.small)
+        
+        em_box := box.new(left = open_time, top = em_high, right = expiry_time, bottom = em_low, bgcolor = color_em_fill, border_color = color.new(color_em_line, 60), border_style = line.style_dashed, xloc = xloc.bar_time)
 
     // 4. Identify Strategy Legs, draw strike lines, labels, breakeven lines and profit boxes
     string leg1_lbl = ""
@@ -454,3 +493,7 @@ if barstate.islast and not na(open_time) and not na(expiry_time) and not na(unde
     pop_text = na(pop) ? "N/A" : str.tostring(pop, "#.#") + "%"
     table.cell(info_table, 0, 4, "Probability of Profit (POP)", text_color = color.white, text_size = size.small, bgcolor = color_hdr_bg)
     table.cell(info_table, 1, 4, pop_text, text_color = color.white, text_size = size.small)
+
+    em_text = na(expected_move) ? "N/A" : "$" + str.tostring(expected_move, "#.##")
+    table.cell(info_table, 0, 5, "Expected Move (EM)", text_color = color.white, text_size = size.small, bgcolor = color_hdr_bg)
+    table.cell(info_table, 1, 5, em_text, text_color = color.white, text_size = size.small)
