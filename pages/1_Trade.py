@@ -138,22 +138,28 @@ st.divider()
 col1, col2 = st.columns(2)
 
 with col1:
-    ticker = st.text_input("Underlying Ticker", value=st.session_state.get("ticker_val", "GLD")).upper()
+    st.markdown("<span style='background-color: #cbd5e1; color: #000000; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 14px;'>Underlying Ticker</span>", unsafe_allow_html=True)
+    ticker = st.text_input("Underlying Ticker", value=st.session_state.get("ticker_val", "GLD"), label_visibility="collapsed").upper()
     if ticker:
         with st.spinner("Fetching data..."):
             info = get_ticker_info(ticker)
         
-        name = st.text_input("Name of Underlying", value=st.session_state.get("name_val", "SPDR Gold Shares" if ticker == "GLD" else info['name']))
+        st.markdown("<span style='background-color: #cbd5e1; color: #000000; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 14px;'>Name of Underlying</span>", unsafe_allow_html=True)
+        name = st.text_input("Name of Underlying", value=st.session_state.get("name_val", "SPDR Gold Shares" if ticker == "GLD" else info['name']), label_visibility="collapsed")
         
         cat_options = ["Stock", "ETF", "Index", "Futures", "Forex", "Crypto"]
         default_cat = "ETF" if ticker == "GLD" else (info['category'].capitalize() if info['category'].capitalize() in cat_options else "Stock")
-        category = st.selectbox("Category", cat_options, index=cat_options.index(default_cat))
+        st.markdown("<span style='background-color: #3399ff; color: #000000; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 14px;'>Category</span>", unsafe_allow_html=True)
+        category = st.selectbox("Category", cat_options, index=cat_options.index(default_cat), label_visibility="collapsed")
         
-        current_price = st.number_input("Underlying Price", value=float(373.63) if ticker == "GLD" else (float(info['current_price']) if info.get('current_price') else 1151.38), format="%.2f")
+        st.markdown("<span style='background-color: #cbd5e1; color: #000000; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 14px;'>Underlying Price</span>", unsafe_allow_html=True)
+        current_price = st.number_input("Underlying Price", value=float(373.63) if ticker == "GLD" else (float(info['current_price']) if info.get('current_price') else 1151.38), format="%.2f", label_visibility="collapsed")
         
         strat_options = [
             "Bull Put Spread (credit)",
             "Bear Call Spread (credit)",
+            "Bull Call Spread (debit)",
+            "Bear Put Spread (debit)",
             "Iron Condor (debit)",
             "Short Iron Condor (credit)",
             "Long Call (debit)",
@@ -164,16 +170,21 @@ with col1:
         ]
         def_strat = st.session_state.get("strategy_val", "Bull Put Spread (credit)" if ticker == "GLD" else "Bull Put Spread (credit)")
         strat_idx = strat_options.index(def_strat) if def_strat in strat_options else 0
-        strategy_type = st.selectbox("Strategy Type", strat_options, index=strat_idx)
+        st.markdown("<span style='background-color: #3399ff; color: #000000; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 14px;'>Strategy Type</span>", unsafe_allow_html=True)
+        strategy_type = st.selectbox("Strategy Type", strat_options, index=strat_idx, label_visibility="collapsed")
 
 with col2:
     move_options = ["Bullish ↗", "Neutral →", "Bearish ↘", "High volatility"]
     def_move = st.session_state.get("move_val", "Bullish ↗" if ticker == "GLD" else "Bullish ↗")
     move_idx = move_options.index(def_move) if def_move in move_options else 0
-    expected_move = st.selectbox("Expected Move", move_options, index=move_idx)
+    st.markdown("<span style='background-color: #3399ff; color: #000000; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 14px;'>Expected Move</span>", unsafe_allow_html=True)
+    expected_move = st.selectbox("Expected Move", move_options, index=move_idx, label_visibility="collapsed")
     
-    idea_url = st.text_input("Idea URL", value=st.session_state.get("url_val", ""))
-    date_opened = st.date_input("Date Opened", value=st.session_state.get("date_val", datetime(2026, 6, 26) if ticker == "GLD" else datetime.today()))
+    st.markdown("<span style='background-color: #3399ff; color: #000000; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 14px;'>Idea URL</span>", unsafe_allow_html=True)
+    idea_url = st.text_input("Idea URL", value=st.session_state.get("url_val", ""), label_visibility="collapsed")
+    
+    st.markdown("<span style='background-color: #3399ff; color: #000000; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 14px;'>Date Opened</span>", unsafe_allow_html=True)
+    date_opened = st.date_input("Date Opened", value=st.session_state.get("date_val", datetime(2026, 6, 26) if ticker == "GLD" else datetime.today()), label_visibility="collapsed")
 
 st.subheader("Options")
 
@@ -213,7 +224,8 @@ observer.observe(window.parent.document.body, {childList: true, subtree: true});
 </script>
 """, height=0, width=0)
 
-num_legs = st.number_input("Number of Legs", min_value=1, max_value=8, key="num_legs")
+st.markdown("<span style='background-color: #cbd5e1; color: #000000; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 14px;'>Number of Legs</span>", unsafe_allow_html=True)
+num_legs = st.number_input("Number of Legs", min_value=1, max_value=8, key="num_legs", label_visibility="collapsed")
 
 col_btn1, col_btn2 = st.columns([2, 10])
 if col_btn1.button("Pull Live Data for All Legs"):
@@ -256,14 +268,14 @@ if col_btn1.button("Pull Live Data for All Legs"):
 legs_data = []
 
 hcol0, hcol1, hcol2, hcol3, hcol4, hcol5, hcol6, hcol7, hcol8 = st.columns([0.8, 1.2, 1, 2.5, 1.5, 1.2, 1.5, 1.5, 1.5])
-hcol1.write("**Action**")
-hcol2.write("**Qty**")
-hcol3.write("**Expiration Date**")
-hcol4.write("**Strike**")
-hcol5.write("**Type**")
-hcol6.write("**Price**")
-hcol7.write("**Delta**")
-hcol8.write("**IV (%)**")
+hcol1.markdown("<span style='background-color: #cbd5e1; color: #000000; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 14px;'>Action</span>", unsafe_allow_html=True)
+hcol2.markdown("<span style='background-color: #cbd5e1; color: #000000; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 14px;'>Qty</span>", unsafe_allow_html=True)
+hcol3.markdown("<span style='background-color: #cbd5e1; color: #000000; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 14px;'>Expiration Date</span>", unsafe_allow_html=True)
+hcol4.markdown("<span style='background-color: #cbd5e1; color: #000000; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 14px;'>Strike</span>", unsafe_allow_html=True)
+hcol5.markdown("<span style='background-color: #cbd5e1; color: #000000; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 14px;'>Type</span>", unsafe_allow_html=True)
+hcol6.markdown("<span style='background-color: #3399ff; color: #000000; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 14px;'>Price</span>", unsafe_allow_html=True)
+hcol7.markdown("<span style='background-color: #cbd5e1; color: #000000; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 14px;'>Delta</span>", unsafe_allow_html=True)
+hcol8.markdown("<span style='background-color: #cbd5e1; color: #000000; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 14px;'>IV (%)</span>", unsafe_allow_html=True)
 
 for i in range(num_legs):
     col0, col1, col2, col3, col4, col5, col6, col7, col8 = st.columns([0.8, 1.2, 1, 2.5, 1.5, 1.2, 1.5, 1.5, 1.5])
