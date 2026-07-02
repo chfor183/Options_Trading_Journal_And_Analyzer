@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 from datetime import datetime, timedelta
 import math
@@ -6,8 +7,64 @@ from fpdf import FPDF, XPos, YPos
 from src.db import SessionLocal
 from src.models import Trade
 
-st.set_page_config(page_title="Export PDF", page_icon="📄", layout="wide")
-st.title("Export PDF")
+st.set_page_config(page_title="Export", page_icon="📄", layout="wide")
+st.title("Export")
+
+# Inject custom CSS styles for PDF and CSV download buttons
+components.html("""
+<script>
+const observer = new MutationObserver(() => {
+    const parentDoc = window.parent.document;
+    
+    if (!parentDoc.getElementById('custom-export-styles')) {
+        const styleEl = parentDoc.createElement('style');
+        styleEl.id = 'custom-export-styles';
+        styleEl.textContent = `
+            .btn-pdf-report {
+                background-color: #1a73e8 !important;
+                color: #ffffff !important;
+                border: 1px solid #1a73e8 !important;
+                transition: background-color 0.2s, transform 0.1s !important;
+            }
+            .btn-pdf-report:hover {
+                background-color: #1557b0 !important;
+                border-color: #1557b0 !important;
+                cursor: pointer !important;
+            }
+            .btn-pdf-report p {
+                color: #ffffff !important;
+            }
+            .btn-csv-report {
+                background-color: #2e7d32 !important;
+                color: #ffffff !important;
+                border: 1px solid #2e7d32 !important;
+                transition: background-color 0.2s, transform 0.1s !important;
+            }
+            .btn-csv-report:hover {
+                background-color: #1b5e20 !important;
+                border-color: #1b5e20 !important;
+                cursor: pointer !important;
+            }
+            .btn-csv-report p {
+                color: #ffffff !important;
+            }
+        `;
+        parentDoc.head.appendChild(styleEl);
+    }
+    
+    const buttons = parentDoc.querySelectorAll('.stButton button, .stDownloadButton button');
+    buttons.forEach(b => {
+        const text = b.innerText.trim();
+        if (text === 'Generate PDF Report') {
+            b.classList.add('btn-pdf-report');
+        } else if (text === 'Export CSV Report') {
+            b.classList.add('btn-csv-report');
+        }
+    });
+});
+observer.observe(window.parent.document.body, {childList: true, subtree: true});
+</script>
+""", height=0, width=0)
 
 def analyze_trade(trade):
     pnl = 0.0
@@ -264,6 +321,87 @@ def generate_pdf(filtered_trades, filter_info):
 
     return pdf.output()
 
+
+def generate_csv_data(filtered_trades):
+    rows = []
+    for t in filtered_trades:
+        stats = analyze_trade(t)
+        
+        # Calculate closed date
+        close_dates = [tx.date for tx in t.transactions if tx.action != "Open"]
+        close_date_str = max(close_dates).strftime('%Y-%m-%d') if close_dates else ""
+        
+        # Determine contracts
+        open_tx = next((tx for tx in t.transactions if tx.action == "Open"), None)
+        contracts = max((leg.quantity for leg in t.legs if leg.quantity), default=1) if t.legs else (open_tx.quantity if open_tx else 1)
+        
+        # Format legs
+        legs_list = []
+        for leg in t.legs:
+            strike_str = f"{leg.strike:.2f}" if leg.strike is not None else ""
+            price_str = f"{leg.price:.3f}" if leg.price is not None else ""
+            delta_str = f"{leg.delta:.4f}" if leg.delta is not None else ""
+            iv_str = f"{leg.iv:.2f}%" if leg.iv is not None else ""
+            expiry_str = leg.expiry.strftime('%Y-%m-%d') if leg.expiry else ""
+            legs_list.append(
+                f"{leg.position} {leg.quantity if leg.quantity else 1} {leg.option_type} "
+                f"(Strike: {strike_str}, Price: {price_str}, Delta: {delta_str}, IV: {iv_str}, Expiry: {expiry_str})"
+            )
+        legs_str = "; ".join(legs_list)
+        
+        # Format transactions
+        tx_list = []
+        for tx in t.transactions:
+            tx_date_str = tx.date.strftime('%Y-%m-%d %H:%M:%S') if tx.date else ""
+            tx_list.append(
+                f"[{tx_date_str}] {tx.action} {tx.quantity} @ {tx.price:.2f} (Comm: {tx.commission:.2f})"
+            )
+        tx_str = "; ".join(tx_list)
+        
+        # Outcome
+        if t.status == "Open":
+            outcome = "Open"
+        elif stats["is_winner"]:
+            outcome = "Win"
+        elif stats["is_loser"]:
+            outcome = "Loss"
+        else:
+            outcome = "Scratch"
+            
+        rows.append({
+            "Trade Number": t.trade_number if t.trade_number is not None else "",
+            "Ticker": t.ticker,
+            "Underlying Name": t.underlying_name or "",
+            "Category": t.category or "",
+            "Strategy Type": t.strategy_type or "",
+            "Expected Move": t.expected_move or "",
+            "Idea URL": t.idea_url or "",
+            "Date Opened": t.date_opened.strftime('%Y-%m-%d %H:%M:%S') if t.date_opened else "",
+            "Date Closed": close_date_str,
+            "Status": t.status,
+            "Collateral": t.collateral if t.collateral is not None else 0.0,
+            "Max Profit": t.max_profit if t.max_profit is not None else 0.0,
+            "Max Loss": t.max_loss if t.max_loss is not None else 0.0,
+            "Probability of Profit": t.probability_of_profit if t.probability_of_profit is not None else 0.0,
+            "Probability of Loss": t.probability_of_loss if t.probability_of_loss is not None else 0.0,
+            "Probability Max Profit": t.probability_max_profit if t.probability_max_profit is not None else 0.0,
+            "Probability Max Loss": t.probability_max_loss if t.probability_max_loss is not None else 0.0,
+            "Expected Value": t.expected_value if t.expected_value is not None else 0.0,
+            "Underlying Price at Open": t.underlying_price_at_open if t.underlying_price_at_open is not None else 0.0,
+            "Premium Collected": stats["premium_collected"],
+            "Premium Paid": stats["premium_paid"],
+            "Total Commission": stats["total_commission"],
+            "Net PnL": stats["pnl"],
+            "Contracts": contracts,
+            "Outcome": outcome,
+            "Legs": legs_str,
+            "Transactions": tx_str
+        })
+        
+    df = pd.DataFrame(rows)
+    return df.to_csv(index=False).encode('utf-8')
+
+
 db = SessionLocal()
 
 active_portfolio_id = st.session_state.get("active_portfolio_id")
@@ -339,12 +477,25 @@ if trades:
     
     pdf_bytes = bytes(generate_pdf(filtered_trades, filter_info))
     
-    st.download_button(
-        label="Generate PDF Report",
-        data=pdf_bytes,
-        file_name=f"Trade_Report_{datetime.now().strftime('%Y%m%d')}.pdf",
-        mime="application/pdf",
-        type="primary"
-    )
+    col_pdf, col_csv = st.columns(2)
+    with col_pdf:
+        st.download_button(
+            label="Generate PDF Report",
+            data=pdf_bytes,
+            file_name=f"Trade_Report_{datetime.now().strftime('%Y%m%d')}.pdf",
+            mime="application/pdf",
+            type="primary",
+            use_container_width=True
+        )
+    with col_csv:
+        csv_bytes = generate_csv_data(filtered_trades)
+        st.download_button(
+            label="Export CSV Report",
+            data=csv_bytes,
+            file_name=f"Trades_Export_{datetime.now().strftime('%Y%m%d')}.csv",
+            mime="text/csv",
+            type="secondary",
+            use_container_width=True
+        )
 
 db.close()

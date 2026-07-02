@@ -17,7 +17,7 @@ with tabs[3]:
             st.session_state[key] = False
 
     def uncheck_company():
-        for key in ["comp_f1", "comp_f2", "comp_f3", "comp_f4", "comp_ta1", "comp_ta2", "comp_ta3", "comp_rsi", "comp_bb", "comp_wma", "comp_sma", "comp_st", "comp_news", "comp_macro"]:
+        for key in ["comp_f1", "comp_f2", "comp_f3", "comp_f4", "comp_ta1", "comp_ta2", "comp_ta3", "comp_rsi", "comp_bb", "comp_wma", "comp_sma", "comp_st", "comp_news", "comp_macro", "comp_revisions"]:
             st.session_state[key] = False
 
     col1, col2 = st.columns(2)
@@ -88,10 +88,11 @@ with tabs[3]:
             st.markdown("**3. Catalyst Checks**")
             comp_news = st.checkbox("Recent corporate developments, leadership shifts, legal actions, and PR reports", key="comp_news")
             comp_macro = st.checkbox("Sector Rotations, industry-specific developments, and cycle stage audited", key="comp_macro")
+            comp_revisions = st.checkbox("Financial target revisions, earnings guidance adjustments, or analyst consensus updates", key="comp_revisions")
 
             # Score Summary Card
-            comp_score = sum([comp_f1, comp_f2, comp_f3, comp_f4, comp_ta1, comp_ta2, comp_ta3, comp_rsi, comp_bb, comp_wma, comp_sma, comp_st, comp_news, comp_macro])
-            comp_total = 14
+            comp_score = sum([comp_f1, comp_f2, comp_f3, comp_f4, comp_ta1, comp_ta2, comp_ta3, comp_rsi, comp_bb, comp_wma, comp_sma, comp_st, comp_news, comp_macro, comp_revisions])
+            comp_total = 15
             progress_pct2 = comp_score / comp_total
             st.write("")
             st.progress(progress_pct2)
