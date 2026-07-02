@@ -116,6 +116,7 @@ def generate_pdf(filtered_trades, filter_info):
             "Is Loser": stats["is_loser"],
             "PnL": stats["pnl"],
             # Trade table data
+            "Trade No": str(t.trade_number) if t.trade_number is not None else "-",
             "Ticker": t.ticker,
             "Name": t.underlying_name or "-",
             "Date Opened": t.date_opened.strftime("%Y-%m-%d"),
@@ -127,7 +128,10 @@ def generate_pdf(filtered_trades, filter_info):
             "Close Price": f"${close_price:.2f}" if close_txs else "-",
             "PnL_str": f"${stats['pnl']:.2f}",
             "Comm": f"${stats['total_commission']:.2f}",
-            "Status": t.status
+            "Status": t.status,
+            "Cost_raw": cost,
+            "Close_raw": close_price,
+            "Comm_raw": stats["total_commission"]
         })
 
     batting_avg = (wins / total_trades * 100) if total_trades > 0 else 0.0
@@ -196,11 +200,9 @@ def generate_pdf(filtered_trades, filter_info):
     # 3. Trades Table
     pdf.chapter_title("Trades List")
     if analyzed_data:
-        cols = ["Ticker", "Name", "Opened", "Closed", "Strategy", "Move", "Contr.", "Cost", "Close", "PnL", "Comm.", "Status"]
+        cols = ["#", "Ticker", "Name", "Opened", "Closed", "Strategy", "Move", "Contr.", "Cost", "Close", "PnL", "Comm.", "Status"]
         # Total width roughly 277 for Landscape A4 (margins are 10mm each side)
-        # Previous widths = [15, 40, 20, 20, 39, 21, 12, 20, 23, 23, 14, 30]
-        # Reducing Name by 6 and giving it to Strategy
-        widths = [15, 34, 20, 20, 45, 21, 12, 20, 23, 23, 14, 30]
+        widths = [12, 14, 32, 19, 19, 44, 21, 11, 19, 22, 22, 13, 29]
         
         def print_trades_header():
             pdf.set_font('helvetica', 'B', 8)
@@ -222,19 +224,41 @@ def generate_pdf(filtered_trades, filter_info):
                 pdf.add_page()
                 print_trades_header()
                 
-            pdf.cell(widths[0], 8, sanitize(data['Ticker'])[:8], 1, align='C')
-            pdf.cell(widths[1], 8, sanitize(data['Name'])[:20], 1, align='C')
-            pdf.cell(widths[2], 8, sanitize(data['Date Opened']), 1, align='C')
-            pdf.cell(widths[3], 8, sanitize(data['Date Closed']), 1, align='C')
-            pdf.cell(widths[4], 8, sanitize(data['Strategy'])[:26], 1, align='C')
-            pdf.cell(widths[5], 8, sanitize(data['Exp. Move'])[:15], 1, align='C')
-            pdf.cell(widths[6], 8, sanitize(data['Contracts']), 1, align='C')
-            pdf.cell(widths[7], 8, sanitize(data['Cost']), 1, align='C')
-            pdf.cell(widths[8], 8, sanitize(data['Close Price']), 1, align='C')
-            pdf.cell(widths[9], 8, sanitize(data['PnL_str']), 1, align='C')
-            pdf.cell(widths[10], 8, sanitize(data['Comm']), 1, align='C')
-            pdf.cell(widths[11], 8, sanitize(data['Status'])[:20], 1, align='C')
+            pdf.cell(widths[0], 8, sanitize(data['Trade No']), 1, align='C')
+            pdf.cell(widths[1], 8, sanitize(data['Ticker'])[:8], 1, align='C')
+            pdf.cell(widths[2], 8, sanitize(data['Name'])[:20], 1, align='C')
+            pdf.cell(widths[3], 8, sanitize(data['Date Opened']), 1, align='C')
+            pdf.cell(widths[4], 8, sanitize(data['Date Closed']), 1, align='C')
+            pdf.cell(widths[5], 8, sanitize(data['Strategy'])[:26], 1, align='C')
+            pdf.cell(widths[6], 8, sanitize(data['Exp. Move'])[:15], 1, align='C')
+            pdf.cell(widths[7], 8, sanitize(data['Contracts']), 1, align='C')
+            pdf.cell(widths[8], 8, sanitize(data['Cost']), 1, align='C')
+            pdf.cell(widths[9], 8, sanitize(data['Close Price']), 1, align='C')
+            pdf.cell(widths[10], 8, sanitize(data['PnL_str']), 1, align='C')
+            pdf.cell(widths[11], 8, sanitize(data['Comm']), 1, align='C')
+            pdf.cell(widths[12], 8, sanitize(data['Status'])[:20], 1, align='C')
             pdf.ln()
+
+        # Print totals row
+        sum_cost = sum(d['Cost_raw'] for d in analyzed_data)
+        sum_close = sum(d['Close_raw'] for d in analyzed_data)
+        sum_pnl = sum(d['PnL'] for d in analyzed_data)
+        sum_comm = sum(d['Comm_raw'] for d in analyzed_data)
+        
+        # Check if we have enough space for the totals row (Landscape A4 height is 210mm)
+        if pdf.get_y() > 185:
+            pdf.add_page()
+            print_trades_header()
+            
+        pdf.set_font('helvetica', 'B', 8)
+        left_width = sum(widths[:8])
+        pdf.cell(left_width, 8, "Total", 1, align='R')
+        pdf.cell(widths[8], 8, f"${sum_cost:.2f}", 1, align='C')
+        pdf.cell(widths[9], 8, f"${sum_close:.2f}", 1, align='C')
+        pdf.cell(widths[10], 8, f"${sum_pnl:.2f}", 1, align='C')
+        pdf.cell(widths[11], 8, f"${sum_comm:.2f}", 1, align='C')
+        pdf.cell(widths[12], 8, "", 1, align='C')
+        pdf.ln()
     else:
         pdf.cell(0, 10, "No trades to display.", 0, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 

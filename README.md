@@ -115,6 +115,10 @@ streamlit run C:\Lab\finance\Home.py
 ## Recent Updates
 
 **Session Date: 2026-07-02**
+- **PDF Export Enhancements**:
+  - **Sequential Trade IDs in PDF**: Added the persistent sequential `trade_number` (`#`) column as the very first column of the "Trades List" section in the exported PDF reports.
+  - **Grid Realignment & Precise Sizing**: Recalculated and optimized the horizontal column widths of the Landscape PDF layout (e.g. allocating `12` width to `#`) to prevent any overflow or boundary clipping.
+  - **Comprehensive Table Totals**: Implemented an automated summation row at the bottom of the "Trades List" table in the PDF export. This row dynamically aggregates and cleanly prints the sum of **Cost**, **Close**, **PnL**, and **Comm.** across all displayed trades, complete with safety boundary checks to handle multi-page overflow cleanly.
 - **Trade Page Auto-Fill Improvements**:
   - Resolved an issue on the Trade page where changing the ticker input did not automatically update the **Name of Underlying** box. Configured an active state comparison check against `st.session_state["last_ticker"]` to programmatically trigger metadata fetches and update `"name_val"` reactively.
 - **Journal Layout & Navigation Overhauls**:
