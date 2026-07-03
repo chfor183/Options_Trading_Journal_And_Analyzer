@@ -17,7 +17,15 @@ def toggle_type(i):
 
 @st.dialog("Extract Multi-Leg Strategy Help", width="large")
 def show_multi_help():
-    st.image("assets/Multileg_tutorial.png", use_container_width=True)
+    import os
+    from PIL import Image
+    try:
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        img_path = os.path.join(base_dir, "assets", "Multileg_tutorial.png")
+        img = Image.open(img_path)
+        st.image(img, use_container_width=True)
+    except Exception as e:
+        st.error(f"Error loading tutorial image: {e}")
     st.markdown("""
     **How to use Extract Multi-Leg Strategy:**
     1. Open your **Interactive Brokers Desktop App**.
@@ -28,7 +36,15 @@ def show_multi_help():
 
 @st.dialog("Extract Single Contract Details Help", width="large")
 def show_single_help():
-    st.image("assets/Singleleg_tutorial.png", use_container_width=True)
+    import os
+    from PIL import Image
+    try:
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        img_path = os.path.join(base_dir, "assets", "Singleleg_tutorial.png")
+        img = Image.open(img_path)
+        st.image(img, use_container_width=True)
+    except Exception as e:
+        st.error(f"Error loading tutorial image: {e}")
     st.markdown("""
     **How to use Extract Single Contract Details:**
     1. Open your **Interactive Brokers Desktop App**.

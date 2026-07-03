@@ -99,11 +99,31 @@ if trades:
         st.session_state.current_page = 1
     
     # Filtering logic
-    filter_col1, filter_col2, filter_col3, filter_col4 = st.columns(4)
-    filter_ticker = filter_col1.text_input("Filter by Ticker", on_change=reset_page)
+    # Initialize keys in session state for resetting filters
+    if "journal_filter_ticker" not in st.session_state:
+        st.session_state.journal_filter_ticker = ""
+    if "journal_filter_date" not in st.session_state:
+        st.session_state.journal_filter_date = "All"
+    if "journal_filter_status" not in st.session_state:
+        st.session_state.journal_filter_status = "All"
+    if "journal_filter_strategy" not in st.session_state:
+        st.session_state.journal_filter_strategy = "All"
+    if "journal_filter_type" not in st.session_state:
+        st.session_state.journal_filter_type = "All"
+
+    def reset_journal_filters():
+        st.session_state.journal_filter_ticker = ""
+        st.session_state.journal_filter_date = "All"
+        st.session_state.journal_filter_status = "All"
+        st.session_state.journal_filter_strategy = "All"
+        st.session_state.journal_filter_type = "All"
+        reset_page()
+
+    filter_col1, filter_col2, filter_col3, filter_col4, filter_col5, filter_col6 = st.columns([1, 1, 1.4, 1.2, 1, 0.9])
+    filter_ticker = filter_col1.text_input("Filter by Ticker", key="journal_filter_ticker", on_change=reset_page)
     
     date_options = ["Last 7 days", "Last month", "Last 3 Months", "Last Year", "YTD", "All"]
-    date_filter = filter_col2.selectbox("Filter by Date", date_options, index=5, on_change=reset_page)
+    date_filter = filter_col2.selectbox("Filter by Date", date_options, key="journal_filter_date", on_change=reset_page)
     
     today = datetime.today().date()
     if date_filter == "Last 7 days":
@@ -119,10 +139,16 @@ if trades:
     else:
         start_date = datetime.min.date()
         
-    filter_status = filter_col3.radio("Filter by Status", ["All", "Open Trades", "Closed Trades"], horizontal=True, on_change=reset_page)
+    filter_status = filter_col3.radio("Filter by Status", ["All", "Open Trades", "Closed Trades"], key="journal_filter_status", horizontal=True, on_change=reset_page)
     
     strategy_options = ["All"] + list(set([t.strategy_type for t in trades]))
-    filter_strategy = filter_col4.selectbox("Filter by Strategy", strategy_options, on_change=reset_page)
+    filter_strategy = filter_col4.selectbox("Filter by Strategy", strategy_options, key="journal_filter_strategy", on_change=reset_page)
+    
+    filter_type = filter_col5.selectbox("Filter by Debit/Credit", ["All", "Debit", "Credit"], key="journal_filter_type", on_change=reset_page)
+
+    filter_col6.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
+    if filter_col6.button("Reset filters", key="journal_reset_btn", type="primary", use_container_width=True, on_click=reset_journal_filters):
+        pass
 
     # Apply filters
     filtered_trades = trades
@@ -147,6 +173,12 @@ if trades:
             
     if filter_strategy != "All":
         filtered_trades = [t for t in filtered_trades if t.strategy_type == filter_strategy]
+        
+    if filter_type != "All":
+        if filter_type == "Debit":
+            filtered_trades = [t for t in filtered_trades if t.strategy_type and "debit" in t.strategy_type.lower()]
+        elif filter_type == "Credit":
+            filtered_trades = [t for t in filtered_trades if t.strategy_type and "credit" in t.strategy_type.lower()]
         
     def get_sort_value(t, col_name):
         if col_name == "#":

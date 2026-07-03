@@ -187,25 +187,53 @@ mcol4.markdown(
 st.divider()
 
 # 4. Filters & Controls for the Open Trades listing
-fcol1, fcol2, fcol3, fcol4 = st.columns([1, 1, 1, 1])
-filter_ticker = fcol1.text_input("🔍 Filter by Ticker symbol", "").upper().strip()
+# Initialize keys in session state for resetting filters
+if "ot_filter_ticker" not in st.session_state:
+    st.session_state.ot_filter_ticker = ""
+if "ot_filter_strategy" not in st.session_state:
+    st.session_state.ot_filter_strategy = "All"
+if "ot_filter_type" not in st.session_state:
+    st.session_state.ot_filter_type = "All"
+if "ot_filter_health" not in st.session_state:
+    st.session_state.ot_filter_health = "All"
+if "ot_filter_zone" not in st.session_state:
+    st.session_state.ot_filter_zone = "All"
+
+def reset_open_trades_filters():
+    st.session_state.ot_filter_ticker = ""
+    st.session_state.ot_filter_strategy = "All"
+    st.session_state.ot_filter_type = "All"
+    st.session_state.ot_filter_health = "All"
+    st.session_state.ot_filter_zone = "All"
+
+fcol1, fcol2, fcol3, fcol4, fcol5, fcol6 = st.columns([1, 1, 1, 1, 1, 0.9])
+filter_ticker = fcol1.text_input("🔍 Filter by Ticker symbol", key="ot_filter_ticker").upper().strip()
 strategy_options = ["All"] + sorted(list(set(p["trade"].strategy_type for p in processed_trades)))
-filter_strategy = fcol2.selectbox("📈 Filter by Strategy", strategy_options)
-filter_health = fcol3.selectbox("📊 Filter by Health", ["All", "Doing Well", "In The Red"])
-filter_zone = fcol4.selectbox("🎯 Filter by Profit Zone", ["All", "In Profit Zone", "Out of Profit Zone", "Profit Zone Irrelevant"])
+filter_strategy = fcol2.selectbox("📈 Filter by Strategy", strategy_options, key="ot_filter_strategy")
+filter_type = fcol3.selectbox("💰 Filter by Debit/Credit", ["All", "Debit", "Credit"], key="ot_filter_type")
+filter_health = fcol4.selectbox("📊 Filter by Health", ["All", "Doing Well", "In The Red"], key="ot_filter_health")
+filter_zone = fcol5.selectbox("🎯 Filter by Profit Zone", ["All", "In Profit Zone", "Out of Profit Zone", "Profit Zone Irrelevant"], key="ot_filter_zone")
+
+# Reset button vertical alignment helper
+fcol6.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
+if fcol6.button("Reset filters", key="ot_reset_btn", type="primary", use_container_width=True, on_click=reset_open_trades_filters):
+    pass
 
 # Apply filters
 filtered_processed = [
     p for p in processed_trades
     if (not filter_ticker or filter_ticker in p["trade"].ticker.upper()) and
        (filter_strategy == "All" or p["trade"].strategy_type == filter_strategy) and
+       (filter_type == "All" or 
+        (filter_type == "Debit" and p["trade"].strategy_type and "debit" in p["trade"].strategy_type.lower()) or 
+        (filter_type == "Credit" and p["trade"].strategy_type and "credit" in p["trade"].strategy_type.lower())) and
        (filter_health == "All" or 
         (filter_health == "Doing Well" and p["unrealized_pnl"] >= 0) or 
         (filter_health == "In The Red" and p["unrealized_pnl"] < 0)) and
        (filter_zone == "All" or
-        (filter_zone == "In Profit Zone" and not "debit" in p["trade"].strategy_type.lower() and p["in_profit_zone"]) or
-        (filter_zone == "Out of Profit Zone" and not "debit" in p["trade"].strategy_type.lower() and not p["in_profit_zone"]) or
-        (filter_zone == "Profit Zone Irrelevant" and "debit" in p["trade"].strategy_type.lower()))
+        (filter_zone == "In Profit Zone" and not (p["trade"].strategy_type and "debit" in p["trade"].strategy_type.lower()) and p["in_profit_zone"]) or
+        (filter_zone == "Out of Profit Zone" and not (p["trade"].strategy_type and "debit" in p["trade"].strategy_type.lower()) and not p["in_profit_zone"]) or
+        (filter_zone == "Profit Zone Irrelevant" and p["trade"].strategy_type and "debit" in p["trade"].strategy_type.lower()))
 ]
 
 if not filtered_processed:

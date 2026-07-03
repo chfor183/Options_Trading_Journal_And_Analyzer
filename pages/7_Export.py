@@ -123,7 +123,7 @@ def generate_pdf(filtered_trades, filter_info):
     # Subtitle for Filters
     pdf.set_font('helvetica', 'I', 10)
     pdf.set_text_color(100, 100, 100)
-    filters_text = f"Filters Applied -> Ticker: {filter_info['Ticker']} | Date: {filter_info['Date']} | Status: {filter_info['Status']} | Strategy: {filter_info['Strategy']}"
+    filters_text = f"Filters Applied -> Ticker: {filter_info['Ticker']} | Date: {filter_info['Date']} | Status: {filter_info['Status']} | Strategy: {filter_info['Strategy']} | Debit/Credit: {filter_info.get('Debit/Credit', 'All')}"
     pdf.cell(0, 6, filters_text, 0, new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='C')
     pdf.set_text_color(0, 0, 0)
     pdf.ln(5)
@@ -413,11 +413,30 @@ else:
 
 if trades:
     # Filtering logic matching Journal
-    filter_col1, filter_col2, filter_col3, filter_col4 = st.columns(4)
-    filter_ticker = filter_col1.text_input("Filter by Ticker")
+    # Initialize keys in session state for resetting filters
+    if "export_filter_ticker" not in st.session_state:
+        st.session_state.export_filter_ticker = ""
+    if "export_filter_date" not in st.session_state:
+        st.session_state.export_filter_date = "All"
+    if "export_filter_status" not in st.session_state:
+        st.session_state.export_filter_status = "All"
+    if "export_filter_strategy" not in st.session_state:
+        st.session_state.export_filter_strategy = "All"
+    if "export_filter_type" not in st.session_state:
+        st.session_state.export_filter_type = "All"
+
+    def reset_export_filters():
+        st.session_state.export_filter_ticker = ""
+        st.session_state.export_filter_date = "All"
+        st.session_state.export_filter_status = "All"
+        st.session_state.export_filter_strategy = "All"
+        st.session_state.export_filter_type = "All"
+
+    filter_col1, filter_col2, filter_col3, filter_col4, filter_col5, filter_col6 = st.columns([1, 1, 1.4, 1.2, 1, 0.9])
+    filter_ticker = filter_col1.text_input("Filter by Ticker", key="export_filter_ticker")
     
     date_options = ["Last 7 days", "Last month", "Last 3 Months", "Last Year", "YTD", "All"]
-    date_filter = filter_col2.selectbox("Filter by Date", date_options, index=5)
+    date_filter = filter_col2.selectbox("Filter by Date", date_options, key="export_filter_date")
     
     today = datetime.today().date()
     if date_filter == "Last 7 days":
@@ -433,10 +452,16 @@ if trades:
     else:
         start_date = datetime.min.date()
         
-    filter_status = filter_col3.radio("Filter by Status", ["All", "Open Trades", "Closed Trades"], horizontal=True)
+    filter_status = filter_col3.radio("Filter by Status", ["All", "Open Trades", "Closed Trades"], key="export_filter_status", horizontal=True)
     
     strategy_options = ["All"] + list(set([t.strategy_type for t in trades]))
-    filter_strategy = filter_col4.selectbox("Filter by Strategy", strategy_options)
+    filter_strategy = filter_col4.selectbox("Filter by Strategy", strategy_options, key="export_filter_strategy")
+    
+    filter_type = filter_col5.selectbox("Filter by Debit/Credit", ["All", "Debit", "Credit"], key="export_filter_type")
+
+    filter_col6.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
+    if filter_col6.button("Reset filters", key="export_reset_btn", type="primary", use_container_width=True, on_click=reset_export_filters):
+        pass
 
     # Apply filters
     filtered_trades = trades
@@ -463,6 +488,12 @@ if trades:
     if filter_strategy != "All":
         filtered_trades = [t for t in filtered_trades if t.strategy_type == filter_strategy]
         
+    if filter_type != "All":
+        if filter_type == "Debit":
+            filtered_trades = [t for t in filtered_trades if t.strategy_type and "debit" in t.strategy_type.lower()]
+        elif filter_type == "Credit":
+            filtered_trades = [t for t in filtered_trades if t.strategy_type and "credit" in t.strategy_type.lower()]
+        
     # Sort
     filtered_trades.sort(key=lambda x: x.date_opened, reverse=True)
     
@@ -472,7 +503,8 @@ if trades:
         "Ticker": filter_ticker if filter_ticker else "All",
         "Date": date_filter,
         "Status": filter_status,
-        "Strategy": filter_strategy
+        "Strategy": filter_strategy,
+        "Debit/Credit": filter_type
     }
     
     pdf_bytes = bytes(generate_pdf(filtered_trades, filter_info))

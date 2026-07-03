@@ -10,6 +10,7 @@ A local, Python-based web application built with Streamlit to track, journal, an
   - Flexible, accurate contract quantity sizing per leg.
   - **Sleek, High-Contrast Labels**: Clean, elegant input labels optimized for Streamlit's dark and light modes with bold, custom colors, without any distracting background boxes or heavy borders.
 - **Automated Trade Input (OCR)**: Seamlessly copy a screenshot of your broker's trade confirmation to your clipboard and click one button to instantly extract the ticket data using Optical Character Recognition (Tesseract-OCR) and automatically populate all trade legs and pricing in the UI. Supports parsing both complex multi-leg groupings (like Iron Condors) and detailed single-contract order screens.
+  - **Dynamic Tutorial Path Resolution**: Bypasses Streamlit's relative path resolving behaviors on Windows (Python 3.14+) by using PIL's image stream loaders and absolute folder paths relative to the execution file to ensure help dialogs load cleanly.
 - **Payoff Visualization**: Generates interactive Plotly charts showing the expected profit and loss at expiration across varying underlying prices.
 - **Advanced Metrics**: 
   - Maximum Profit & Maximum Loss
@@ -26,7 +27,9 @@ A local, Python-based web application built with Streamlit to track, journal, an
   - **Reopen Trades**: Un-stack and reverse accidental or temporary closing transactions directly from the Journal, restoring the trade to its open state with full accuracy.
 - **Journal & Ledger**: 
   - Save trades to a local PostgreSQL database (`finance` schema).
-  - View trades with pagination, sorting, and dynamic filtering (Ticker, Date, Status, Strategy).
+  - View trades with pagination, sorting, and dynamic filtering (Ticker, Date, Status, Strategy, Debit/Credit).
+  - **Debit or Credit Strategy Filters**: Instant filtering by `"Debit"` or `"Credit"` premium categories across the Trading Journal, Live Open Trades, and PDF Export page to evaluate portfolio premium distribution.
+  - **Streamlined Reset Button**: Introducing a clean, blue **"Reset filters"** button integrated into the filter layout grids to instantly clear search inputs and return all listings to their defaults seamlessly using pre-widget callbacks.
   - **Single-Column Sorting**: Column headers in the Trading Journal can be clicked to toggle sorting (Ascending/Descending), with a clean, flat aesthetic.
   - **Sequential Trade Numbering**: Dynamically maps and permanently stores a chronological trade number (`#`) for every trade per-portfolio, displaying it as the first column after the select boxes.
   - **Dynamic Portfolio-Change Reset**: Automatically resets the active journal page pagination to **Page 1** whenever you switch to a different portfolio, preventing page overflow errors.

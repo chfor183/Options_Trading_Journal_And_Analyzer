@@ -156,11 +156,11 @@ with tabs[1]:
     st.markdown("""
     | Capital Tier | Primary Option Strategy | Tactical Note |
     | :--- | :--- | :--- |
-    | **\\$3,000 - \\$10,000** | Spreads + Iron Condor | **Credit > Debit**: Selling premium harnesses high-odds win rates through extrinsic value farming. |
+    | **\\$3,000 - \\$10,000** | Spreads + Short Iron Condor | **Credit > Debit**: Selling premium harnesses high-odds win rates through extrinsic value farming. |
     | **\\$10,000 - \\$30,000** | Add Buying LEAPS | Utilize naked or spreads depending on available margin to gain leveraged directional exposure. |
     | **\\$30,000 - \\$50,000** | Add Sell Cash-Secured Puts | Sell CSPs on high-quality companies; acquire the underlying stock if it closes In-The-Money (ITM) and you want ownership. |
-    | **\\$50,000 - \\$100,000** | Add Sell Covered Calls | Complete the loop by selling covered calls on stock positions if it moves ITM and you wish to exit. |
-    | **\\$100,000+** | Diversify + Dividends + DCA + Buy the Dip | Consolidate wealth. Transition to dollar-cost averaging, blue-chip dividends, and dynamic risk management. |
+    | **\\$50,000 - \\$100,000** | Add Sell Covered Calls | Complete the loop (Wheel Strategy) by selling covered calls on stock positions if it moves ITM and you wish to exit. |
+    | **\\$100,000+** | Diversify + Dividends + DCA + Buy the Dip | Consolidate wealth. Add dollar-cost averaging, blue-chip dividends, and dynamic risk management. |
     """)
     
     st.write("")
