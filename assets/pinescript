@@ -152,7 +152,6 @@ var line line_em_down = na
 
 var box profit_box1 = na
 var box profit_box2 = na
-var box em_box = na
 
 var label label_open = na
 var label label_expiry = na
@@ -184,7 +183,6 @@ if barstate.islast and not na(open_time) and not na(expiry_time) and not na(unde
     
     box.delete(profit_box1)
     box.delete(profit_box2)
-    box.delete(em_box)
     
     label.delete(label_open)
     label.delete(label_expiry)
@@ -259,15 +257,13 @@ if barstate.islast and not na(open_time) and not na(expiry_time) and not na(unde
         float em_low = math.max(0, underlying_open - em_val)
         
         color_em_line = color.new(color.purple, 30)
-        color_em_fill = color.new(color.purple, 93)
         
-        line_em_up := line.new(x1 = open_time, y1 = em_high, x2 = expiry_time, y2 = em_high, xloc = xloc.bar_time, color = color_em_line, style = line.style_dashed, width = 1)
-        line_em_down := line.new(x1 = open_time, y1 = em_low, x2 = expiry_time, y2 = em_low, xloc = xloc.bar_time, color = color_em_line, style = line.style_dashed, width = 1)
+        // Two diagonal lines starting from underlying open at open_time to expected move values at expiry
+        line_em_up := line.new(x1 = open_time, y1 = underlying_open, x2 = expiry_time, y2 = em_high, xloc = xloc.bar_time, color = color_em_line, style = line.style_dashed, width = 1)
+        line_em_down := line.new(x1 = open_time, y1 = underlying_open, x2 = expiry_time, y2 = em_low, xloc = xloc.bar_time, color = color_em_line, style = line.style_dashed, width = 1)
         
-        label_em_up := label.new(x = open_time, y = em_high, text = "EM Upper: " + str.tostring(em_high, "#.##"), xloc = xloc.bar_time, color = color_em_line, textcolor = color.white, style = label.style_label_lower_right, size = size.small)
-        label_em_down := label.new(x = open_time, y = em_low, text = "EM Lower: " + str.tostring(em_low, "#.##"), xloc = xloc.bar_time, color = color_em_line, textcolor = color.white, style = label.style_label_upper_right, size = size.small)
-        
-        em_box := box.new(left = open_time, top = em_high, right = expiry_time, bottom = em_low, bgcolor = color_em_fill, border_color = color.new(color_em_line, 60), border_style = line.style_dashed, xloc = xloc.bar_time)
+        label_em_up := label.new(x = expiry_time, y = em_high, text = "EM Upper: " + str.tostring(em_high, "#.##"), xloc = xloc.bar_time, color = color_em_line, textcolor = color.white, style = label.style_label_left, size = size.small)
+        label_em_down := label.new(x = expiry_time, y = em_low, text = "EM Lower: " + str.tostring(em_low, "#.##"), xloc = xloc.bar_time, color = color_em_line, textcolor = color.white, style = label.style_label_left, size = size.small)
 
     // 4. Identify Strategy Legs, draw strike lines, labels, breakeven lines and profit boxes
     string leg1_lbl = ""
@@ -484,16 +480,17 @@ if barstate.islast and not na(open_time) and not na(expiry_time) and not na(unde
     table.cell(info_table, 0, 1, "Underlying Open", text_color = color.white, text_size = size.small, bgcolor = color_hdr_bg)
     table.cell(info_table, 1, 1, "$" + str.tostring(underlying_open, "#.##"), text_color = color.white, text_size = size.small)
     
-    table.cell(info_table, 0, 2, "Premium Received", text_color = color.white, text_size = size.small, bgcolor = color_hdr_bg)
+    table.cell(info_table, 0, 2, "Cost", text_color = color.white, text_size = size.small, bgcolor = color_hdr_bg)
     table.cell(info_table, 1, 2, "$" + str.tostring(premium, "#.##") + (is_credit ? " (Credit)" : " (Debit)"), text_color = color.white, text_size = size.small)
 
+    duration_days = math.round((expiry_time - open_time) / 86400000)
     table.cell(info_table, 0, 3, "Trade Duration", text_color = color.white, text_size = size.small, bgcolor = color_hdr_bg)
-    table.cell(info_table, 1, 3, open_date_str + " to " + expiry_date_str, text_color = color.white, text_size = size.small)
+    table.cell(info_table, 1, 3, str.tostring(duration_days, "#") + " Days", text_color = color.white, text_size = size.small)
 
     pop_text = na(pop) ? "N/A" : str.tostring(pop, "#.#") + "%"
     table.cell(info_table, 0, 4, "Probability of Profit (POP)", text_color = color.white, text_size = size.small, bgcolor = color_hdr_bg)
     table.cell(info_table, 1, 4, pop_text, text_color = color.white, text_size = size.small)
 
-    em_text = na(expected_move) ? "N/A" : "$" + str.tostring(expected_move, "#.##")
+    em_text = na(expected_move) ? "N/A" : "+/- $" + str.tostring(expected_move, "#.##")
     table.cell(info_table, 0, 5, "Expected Move (EM)", text_color = color.white, text_size = size.small, bgcolor = color_hdr_bg)
     table.cell(info_table, 1, 5, em_text, text_color = color.white, text_size = size.small)
