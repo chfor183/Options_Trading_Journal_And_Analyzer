@@ -192,7 +192,7 @@ filter_ticker = fcol1.text_input("🔍 Filter by Ticker symbol", "").upper().str
 strategy_options = ["All"] + sorted(list(set(p["trade"].strategy_type for p in processed_trades)))
 filter_strategy = fcol2.selectbox("📈 Filter by Strategy", strategy_options)
 filter_health = fcol3.selectbox("📊 Filter by Health", ["All", "Doing Well", "In The Red"])
-filter_zone = fcol4.selectbox("🎯 Filter by Profit Zone", ["All", "In Profit Zone", "Out of Profit Zone"])
+filter_zone = fcol4.selectbox("🎯 Filter by Profit Zone", ["All", "In Profit Zone", "Out of Profit Zone", "Profit Zone Irrelevant"])
 
 # Apply filters
 filtered_processed = [
@@ -203,8 +203,9 @@ filtered_processed = [
         (filter_health == "Doing Well" and p["unrealized_pnl"] >= 0) or 
         (filter_health == "In The Red" and p["unrealized_pnl"] < 0)) and
        (filter_zone == "All" or
-        (filter_zone == "In Profit Zone" and p["in_profit_zone"]) or
-        (filter_zone == "Out of Profit Zone" and not p["in_profit_zone"]))
+        (filter_zone == "In Profit Zone" and not "debit" in p["trade"].strategy_type.lower() and p["in_profit_zone"]) or
+        (filter_zone == "Out of Profit Zone" and not "debit" in p["trade"].strategy_type.lower() and not p["in_profit_zone"]) or
+        (filter_zone == "Profit Zone Irrelevant" and "debit" in p["trade"].strategy_type.lower()))
 ]
 
 if not filtered_processed:
@@ -223,6 +224,8 @@ for idx, p in enumerate(filtered_processed):
     pnl_symbol = "📈 Profit" if is_profit else "📉 Loss"
     color_hex = "#28a745" if is_profit else "#dc3545"
     bg_hex = "rgba(40, 167, 69, 0.05)" if is_profit else "rgba(220, 53, 69, 0.05)"
+    
+    is_debit = "debit" in t.strategy_type.lower()
     
     # Calculate days since opened and days remaining to expiry
     days_since_open = (datetime.now().date() - t.date_opened.date()).days
@@ -244,10 +247,35 @@ for idx, p in enumerate(filtered_processed):
         days_to_expiry = (min_expiry - datetime.now().date()).days
         if days_to_expiry < 0:
             expiry_badge = f'<span style="background-color: rgba(220, 53, 69, 0.15); color: #ff6b6b; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; margin-left: 10px; font-weight: bold; border: 1px solid rgba(220, 53, 69, 0.3);">⏳ Expired</span>'
-        elif days_to_expiry <= 7:
-            expiry_badge = f'<span style="background-color: rgba(255, 193, 7, 0.15); color: #fcc419; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; margin-left: 10px; font-weight: bold; border: 1px solid rgba(255, 193, 7, 0.3);">⏳ {days_to_expiry} DTE left</span>'
         else:
-            expiry_badge = f'<span style="background-color: rgba(40, 167, 69, 0.15); color: #51cf66; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; margin-left: 10px; font-weight: bold; border: 1px solid rgba(40, 167, 69, 0.3);">⏳ {days_to_expiry} DTE left</span>'
+            if is_debit:
+                if days_to_expiry <= 30:
+                    badge_color = "#ff6b6b"
+                    badge_bg = "rgba(220, 53, 69, 0.15)"
+                    badge_border = "rgba(220, 53, 69, 0.3)"
+                elif days_to_expiry <= 60:
+                    badge_color = "#fcc419"
+                    badge_bg = "rgba(255, 193, 7, 0.15)"
+                    badge_border = "rgba(255, 193, 7, 0.3)"
+                else:
+                    badge_color = "#51cf66"
+                    badge_bg = "rgba(40, 167, 69, 0.15)"
+                    badge_border = "rgba(40, 167, 69, 0.3)"
+            else:
+                if days_to_expiry <= 3:
+                    badge_color = "#ff6b6b"
+                    badge_bg = "rgba(220, 53, 69, 0.15)"
+                    badge_border = "rgba(220, 53, 69, 0.3)"
+                elif days_to_expiry <= 7:
+                    badge_color = "#fcc419"
+                    badge_bg = "rgba(255, 193, 7, 0.15)"
+                    badge_border = "rgba(255, 193, 7, 0.3)"
+                else:
+                    badge_color = "#51cf66"
+                    badge_bg = "rgba(40, 167, 69, 0.15)"
+                    badge_border = "rgba(40, 167, 69, 0.3)"
+                    
+            expiry_badge = f'<span style="background-color: {badge_bg}; color: {badge_color}; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; margin-left: 10px; font-weight: bold; border: 1px solid {badge_border};">⏳ {days_to_expiry} DTE left</span>'
             
         time_details_html = f"{opened_badge}{initial_dte_badge}{days_ago_badge}{expiry_badge}"
     else:
@@ -259,7 +287,10 @@ for idx, p in enumerate(filtered_processed):
     near_strike_val = p["near_strike_val"]
     current_underlying_price = p["current_underlying_price"]
                 
-    if in_profit_zone:
+    if is_debit:
+        zone_banner = "Profit Zone Irrelevant"
+        zone_color = "#6c757d" # Grey
+    elif in_profit_zone:
         if is_near_strike:
             zone_banner = f"⚠️ PROFIT ZONE (NEAR ${near_strike_val:.2f})"
             zone_color = "#ffc107" # Yellow
@@ -358,12 +389,24 @@ for idx, p in enumerate(filtered_processed):
             pop_sign = "+" if change_pop >= 0 else ""
             pop_html = f"<span style='font-weight: bold;'>{current_pop*100:.1f}%</span> <span style='color: {pop_color}; font-weight: bold;'>({pop_sign}{change_pop*100:.1f}%)</span>"
             
+            # Format and color Expected Move
+            expected_move_text = t.expected_move or "N/A"
+            if "bullish" in expected_move_text.lower():
+                move_color = "#28a745"  # Green
+            elif "bearish" in expected_move_text.lower():
+                move_color = "#dc3545"  # Red
+            elif "neutral" in expected_move_text.lower():
+                move_color = "#ffc107"  # Yellow
+            else:
+                move_color = "inherit"
+            move_html = f"<span style='color: {move_color}; font-weight: bold;'>{expected_move_text}</span>"
+            
             # Render Column 1 as a single block-level HTML element to prevent Markdown escaping
             st.markdown(f"""
             <div style="font-size: 1rem; line-height: 2.0; font-family: inherit; color: inherit;">
                 <div style="margin-bottom: 6px;">📈 <b>Underlying Ticker Price:</b> {underlying_html}</div>
                 <div style="margin-bottom: 6px;">🎯 <b>PoP (Current & Change):</b> {pop_html}</div>
-                <div style="margin-bottom: 6px;">🔮 <b>Expected Move:</b> <span style="font-weight: bold;">{t.expected_move or 'N/A'}</span></div>
+                <div style="margin-bottom: 6px;">🔮 <b>Expected Move:</b> {move_html}</div>
             </div>
             """, unsafe_allow_html=True)
             

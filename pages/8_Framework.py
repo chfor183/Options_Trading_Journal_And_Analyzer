@@ -5,15 +5,15 @@ import plotly.graph_objects as go
 st.set_page_config(page_title="Investment Framework", page_icon="🧠", layout="wide")
 st.title("🧠 Investment Framework")
 
-tabs = st.tabs(["💰 Allocation & Notes", "⚖️ Rules & Mindset", "🧠 Psychology & Takeaways", "📋 Analysis Checklists"])
+tabs = st.tabs(["📋 Analysis Checklists", "💰 Allocation & Notes", "⚖️ Rules & Mindset", "🧠 Psychology & Takeaways"])
 
-with tabs[3]:
+with tabs[0]:
     st.subheader("🔍 Interactive Investment Checklists")
     st.write("Use these interactive, state-preserving checklists to audit trade setups before committing capital.")
     
     # Callback functions to reset session state keys for each checkbox group
     def uncheck_etf():
-        for key in ["etf_ta1", "etf_ta2", "etf_ta3", "etf_rsi", "etf_bb", "etf_wma", "etf_sma", "etf_st", "etf_sent", "etf_breadth", "etf_seas", "etf_fomc", "etf_cpi", "etf_unemp", "etf_friday", "etf_geo"]:
+        for key in ["etf_ta1", "etf_ta2", "etf_ta3", "etf_rsi", "etf_bb", "etf_wma", "etf_sma", "etf_st", "etf_sent", "etf_breadth", "etf_vix", "etf_seas", "etf_fomc", "etf_cpi", "etf_unemp", "etf_friday", "etf_geo"]:
             st.session_state[key] = False
 
     def uncheck_company():
@@ -25,7 +25,7 @@ with tabs[3]:
             st.session_state[key] = value
 
     # Define checklist keys for scoring and state tracking
-    etf_keys = ["etf_ta1", "etf_ta2", "etf_ta3", "etf_rsi", "etf_bb", "etf_wma", "etf_sma", "etf_st", "etf_sent", "etf_breadth", "etf_seas", "etf_fomc", "etf_cpi", "etf_unemp", "etf_friday", "etf_geo"]
+    etf_keys = ["etf_ta1", "etf_ta2", "etf_ta3", "etf_rsi", "etf_bb", "etf_wma", "etf_sma", "etf_st", "etf_sent", "etf_breadth", "etf_vix", "etf_seas", "etf_fomc", "etf_cpi", "etf_unemp", "etf_friday", "etf_geo"]
     comp_keys = ["comp_f1", "comp_f2", "comp_f3", "comp_f4", "comp_ta1", "comp_ta2", "comp_ta3", "comp_rsi", "comp_bb", "comp_wma", "comp_sma", "comp_st", "comp_news", "comp_macro", "comp_revisions"]
 
     etf_score = sum([st.session_state.get(k, False) for k in etf_keys])
@@ -73,13 +73,14 @@ with tabs[3]:
                 etf_st = st.checkbox("Supertrend (10, 1, 1) execution signal confirmed", key="etf_st")
                 
             with st.expander("📊 3. Macro Sentiment & Breadth", expanded=False):
-                sec_keys_etf_macro = ["etf_sent", "etf_breadth", "etf_seas"]
+                sec_keys_etf_macro = ["etf_sent", "etf_breadth", "etf_vix", "etf_seas"]
                 btn_c1, btn_c2 = st.columns(2)
                 btn_c1.button("Check section", key="chk_sec_etf_macro", on_click=set_section_state, args=(sec_keys_etf_macro, True), use_container_width=True)
                 btn_c2.button("Uncheck section", key="unchk_sec_etf_macro", on_click=set_section_state, args=(sec_keys_etf_macro, False), use_container_width=True)
 
                 etf_sent = st.checkbox("Sentiment indexes & Put-Call ratios", key="etf_sent")
                 etf_breadth = st.checkbox("Market Breadth (% of stocks above 50/200 SMA) checked", key="etf_breadth")
+                etf_vix = st.checkbox("VIX Volatility Index checked", key="etf_vix")
                 etf_seas = st.checkbox("Historical monthly/quarterly Seasonality checked", key="etf_seas")
             
             with st.expander("📅 4. Key Macro Catalyst Schedule", expanded=False):
@@ -149,7 +150,7 @@ with tabs[3]:
                 comp_macro = st.checkbox("Sector Rotations, industry-specific developments, and cycle stage audited", key="comp_macro")
                 comp_revisions = st.checkbox("Financial target revisions, earnings guidance adjustments, or analyst consensus updates", key="comp_revisions")
 
-with tabs[0]:
+with tabs[1]:
     st.subheader("💵 Portfolio & Capital Allocation")
     
     st.markdown("""
@@ -171,7 +172,7 @@ with tabs[0]:
     - **Note 4 : ⚠️ POSITION SIZING is the ultimate key to survival in the markets!** Never risk too much on any single trade or ticker.
     """)
 
-with tabs[1]:
+with tabs[2]:
     st.subheader("⚖️ Rules & Mindset")
     
     col_r1, col_r2 = st.columns(2)
@@ -221,7 +222,7 @@ with tabs[1]:
               - Emotional FOMO unwinding
             """)
 
-with tabs[2]:
+with tabs[3]:
     st.subheader("🧠 Psychology & Key Takeaways")
     
     col_p1, col_p2 = st.columns(2)
