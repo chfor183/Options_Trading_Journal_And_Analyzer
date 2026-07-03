@@ -176,7 +176,7 @@ with tabs[1]:
                 <td><b>Covered Call</b></td>
                 <td><b>Wheel Strategy</b><br><span class="badge badge-credit">Credit</span></td>
                 <td>Collecting premium based on probability of profit. Farming Theta decay. Looking to sell underlying at a key strike point or rolling over.</td>
-                <td>15 - 60 Days</td>
+                <td>10 - 30 Days</td>
                 <td>OTM (Low delta, typically &lt;= 0.30)</td>
                 <td>Go further out in expiration (e.g., 45-60 DTE) for less maintenance work and proportional yield. You want to close your position in the underlying.</td>
             </tr>
@@ -184,7 +184,7 @@ with tabs[1]:
                 <td><b>Cash-Secured Put</b></td>
                 <td><b>Wheel Strategy</b><br><span class="badge badge-credit">Credit</span></td>
                 <td>Collecting premium based on probability of profit. Farming Theta decay. Looking to buy underlying at a key strike point or rolling over.</td>
-                <td>15 - 60 Days</td>
+                <td>10 - 30 Days</td>
                 <td>OTM (Low delta, typically &lt;= 0.30)</td>
                 <td>Go further out in expiration for less work and steady proportional yield. You want to own the underlying.</td>
             </tr>
@@ -192,7 +192,7 @@ with tabs[1]:
                 <td><b>Bull Put Spread</b></td>
                 <td><b>Credit Spread</b><br><span class="badge badge-credit">Credit</span></td>
                 <td>Collecting premium based on probability of profit. Farming Theta decay. Sell outer put and buy deeper put to define risk.</td>
-                <td>15 - 60 Days</td>
+                <td>10 - 30 Days</td>
                 <td>OTM (Low delta, typically &lt;= 0.25)</td>
                 <td>Go further out in expiration for less work and proportional yield if support holds.</td>
             </tr>
@@ -200,7 +200,7 @@ with tabs[1]:
                 <td><b>Bear Call Spread</b></td>
                 <td><b>Credit Spread</b><br><span class="badge badge-credit">Credit</span></td>
                 <td>Collecting premium based on probability of profit. Farming Theta decay. Sell outer call and buy deeper call to define risk.</td>
-                <td>15 - 60 Days</td>
+                <td>10 - 30 Days</td>
                 <td>OTM (Low delta, typically &lt;= 0.25)</td>
                 <td>Go further out in expiration for less work and proportional yield if resistance holds.</td>
             </tr>
@@ -232,7 +232,7 @@ with tabs[1]:
                 <td><b>Short Iron Condor</b></td>
                 <td><b>Low Volatility</b><br><span class="badge badge-credit">Credit</span></td>
                 <td>Maximizing premium collected based on range-bound price channels. Farming Theta decay. Sell OTM Put spread and OTM Call spread.</td>
-                <td>15 - 60 Days</td>
+                <td>10 - 30 Days</td>
                 <td>OTM Wings (Low delta, typically &lt;= 0.20)</td>
                 <td>Demands a lot of attention (high maintenance). High probability of success, defined risk.</td>
             </tr>
