@@ -115,8 +115,6 @@ elif all_trades:
     else:
         start_date = datetime.min.date()
         
-    # Status Filter Note
-    f_col2.info("Showing data for Closed Trades only.", icon="ℹ️")
     
     st.divider()
     
