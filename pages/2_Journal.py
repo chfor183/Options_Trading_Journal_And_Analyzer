@@ -19,6 +19,14 @@ if "sort_desc" not in st.session_state:
     st.session_state.sort_desc = True
 
 active_portfolio_id = st.session_state.get("active_portfolio_id")
+
+# Reset pagination on portfolio change
+if "journal_last_portfolio_id" not in st.session_state:
+    st.session_state.journal_last_portfolio_id = active_portfolio_id
+elif active_portfolio_id != st.session_state.journal_last_portfolio_id:
+    st.session_state.current_page = 1
+    st.session_state.journal_last_portfolio_id = active_portfolio_id
+
 if active_portfolio_id:
     trades = db.query(Trade).filter(Trade.portfolio_id == active_portfolio_id).all()
 else:
@@ -214,9 +222,12 @@ if trades:
             
     # Header row
     # Adjusting column widths so Details/Edit/Action buttons have a bit more space
-    # PnL was index 12 with width 1.3 -> reduced to 0.9 (reduced by 0.4)
-    # Status was index 13 with width 0.8 -> increased to 1.2 (increased by 0.4)
-    col_widths = [0.4, 0.5, 0.9, 1.8, 1.0, 1.0, 1.5, 0.5, 1.0, 1.1, 1.0, 1.0, 0.9, 1.2, 0.8, 0.7, 0.9]
+    # Ticker was index 2 with width 0.9 -> reduced to 0.6 (reduced by 0.3)
+    # Name was index 3 with width 1.3 -> increased to 1.6 (increased by 0.3)
+    # Cost was index 11 with width 1.0 -> increased to 1.2 (increased by 0.2)
+    # Status changed to 1.7
+    # Date Opened and Date Closed increased by 0.1 each (from 1.0 to 1.1)
+    col_widths = [0.4, 0.5, 0.6, 1.4, 1.1, 1.1, 1.5, 0.5, 1.0, 1.1, 1.0, 1.2, 1.2, 1.7, 0.8, 0.7, 0.9]
     cols = st.columns(col_widths)
     headers_config = [
         ("", False),
@@ -445,7 +456,7 @@ if trades:
         trade_num = t.trade_number if t.trade_number is not None else ""
         cols[1].markdown(f"<div style='text-align: left;'>{trade_num}</div>", unsafe_allow_html=True)
         cols[2].markdown(f"<div style='text-align: left;'>{t.ticker}</div>", unsafe_allow_html=True)
-        cols[3].markdown(f"<div style='text-align: left;'>{t.underlying_name}</div>", unsafe_allow_html=True)
+        cols[3].markdown(f"<div style='text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;'>{t.underlying_name}</div>", unsafe_allow_html=True)
         cols[4].markdown(f"<div style='text-align: left;'>{t.date_opened.strftime('%Y-%m-%d')}</div>", unsafe_allow_html=True)
         cols[5].markdown(f"<div style='text-align: left;'>{close_date_str}</div>", unsafe_allow_html=True)
         cols[6].markdown(f"<div style='text-align: left;'>{t.strategy_type}</div>", unsafe_allow_html=True)
