@@ -110,6 +110,36 @@ with st.spinner("Fetching live market data and calculating valuations..."):
         unrealized_pnl = entry_net_premium + liquidation_value
         total_unrealized_pnl += unrealized_pnl
         
+        # Calculate Profit Zone and Strikes proximity warning
+        in_profit_zone = False
+        is_near_strike = False
+        near_strike_val = None
+        
+        if current_underlying_price is not None and t.legs:
+            legs_for_payoff = []
+            for leg in t.legs:
+                legs_for_payoff.append({
+                    "action": "Buy" if leg.position.lower() in ["buy", "long"] else "Sell",
+                    "qty": leg.quantity if leg.quantity else 1,
+                    "type": leg.option_type,
+                    "strike": leg.strike,
+                    "price": float(leg.price) if leg.price is not None else 0.0,
+                    "expiry": pd.to_datetime(leg.expiry)
+                })
+            try:
+                payoffs = calculate_payoff_array(legs_for_payoff, np.array([current_underlying_price]))
+                if len(payoffs) > 0:
+                    in_profit_zone = payoffs[0] > 0
+            except Exception:
+                pass
+                
+            # Check if current price is within 5% of any strike
+            for leg in t.legs:
+                if abs(current_underlying_price - leg.strike) / leg.strike <= 0.05:
+                    is_near_strike = True
+                    near_strike_val = leg.strike
+                    break
+        
         processed_trades.append({
             "trade": t,
             "entry_net_premium": entry_net_premium,
@@ -117,7 +147,10 @@ with st.spinner("Fetching live market data and calculating valuations..."):
             "unrealized_pnl": unrealized_pnl,
             "current_underlying_price": current_underlying_price,
             "legs_details": legs_detail_list,
-            "is_live_pricing": is_live
+            "is_live_pricing": is_live,
+            "in_profit_zone": in_profit_zone,
+            "is_near_strike": is_near_strike,
+            "near_strike_val": near_strike_val
         })
 
 if has_live_pricing_warning:
@@ -154,11 +187,12 @@ mcol4.markdown(
 st.divider()
 
 # 4. Filters & Controls for the Open Trades listing
-fcol1, fcol2, fcol3 = st.columns([1, 1, 1])
+fcol1, fcol2, fcol3, fcol4 = st.columns([1, 1, 1, 1])
 filter_ticker = fcol1.text_input("🔍 Filter by Ticker symbol", "").upper().strip()
 strategy_options = ["All"] + sorted(list(set(p["trade"].strategy_type for p in processed_trades)))
 filter_strategy = fcol2.selectbox("📈 Filter by Strategy", strategy_options)
 filter_health = fcol3.selectbox("📊 Filter by Health", ["All", "Doing Well", "In The Red"])
+filter_zone = fcol4.selectbox("🎯 Filter by Profit Zone", ["All", "In Profit Zone", "Out of Profit Zone"])
 
 # Apply filters
 filtered_processed = [
@@ -167,7 +201,10 @@ filtered_processed = [
        (filter_strategy == "All" or p["trade"].strategy_type == filter_strategy) and
        (filter_health == "All" or 
         (filter_health == "Doing Well" and p["unrealized_pnl"] >= 0) or 
-        (filter_health == "In The Red" and p["unrealized_pnl"] < 0))
+        (filter_health == "In The Red" and p["unrealized_pnl"] < 0)) and
+       (filter_zone == "All" or
+        (filter_zone == "In Profit Zone" and p["in_profit_zone"]) or
+        (filter_zone == "Out of Profit Zone" and not p["in_profit_zone"]))
 ]
 
 if not filtered_processed:
@@ -189,6 +226,11 @@ for idx, p in enumerate(filtered_processed):
     
     # Calculate days since opened and days remaining to expiry
     days_since_open = (datetime.now().date() - t.date_opened.date()).days
+    opened_date_str = t.date_opened.strftime('%Y-%m-%d')
+    opened_badge = f'<span style="font-size: 0.95rem; color: #ced4da; margin-left: 15px; font-family: sans-serif;">🗓️ Opened: <b style="color: #f8f9fa;">{opened_date_str}</b></span>'
+    days_ago_text = f"{days_since_open} day ago" if days_since_open == 1 or days_since_open == 0 else f"{days_since_open} days ago"
+    days_ago_badge = f'<span style="background-color: rgba(173, 181, 189, 0.15); color: #dee2e6; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; margin-left: 10px; font-weight: bold; border: 1px solid rgba(173, 181, 189, 0.3);">📅 {days_ago_text}</span>'
+    
     if t.legs:
         # Initial DTE of trade at open
         first_leg_open = min(t.legs, key=lambda l: l.expiry)
@@ -196,43 +238,26 @@ for idx, p in enumerate(filtered_processed):
         if dte_at_open_val <= 0:
             dte_at_open_val = 1
         
+        initial_dte_badge = f'<span style="background-color: rgba(0, 123, 255, 0.15); color: #339af0; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; margin-left: 10px; font-weight: bold; border: 1px solid rgba(0, 123, 255, 0.3);">⏱️ {dte_at_open_val} DTE at Open</span>'
+        
         min_expiry = min(leg.expiry for leg in t.legs)
         days_to_expiry = (min_expiry - datetime.now().date()).days
-        expiry_info = f"{days_to_expiry} DTE left" if days_to_expiry >= 0 else "Expired"
-        days_display_str = f"for {dte_at_open_val} DTE [ {days_since_open} days ago & {expiry_info} ]"
-    else:
-        days_display_str = f"[ {days_since_open} days ago ]"
-        
-    # Calculate Profit Zone and Strikes proximity warning
-    in_profit_zone = False
-    is_near_strike = False
-    near_strike_val = None
-    
-    current_underlying_price = p["current_underlying_price"]
-    if current_underlying_price is not None and t.legs:
-        legs_for_payoff = []
-        for leg in t.legs:
-            legs_for_payoff.append({
-                "action": "Buy" if leg.position.lower() in ["buy", "long"] else "Sell",
-                "qty": leg.quantity if leg.quantity else 1,
-                "type": leg.option_type,
-                "strike": leg.strike,
-                "price": float(leg.price) if leg.price is not None else 0.0,
-                "expiry": pd.to_datetime(leg.expiry)
-            })
-        try:
-            payoffs = calculate_payoff_array(legs_for_payoff, np.array([current_underlying_price]))
-            if len(payoffs) > 0:
-                in_profit_zone = payoffs[0] > 0
-        except Exception:
-            pass
+        if days_to_expiry < 0:
+            expiry_badge = f'<span style="background-color: rgba(220, 53, 69, 0.15); color: #ff6b6b; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; margin-left: 10px; font-weight: bold; border: 1px solid rgba(220, 53, 69, 0.3);">⏳ Expired</span>'
+        elif days_to_expiry <= 7:
+            expiry_badge = f'<span style="background-color: rgba(255, 193, 7, 0.15); color: #fcc419; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; margin-left: 10px; font-weight: bold; border: 1px solid rgba(255, 193, 7, 0.3);">⏳ {days_to_expiry} DTE left</span>'
+        else:
+            expiry_badge = f'<span style="background-color: rgba(40, 167, 69, 0.15); color: #51cf66; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; margin-left: 10px; font-weight: bold; border: 1px solid rgba(40, 167, 69, 0.3);">⏳ {days_to_expiry} DTE left</span>'
             
-        # Check if current price is within 5% of any strike
-        for leg in t.legs:
-            if abs(current_underlying_price - leg.strike) / leg.strike <= 0.05:
-                is_near_strike = True
-                near_strike_val = leg.strike
-                break
+        time_details_html = f"{opened_badge}{initial_dte_badge}{days_ago_badge}{expiry_badge}"
+    else:
+        time_details_html = f"{opened_badge}{days_ago_badge}"
+        
+    # Retrieve Profit Zone and Strikes proximity warning from processed dictionary
+    in_profit_zone = p["in_profit_zone"]
+    is_near_strike = p["is_near_strike"]
+    near_strike_val = p["near_strike_val"]
+    current_underlying_price = p["current_underlying_price"]
                 
     if in_profit_zone:
         if is_near_strike:
@@ -297,7 +322,7 @@ for idx, p in enumerate(filtered_processed):
                 <div>
                     <span style="font-size: 1.4rem; font-weight: bold; color: white;">#{t.trade_number or idx+1} {t.ticker}</span>
                     <span style="background-color: #f1f3f5; color: #495057; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; margin-left: 10px; font-weight: bold;">{t.strategy_type}</span>
-                    <span style="font-size: 0.9rem; color: #6c757d; margin-left: 15px;">Opened: {t.date_opened.strftime('%Y-%m-%d')} {days_display_str}</span>
+                    {time_details_html}
                 </div>
                 <div style="display: flex; gap: 10px; align-items: center;">
                     <div style="font-size: 1.15rem; font-weight: bold; color: {zone_color}; padding: 5px 12px; border-radius: 4px; border: 1px solid {zone_color}; background-color: rgba(0,0,0,0.2);">
@@ -344,10 +369,10 @@ for idx, p in enumerate(filtered_processed):
             
         with cc2:
             # Format and color Net Position Cost
-            is_debit = p['entry_net_premium'] < 0
-            cost_color = "#dc3545" if is_debit else "#28a745"
-            cost_type = "Debit" if is_debit else "Credit"
-            cost_html = f"<span style='color: {cost_color}; font-weight: bold;'>${abs(p['entry_net_premium']):,.2f} {cost_type}</span>"
+            entry_net = p['entry_net_premium']
+            cost_color = "#28a745" if entry_net >= 0 else "#dc3545"
+            cost_sign = "+" if entry_net >= 0 else "-"
+            cost_html = f"<span style='color: {cost_color}; font-weight: bold;'>{cost_sign}${abs(entry_net):,.2f}</span>"
             
             # Format and color Current Liquidation Value
             liq_val = p['liquidation_value']

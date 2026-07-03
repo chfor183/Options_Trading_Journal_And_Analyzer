@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from src.db import SessionLocal
 from src.models import Trade, Transaction
 
-st.set_page_config(page_title="Dashboard", page_icon="📊", layout="wide")
+st.set_page_config(page_title="Closed Trades Review", page_icon="📊", layout="wide")
 
 # Custom CSS to make the page more vertically compact
 st.markdown("""
@@ -22,7 +22,7 @@ st.markdown("""
 
 # Setup layout for title and filters on the same row
 title_col, f_col1, f_col2 = st.columns([1.5, 1, 1.5], vertical_alignment="bottom")
-title_col.title("Performance Dashboard")
+title_col.title("Closed Trades Review")
 
 def get_dte_category(dte):
     if dte <= 0:

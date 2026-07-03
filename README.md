@@ -32,7 +32,7 @@ A local, Python-based web application built with Streamlit to track, journal, an
   - Performance-optimized data fetching (bypasses live API calls for closed trades).
   - Live "Current Price", "Break-Even", and real-time Probability metrics comparison to monitor active trades.
   - Responsive table layout handling large dollar amounts seamlessly.
-- **Dashboard & Analytics**: Advanced performance analytics based on actual closed and open trades.
+- **Dashboard & Analytics**: Advanced performance analytics based on actual closed and open trades in the **Closed Trades Review** page.
   - Interactive cumulative Net PnL equity curve over time.
   - Key Aggregate Metrics: Win Rate, Average Win/Loss, Net PnL, Total Commission, Premium Collected vs Paid.
   - Filterable by Date Interval (Last 7 days, 3 Months, YTD, etc.) and Trade Status.
@@ -63,7 +63,7 @@ finance/
 │   ├── 1_Trade.py          # Trade entry, editing, and payoff chart
 │   ├── 2_Journal.py        # Ledger of saved trades (pagination, filters, bulk delete)
 │   ├── 3_Open_Trades.py    # Live open trades tracker, P&L estimator, and health dashboard
-│   ├── 4_Dashboard.py      # High-level performance metrics
+│   ├── 4_Closed Trades Review.py # High-level performance metrics and dashboards
 │   ├── 5_Close Trade.py    # Hidden navigation tab for executing closing transactions
 │   ├── 6_Research.py       # Market research tools and data integration
 │   ├── 7_Export.py         # Dynamic PDF Report generation and downloading
@@ -116,6 +116,13 @@ streamlit run C:\Lab\finance\Home.py
 ## Recent Updates
 
 **Session Date: 2026-07-02**
+- **Closed Trades Review Migration**:
+  - Renamed the dashboard module from **Dashboard** to **Closed Trades Review** in the sidebar routing (`Home.py`), the internal configuration title, and the layout header titles to clarify performance analytics targeting closed trades.
+- **Open Trades Layout & Filter Optimizations**:
+  - **Enhanced Metadata Badges**: Overhauled the grey layout text inside individual active position headers, converting them into modern, beautiful, and color-coded translucent badges (🗓️ Opened details with date, ⏱️ DTE at Open, 📅 Days Ago, and ⏳ DTE left).
+  - **Flexible Days-Ago Display**: Customized days since opening format to correctly render `0 day ago`, `1 day ago` and standard plurals instead of writing "today".
+  - **Symmetric Net Position Cost**: Modified **Net Position Cost** representation to discard string qualifiers ("Credit" / "Debit") and mirror the **Current Liquidation Value** notation by showing numeric `+` or `-` prefixes.
+  - **Profit Zone Filters**: Built an interactive **Filter by Profit Zone** dropdown (`All`, `In Profit Zone`, `Out of Profit Zone`) allowing instant sorting of active cards. Integrated warning states (e.g. `⚠️ PROFIT ZONE (NEAR $...)`) cleanly as `In Profit Zone`.
 - **CSV Data Export Integration**:
   - **Comprehensive Data Export**: Added an **Export CSV Report** button to the Export page. The exported CSV contains all available data for the selected (filtered) trades, including chronological metadata, calculated metrics (collateral, expected values, max win/loss, probability metrics, etc.), and complete serialized lists of associated legs and transactions.
   - **Dynamic Sidebar and Page Title Refactoring**: Renamed the Export page from "Export PDF" to **Export** in the sidebar navigation (`Home.py`) as well as in the page title (`pages/6_Export.py`).
