@@ -221,13 +221,7 @@ if trades:
             st.rerun()
             
     # Header row
-    # Adjusting column widths so Details/Edit/Action buttons have a bit more space
-    # Ticker was index 2 with width 0.9 -> reduced to 0.6 (reduced by 0.3)
-    # Name was index 3 with width 1.3 -> increased to 1.6 (increased by 0.3)
-    # Cost was index 11 with width 1.0 -> increased to 1.2 (increased by 0.2)
-    # Status changed to 1.7
-    # Date Opened and Date Closed increased by 0.1 each (from 1.0 to 1.1)
-    col_widths = [0.4, 0.5, 0.6, 1.4, 1.1, 1.1, 1.5, 0.5, 1.0, 1.1, 1.0, 1.2, 1.2, 1.7, 0.8, 0.7, 0.9]
+    col_widths = [0.4, 0.5, 0.7, 1.4, 1.1, 1.1, 1.5, 0.5, 1.0, 1.1, 1.0, 1.2, 1.2, 1.7, 0.8, 0.7, 0.9]
     cols = st.columns(col_widths)
     headers_config = [
         ("", False),

@@ -9,7 +9,7 @@ tabs = st.tabs(["💰 Allocation & Notes", "⚖️ Rules & Mindset", "🧠 Psych
 
 with tabs[3]:
     st.subheader("🔍 Interactive Investment Checklists")
-    st.write("Use these interactive, state-perserving checklists to audit trade setups before committing capital.")
+    st.write("Use these interactive, state-preserving checklists to audit trade setups before committing capital.")
     
     # Callback functions to reset session state keys for each checkbox group
     def uncheck_etf():
@@ -20,6 +20,22 @@ with tabs[3]:
         for key in ["comp_f1", "comp_f2", "comp_f3", "comp_f4", "comp_ta1", "comp_ta2", "comp_ta3", "comp_rsi", "comp_bb", "comp_wma", "comp_sma", "comp_st", "comp_news", "comp_macro", "comp_revisions"]:
             st.session_state[key] = False
 
+    def set_section_state(keys, value):
+        for key in keys:
+            st.session_state[key] = value
+
+    # Define checklist keys for scoring and state tracking
+    etf_keys = ["etf_ta1", "etf_ta2", "etf_ta3", "etf_rsi", "etf_bb", "etf_wma", "etf_sma", "etf_st", "etf_sent", "etf_breadth", "etf_seas", "etf_fomc", "etf_cpi", "etf_unemp", "etf_friday", "etf_geo"]
+    comp_keys = ["comp_f1", "comp_f2", "comp_f3", "comp_f4", "comp_ta1", "comp_ta2", "comp_ta3", "comp_rsi", "comp_bb", "comp_wma", "comp_sma", "comp_st", "comp_news", "comp_macro", "comp_revisions"]
+
+    etf_score = sum([st.session_state.get(k, False) for k in etf_keys])
+    etf_total = len(etf_keys)
+    etf_progress = etf_score / etf_total
+
+    comp_score = sum([st.session_state.get(k, False) for k in comp_keys])
+    comp_total = len(comp_keys)
+    comp_progress = comp_score / comp_total
+
     col1, col2 = st.columns(2)
     
     with col1:
@@ -28,38 +44,55 @@ with tabs[3]:
             col_title.markdown("### 🗺️ ETF Analysis")
             col_btn.button("Uncheck all", key="uncheck_etf_btn", on_click=uncheck_etf, use_container_width=True)
             
-            # Use columns or expanders to make the layout extremely clean, readable, and interactive!
-            st.markdown("**1. Technical Analysis**")
-            etf_ta1 = st.checkbox("Weekly Heikin Ashi Trend & Daily Candles Price Action", key="etf_ta1")
-            etf_ta2 = st.checkbox("Volume accumulation and distribution", key="etf_ta2")
-            etf_ta3 = st.checkbox("Horizontal Support & Resistance Swing Zones Mapped", key="etf_ta3")
+            # Progress and Score metrics displayed prominently at the top
+            st.progress(etf_progress)
+            st.metric("ETF Checklist Score", f"{etf_score} / {etf_total}", delta=f"{int(etf_progress*100)}% Complete")
+            st.write("---")
             
-            with st.expander("🔬 Core Technical Indicators Status", expanded=True):
+            # Use collapsed expanders to keep the checklists vertically compact!
+            with st.expander("📈 1. Technical Analysis", expanded=False):
+                sec_keys_etf_ta = ["etf_ta1", "etf_ta2", "etf_ta3"]
+                btn_c1, btn_c2 = st.columns(2)
+                btn_c1.button("Check section", key="chk_sec_etf_ta", on_click=set_section_state, args=(sec_keys_etf_ta, True), use_container_width=True)
+                btn_c2.button("Uncheck section", key="unchk_sec_etf_ta", on_click=set_section_state, args=(sec_keys_etf_ta, False), use_container_width=True)
+                
+                etf_ta1 = st.checkbox("Weekly Heikin Ashi Trend & Daily Candles Price Action", key="etf_ta1")
+                etf_ta2 = st.checkbox("Volume accumulation and distribution", key="etf_ta2")
+                etf_ta3 = st.checkbox("Horizontal Support & Resistance Swing Zones Mapped", key="etf_ta3")
+            
+            with st.expander("🔬 2. Core Technical Indicators Status", expanded=False):
+                sec_keys_etf_ind = ["etf_rsi", "etf_bb", "etf_wma", "etf_sma", "etf_st"]
+                btn_c1, btn_c2 = st.columns(2)
+                btn_c1.button("Check section", key="chk_sec_etf_ind", on_click=set_section_state, args=(sec_keys_etf_ind, True), use_container_width=True)
+                btn_c2.button("Uncheck section", key="unchk_sec_etf_ind", on_click=set_section_state, args=(sec_keys_etf_ind, False), use_container_width=True)
+
                 etf_rsi = st.checkbox("RSI (14) audited (Overbought >70 / Oversold <30)", key="etf_rsi")
                 etf_bb = st.checkbox("Bollinger Bands (20, 2SD) extremes or squeeze checked", key="etf_bb")
                 etf_wma = st.checkbox("WMA 50 checked for mid-term trend support/resistance", key="etf_wma")
                 etf_sma = st.checkbox("SMA 200 checked for long-term institutional trend direction", key="etf_sma")
                 etf_st = st.checkbox("Supertrend (10, 1, 1) execution signal confirmed", key="etf_st")
                 
-            st.markdown("**2. Macro Sentiment & Breadth**")
-            etf_sent = st.checkbox("Greed/Fear indexes, retail interest levels & Put-Call ratios", key="etf_sent")
-            etf_breadth = st.checkbox("Market Breadth (% of stocks above 50/200 SMA) checked", key="etf_breadth")
-            etf_seas = st.checkbox("Historical monthly/quarterly Seasonality checked", key="etf_seas")
+            with st.expander("📊 3. Macro Sentiment & Breadth", expanded=False):
+                sec_keys_etf_macro = ["etf_sent", "etf_breadth", "etf_seas"]
+                btn_c1, btn_c2 = st.columns(2)
+                btn_c1.button("Check section", key="chk_sec_etf_macro", on_click=set_section_state, args=(sec_keys_etf_macro, True), use_container_width=True)
+                btn_c2.button("Uncheck section", key="unchk_sec_etf_macro", on_click=set_section_state, args=(sec_keys_etf_macro, False), use_container_width=True)
+
+                etf_sent = st.checkbox("Sentiment indexes & Put-Call ratios", key="etf_sent")
+                etf_breadth = st.checkbox("Market Breadth (% of stocks above 50/200 SMA) checked", key="etf_breadth")
+                etf_seas = st.checkbox("Historical monthly/quarterly Seasonality checked", key="etf_seas")
             
-            with st.expander("📅 Key Macro Catalyst Schedule", expanded=True):
+            with st.expander("📅 4. Key Macro Catalyst Schedule", expanded=False):
+                sec_keys_etf_cat = ["etf_fomc", "etf_cpi", "etf_unemp", "etf_friday", "etf_geo"]
+                btn_c1, btn_c2 = st.columns(2)
+                btn_c1.button("Check section", key="chk_sec_etf_cat", on_click=set_section_state, args=(sec_keys_etf_cat, True), use_container_width=True)
+                btn_c2.button("Uncheck section", key="unchk_sec_etf_cat", on_click=set_section_state, args=(sec_keys_etf_cat, False), use_container_width=True)
+
                 etf_fomc = st.checkbox("FOMC Meetings & Interest Rate decisions checked", key="etf_fomc")
                 etf_cpi = st.checkbox("Inflation (CPI/PCI US) & economic calendar schedule checked", key="etf_cpi")
                 etf_unemp = st.checkbox("Unemployment rates & Jobs report timeline checked", key="etf_unemp")
                 etf_friday = st.checkbox("Options Friday (3rd Friday of the month) expiration risks checked", key="etf_friday")
                 etf_geo = st.checkbox("Global political climate & war developments audited", key="etf_geo")
-
-            # Score Summary Card
-            etf_score = sum([etf_ta1, etf_ta2, etf_ta3, etf_rsi, etf_bb, etf_wma, etf_sma, etf_st, etf_sent, etf_breadth, etf_seas, etf_fomc, etf_cpi, etf_unemp, etf_friday, etf_geo])
-            etf_total = 16
-            progress_pct = etf_score / etf_total
-            st.write("")
-            st.progress(progress_pct)
-            st.metric("ETF Checklist Score", f"{etf_score} / {etf_total}", delta=f"{int(progress_pct*100)}% Complete")
             
     with col2:
         with st.container(border=True):
@@ -67,36 +100,54 @@ with tabs[3]:
             col_title2.markdown("### 🏢 Company Analysis")
             col_btn2.button("Uncheck all", key="uncheck_comp_btn", on_click=uncheck_company, use_container_width=True)
             
-            st.markdown("**1. Fundamental Analysis**")
-            comp_f1 = st.checkbox("Earnings History (EPS & Revenue growth / Surprises audited)", key="comp_f1")
-            comp_f2 = st.checkbox("Forward Guidance (Capex outlook, revisions, sector guidance)", key="comp_f2")
-            comp_f3 = st.checkbox("Balance Sheet Health (Debt-to-Equity & Current ratios)", key="comp_f3")
-            comp_f4 = st.checkbox("Operating Metrics (Gross/Operating/Net margins & FCF Yield)", key="comp_f4")
+            # Progress and Score metrics displayed prominently at the top
+            st.progress(comp_progress)
+            st.metric("Company Checklist Score", f"{comp_score} / {comp_total}", delta=f"{int(comp_progress*100)}% Complete")
+            st.write("---")
             
-            st.markdown("**2. Technical Analysis**")
-            comp_ta1 = st.checkbox("Weekly Heikin Ashi Trend & Daily Candles Price Action", key="comp_ta1")
-            comp_ta2 = st.checkbox("Volume accumulation and distribution", key="comp_ta2")
-            comp_ta3 = st.checkbox("Horizontal Support & Resistance Swing Zones Mapped", key="comp_ta3")
+            # Use collapsed expanders to keep the checklists vertically compact!
+            with st.expander("📊 1. Fundamental Analysis", expanded=False):
+                sec_keys_comp_fund = ["comp_f1", "comp_f2", "comp_f3", "comp_f4"]
+                btn_c1, btn_c2 = st.columns(2)
+                btn_c1.button("Check section", key="chk_sec_comp_fund", on_click=set_section_state, args=(sec_keys_comp_fund, True), use_container_width=True)
+                btn_c2.button("Uncheck section", key="unchk_sec_comp_fund", on_click=set_section_state, args=(sec_keys_comp_fund, False), use_container_width=True)
+
+                comp_f1 = st.checkbox("Earnings History (EPS & Revenue growth / Surprises audited)", key="comp_f1")
+                comp_f2 = st.checkbox("Forward Guidance (Capex outlook, revisions, sector guidance)", key="comp_f2")
+                comp_f3 = st.checkbox("Balance Sheet Health (Debt-to-Equity & Current ratios)", key="comp_f3")
+                comp_f4 = st.checkbox("Operating Metrics (Gross/Operating/Net margins & FCF Yield)", key="comp_f4")
             
-            with st.expander("🔬 Core Technical Indicators Status", expanded=True):
+            with st.expander("📈 2. Technical Analysis", expanded=False):
+                sec_keys_comp_ta = ["comp_ta1", "comp_ta2", "comp_ta3"]
+                btn_c1, btn_c2 = st.columns(2)
+                btn_c1.button("Check section", key="chk_sec_comp_ta", on_click=set_section_state, args=(sec_keys_comp_ta, True), use_container_width=True)
+                btn_c2.button("Uncheck section", key="unchk_sec_comp_ta", on_click=set_section_state, args=(sec_keys_comp_ta, False), use_container_width=True)
+
+                comp_ta1 = st.checkbox("Weekly Heikin Ashi Trend & Daily Candles Price Action", key="comp_ta1")
+                comp_ta2 = st.checkbox("Volume accumulation and distribution", key="comp_ta2")
+                comp_ta3 = st.checkbox("Horizontal Support & Resistance Swing Zones Mapped", key="comp_ta3")
+            
+            with st.expander("🔬 3. Core Technical Indicators Status", expanded=False):
+                sec_keys_comp_ind = ["comp_rsi", "comp_bb", "comp_wma", "comp_sma", "comp_st"]
+                btn_c1, btn_c2 = st.columns(2)
+                btn_c1.button("Check section", key="chk_sec_comp_ind", on_click=set_section_state, args=(sec_keys_comp_ind, True), use_container_width=True)
+                btn_c2.button("Uncheck section", key="unchk_sec_comp_ind", on_click=set_section_state, args=(sec_keys_comp_ind, False), use_container_width=True)
+
                 comp_rsi = st.checkbox("RSI (14) audited (Overbought >70 / Oversold <30)", key="comp_rsi")
                 comp_bb = st.checkbox("Bollinger Bands (20, 2SD) extremes or squeeze checked", key="comp_bb")
                 comp_wma = st.checkbox("WMA 50 checked for mid-term trend support/resistance", key="comp_wma")
                 comp_sma = st.checkbox("SMA 200 checked for long-term institutional trend direction", key="comp_sma")
                 comp_st = st.checkbox("Supertrend (10, 1, 1) execution signal confirmed", key="comp_st")
                 
-            st.markdown("**3. Catalyst Checks**")
-            comp_news = st.checkbox("Recent corporate developments, leadership shifts, legal actions, and PR reports", key="comp_news")
-            comp_macro = st.checkbox("Sector Rotations, industry-specific developments, and cycle stage audited", key="comp_macro")
-            comp_revisions = st.checkbox("Financial target revisions, earnings guidance adjustments, or analyst consensus updates", key="comp_revisions")
+            with st.expander("📅 4. Catalyst Checks", expanded=False):
+                sec_keys_comp_cat = ["comp_news", "comp_macro", "comp_revisions"]
+                btn_c1, btn_c2 = st.columns(2)
+                btn_c1.button("Check section", key="chk_sec_comp_cat", on_click=set_section_state, args=(sec_keys_comp_cat, True), use_container_width=True)
+                btn_c2.button("Uncheck section", key="unchk_sec_comp_cat", on_click=set_section_state, args=(sec_keys_comp_cat, False), use_container_width=True)
 
-            # Score Summary Card
-            comp_score = sum([comp_f1, comp_f2, comp_f3, comp_f4, comp_ta1, comp_ta2, comp_ta3, comp_rsi, comp_bb, comp_wma, comp_sma, comp_st, comp_news, comp_macro, comp_revisions])
-            comp_total = 15
-            progress_pct2 = comp_score / comp_total
-            st.write("")
-            st.progress(progress_pct2)
-            st.metric("Company Checklist Score", f"{comp_score} / {comp_total}", delta=f"{int(progress_pct2*100)}% Complete")
+                comp_news = st.checkbox("Recent corporate developments, leadership shifts, legal actions, and PR reports", key="comp_news")
+                comp_macro = st.checkbox("Sector Rotations, industry-specific developments, and cycle stage audited", key="comp_macro")
+                comp_revisions = st.checkbox("Financial target revisions, earnings guidance adjustments, or analyst consensus updates", key="comp_revisions")
 
 with tabs[0]:
     st.subheader("💵 Portfolio & Capital Allocation")

@@ -205,8 +205,8 @@ with tabs[1]:
                 <td>Go further out in expiration for less work and proportional yield if resistance holds.</td>
             </tr>
             <tr>
-                <td><b>LEAPS Call / Put</b></td>
-                <td><b>Debit</b><br><span class="badge badge-debit">Debit</span></td>
+                <td><b>LEAPS (Long Call / Put)</b></td>
+                <td><b>Stock substitute</b><br><span class="badge badge-debit">Debit</span></td>
                 <td>Capitalizing on a predefined large directional move up or down. Farming intrinsic value. Reduces Theta decay drag.</td>
                 <td>6 Months - 1+ Years</td>
                 <td>Deep ITM (High delta, typically &gt;= 0.70)</td>
@@ -229,20 +229,20 @@ with tabs[1]:
                 <td>Cheap Leaps. Ideal for capturing downward moves in high-priced stocks with controlled risk.</td>
             </tr>
             <tr>
-                <td><b>Short Iron Butterfly</b></td>
-                <td><b>High Volatility</b><br><span class="badge badge-credit">Credit</span></td>
-                <td>Maximizing premium collected based on tight price ranges. Farming Theta decay. Sell ATM Straddle and buy OTM protective wings.</td>
-                <td>15 - 60 Days</td>
-                <td>ATM Core (High ATM delta, low wing delta)</td>
-                <td>Demands a lot of attention (high maintenance). Highest risk but highest potential reward.</td>
-            </tr>
-            <tr>
                 <td><b>Short Iron Condor</b></td>
-                <td><b>High Volatility</b><br><span class="badge badge-credit">Credit</span></td>
+                <td><b>Low Volatility</b><br><span class="badge badge-credit">Credit</span></td>
                 <td>Maximizing premium collected based on range-bound price channels. Farming Theta decay. Sell OTM Put spread and OTM Call spread.</td>
                 <td>15 - 60 Days</td>
                 <td>OTM Wings (Low delta, typically &lt;= 0.20)</td>
-                <td>Demands a lot of attention (high maintenance). Less risk than Iron Butterfly but similar.</td>
+                <td>Demands a lot of attention (high maintenance). High probability of success, defined risk.</td>
+            </tr>
+            <tr>
+                <td><b>Iron Condor</b></td>
+                <td><b>High Volatility</b><br><span class="badge badge-debit">Debit</span></td>
+                <td>Capitalizing on a major breakout or breakdown outside of the wings. Buy ATM/ITM Call spread and Put spread.</td>
+                <td>15 - 60 Days</td>
+                <td>ATM Core / OTM Wings</td>
+                <td>Best used right before high-impact binary events like corporate earnings. Capped risk, high potential payoff.</td>
             </tr>
         </tbody>
     </table>

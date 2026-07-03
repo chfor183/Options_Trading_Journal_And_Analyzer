@@ -119,6 +119,14 @@ streamlit run C:\Lab\finance\Home.py
 ## Recent Updates
 
 **Session Date: 2026-07-02**
+- **Option Strategies Playbook & Reference Table**:
+  - **Short Iron Condor Realignment**: Replaced the high-maintenance **Short Iron Butterfly** strategy in the reference summary table with a regular, credit-based **Short Iron Condor**.
+  - **Long Iron Condor Addition**: Added a dedicated row for **Long Iron Condor** as a high-volatility debit breakout strategy. This ensures full symmetry with the interactive debit/credit strategies selector inside the Detailed Strategy configurations.
+- **Interactive Investment Checklists & Framework**:
+  - **Vertically Compact Category Expanders**: Overhauled the **Analysis Checklists** tab to group checkbox elements into clean, collapsed-by-default categories using `st.expander` to minimize page height and improve readability.
+  - **Top-Level Progress Visibility**: Moved the checklist progress bar (`st.progress`) and completion percentage metric (`st.metric`) to the top of each checklist container card for instant progress updates before digging into sub-criteria.
+  - **Interactive Section-Level Controls**: Added **Check section** and **Uncheck section** buttons inside each of the 4 ETF and 4 Company section expanders, utilizing session-state helper functions to allow users to toggle an entire checklist group at once.
+  - **Spacing Cleanups**: Removed an aesthetic vertical gap (`st.write("")`) from the *Macro Sentiment & Breadth* expander to guarantee consistent checkbox alignment.
 - **Closed Trades Review Migration**:
   - Renamed the dashboard module from **Dashboard** to **Closed Trades Review** in the sidebar routing (`Home.py`), the internal configuration title, and the layout header titles to clarify performance analytics targeting closed trades.
 - **Open Trades Layout & Filter Optimizations**:
