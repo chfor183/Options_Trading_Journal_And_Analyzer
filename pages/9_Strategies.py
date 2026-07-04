@@ -556,7 +556,6 @@ with tabs[2]:
                 """)
                 st.markdown("**Risk Management**")
                 st.markdown("""
-                - Restrict size to **2% - 5% of total capital max**.
                 - Buy further out in expiration (60-90+ Days to Expiration) to buffer against immediate Theta decay.
                 """)
                 st.markdown("**Exit & Take Profit Strategies**")
@@ -593,7 +592,7 @@ with tabs[2]:
                 """)
                 st.markdown("**Risk Management**")
                 st.markdown("""
-                - Position size limited to **2% - 5% max**.
+
                 - Avoid buying during historically high Implied Volatility (IV Rank > 70%) to protect against IV crush.
                 """)
                 st.markdown("**Exit & Take Profit Strategies**")
@@ -710,7 +709,6 @@ with tabs[2]:
                 st.markdown("""
                 - *Strike Width*: Larger spreads equal less structural capping (more potential profit) but higher premium paid.
                 - *Delta*: Lower delta long leg equals more execution risk.
-                - Limit trade size to **5% - 10% of total portfolio capital max**.
                 - Avoid trading during Ex-Dividend weeks, or exit 2 days prior to prevent early assignment on the short call.
                 - Always cross-reference upcoming earnings announcements.
                 """)
@@ -757,7 +755,6 @@ with tabs[2]:
                 st.markdown("""
                 - *Strike Width*: Larger spreads equal more potential profit but higher capital cost.
                 - *Delta*: Lower delta on the long put equals higher probability of loss.
-                - Limit trade size to **5% - 10% of total portfolio capital max**.
                 - Check for upcoming dividend distributions and exit schedules.
                 - Monitor earnings releases carefully.
                 """)
@@ -804,7 +801,6 @@ with tabs[2]:
                 st.markdown("""
                 - *Strike Width*: Larger spreads increase maximum risk but collect more initial credit.
                 - *Delta*: Lower delta short call increases probability of success but collects less premium.
-                - Limit allocation to **5% - 10% of portfolio capital per trade**.
                 - Do not trade during Ex-Dividend weeks to eliminate dividend-assignment risk on the short call.
                 - Ensure no major corporate earnings are scheduled during the trade's duration.
                 """)
@@ -852,7 +848,6 @@ with tabs[2]:
                 st.markdown("""
                 - *Strike Width*: Wider spreads increase maximum risk but offer a higher net credit.
                 - *Delta*: Lower delta on the short put decreases risk of assignment.
-                - Limit trade allocation to **5% - 10% of portfolio max**.
                 - Guard against early assignment risk by checking ex-dividend calendars.
                 - Verify earnings calendars.
                 """)
@@ -900,7 +895,6 @@ with tabs[2]:
                 st.markdown("""
                 - Avoid trading through high-risk binary events like corporate earnings or major FOMC releases.
                 - If one wing is tested, you can roll the untested side closer to the underlying price to collect additional credit.
-                - Limit overall Iron Condor exposure to **10% of total portfolio capital max**.
                 """)
                 
                 st.markdown("**Exit & Profit Strategy**")
