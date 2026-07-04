@@ -23,7 +23,7 @@ class Trade(Base):
     underlying_name = Column(String(100))
     category = Column(String(50))
     strategy_type = Column(String(50))
-    expected_move = Column(String(50))
+    expected_direction = Column(String(50))
     idea_url = Column(String(255))
     date_opened = Column(DateTime, default=datetime.utcnow)
     collateral = Column(Float)

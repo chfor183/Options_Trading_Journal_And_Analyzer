@@ -41,6 +41,19 @@ def init_db():
             db_session.commit()
             db_session.close()
 
+        # Check if expected_move column exists and rename to expected_direction if expected_direction doesn't exist
+        res_move = conn.execute(text(
+            "SELECT 1 FROM information_schema.columns "
+            "WHERE table_schema = 'finance' AND table_name = 'trades' AND column_name = 'expected_move'"
+        )).fetchone()
+        res_direction = conn.execute(text(
+            "SELECT 1 FROM information_schema.columns "
+            "WHERE table_schema = 'finance' AND table_name = 'trades' AND column_name = 'expected_direction'"
+        )).fetchone()
+        if res_move and not res_direction:
+            conn.execute(text("ALTER TABLE finance.trades RENAME COLUMN expected_move TO expected_direction"))
+            conn.commit()
+
     # Create default portfolio if none exist
     db = SessionLocal()
     from src.models import Portfolio

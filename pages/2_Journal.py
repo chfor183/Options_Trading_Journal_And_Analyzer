@@ -67,7 +67,7 @@ if trades:
     const observer = new MutationObserver(() => {
         const parentDoc = window.parent.document;
         const buttons = parentDoc.querySelectorAll('.stButton button');
-        const sortableHeaders = ["#", "Ticker", "Name", "Date Opened", "Date Closed", "Strategy", "DTE", "Exp. Move", "Cost", "PnL", "Status"];
+        const sortableHeaders = ["#", "Ticker", "Name", "Date Opened", "Date Closed", "Strategy", "DTE", "Exp. Direction", "Cost", "PnL", "Status"];
         buttons.forEach(b => {
             const text = b.innerText.trim();
             if (sortableHeaders.includes(text)) {
@@ -199,8 +199,8 @@ if trades:
                 first_leg = min(t.legs, key=lambda l: l.expiry)
                 return (first_leg.expiry - t.date_opened.date()).days
             return -1
-        elif col_name == "Exp. Move":
-            return t.expected_move or ""
+        elif col_name == "Exp. Direction":
+            return t.expected_direction or ""
         elif col_name == "Cost":
             open_tx = next((tx for tx in t.transactions if tx.action == "Open"), None)
             return open_tx.price if open_tx else 0.0
@@ -301,7 +301,7 @@ if trades:
         ("Date Closed", True),
         ("Strategy", True),
         ("DTE", True),
-        ("Exp. Move", True),
+        ("Exp. Direction", True),
         ("Current or Closed Price", False),
         ("Break-Even", False),
         ("Cost", True),
@@ -478,8 +478,8 @@ if trades:
         # Calculate Expected Move value numerically for the pinescript
         em_val = 0.0
         try:
-            if t.expected_move:
-                # Expected move might be e.g. "Bullish ↗" or "Neutral →", let's parse actual expected move width
+            if t.expected_direction:
+                # Expected direction might be e.g. "Bullish ↗" or "Neutral →", let's parse actual expected move width
                 # Let's extract numeric expected move from some standard calculation or if average IV is available
                 if t.legs:
                     first_leg = min(t.legs, key=lambda l: l.expiry)
@@ -524,7 +524,7 @@ if trades:
         cols[5].markdown(f"<div style='text-align: left;'>{close_date_str}</div>", unsafe_allow_html=True)
         cols[6].markdown(f"<div style='text-align: left;'>{t.strategy_type}</div>", unsafe_allow_html=True)
         cols[7].markdown(f"<div style='text-align: left;'>{dte_str}</div>", unsafe_allow_html=True)
-        cols[8].markdown(f"<div style='text-align: left;'>{t.expected_move}</div>", unsafe_allow_html=True)
+        cols[8].markdown(f"<div style='text-align: left;'>{t.expected_direction}</div>", unsafe_allow_html=True)
         cols[9].markdown(f"<div style='text-align: left;'>{current_price}</div>", unsafe_allow_html=True)
         cols[10].markdown(f"<div style='text-align: left;'>{breakevens}</div>", unsafe_allow_html=True)
         cols[11].markdown(f"<div style='text-align: left;'>${display_cost:.2f}</div>", unsafe_allow_html=True)

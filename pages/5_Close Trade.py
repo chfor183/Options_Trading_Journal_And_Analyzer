@@ -51,7 +51,7 @@ st.markdown(f"""
     <div style='display: flex; flex-direction: column;'><b>Cost of trade</b> <span>{format_currency(display_cost)}</span></div>
     <div style='display: flex; flex-direction: column;'><b>Collateral</b> <span>{format_currency(trade.collateral)}</span></div>
     <div style='display: flex; flex-direction: column;'><b>Category</b> <span>{format_string(trade.category)}</span></div>
-    <div style='display: flex; flex-direction: column;'><b>Expected Move</b> <span>{format_string(trade.expected_move)}</span></div>
+    <div style='display: flex; flex-direction: column;'><b>Expected Direction</b> <span>{format_string(trade.expected_direction)}</span></div>
 </div>
 
 #### Probabilities & Metrics

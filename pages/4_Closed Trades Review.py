@@ -139,7 +139,7 @@ elif all_trades:
             "Premium Collected": stats["premium_collected"],
             "Premium Paid": stats["premium_paid"],
             "Commission": stats["total_commission"],
-            "Expected Move": t.expected_move if t.expected_move else "N/A",
+            "Expected Direction": t.expected_direction if t.expected_direction else "N/A",
             "Strategy Type": t.strategy_type if t.strategy_type else "N/A",
             "Category": t.category if t.category else "N/A",
             "DTE Category": stats["dte_category"],
@@ -222,11 +222,11 @@ elif all_trades:
         
         st.write("Analyze Performance By:")
         if "breakdown_by" not in st.session_state:
-            st.session_state.breakdown_by = "Expected Move"
+            st.session_state.breakdown_by = "Expected Direction"
             
         btn_cols = st.columns(7)
-        if btn_cols[0].button("Expected Move", use_container_width=True, type="primary" if st.session_state.breakdown_by == "Expected Move" else "secondary"):
-            st.session_state.breakdown_by = "Expected Move"
+        if btn_cols[0].button("Expected Direction", use_container_width=True, type="primary" if st.session_state.breakdown_by == "Expected Direction" else "secondary"):
+            st.session_state.breakdown_by = "Expected Direction"
             st.rerun()
         if btn_cols[1].button("Strategy Type", use_container_width=True, type="primary" if st.session_state.breakdown_by == "Strategy Type" else "secondary"):
             st.session_state.breakdown_by = "Strategy Type"

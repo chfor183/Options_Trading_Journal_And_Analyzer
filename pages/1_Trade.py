@@ -71,7 +71,7 @@ if "edit_trade_id" in st.session_state and st.session_state.edit_trade_id:
         st.session_state["name_val"] = trade_to_edit.underlying_name
         st.session_state["last_ticker"] = trade_to_edit.ticker
         st.session_state["strategy_val"] = trade_to_edit.strategy_type
-        st.session_state["move_val"] = trade_to_edit.expected_move
+        st.session_state["direction_val"] = trade_to_edit.expected_direction
         st.session_state["url_val"] = trade_to_edit.idea_url
         st.session_state["date_val"] = trade_to_edit.date_opened
         st.session_state["num_legs"] = len(trade_to_edit.legs) or 2
@@ -196,11 +196,11 @@ with col1:
         strategy_type = st.selectbox("Strategy Type", strat_options, index=strat_idx, label_visibility="collapsed")
 
 with col2:
-    move_options = ["Bullish ↗", "Neutral →", "Bearish ↘", "High volatility"]
-    def_move = st.session_state.get("move_val", "Bullish ↗" if ticker == "GLD" else "Bullish ↗")
-    move_idx = move_options.index(def_move) if def_move in move_options else 0
-    st.markdown("<span style='color: #60a5fa; font-weight: bold; font-size: 14px;'>Expected Move</span>", unsafe_allow_html=True)
-    expected_move = st.selectbox("Expected Move", move_options, index=move_idx, label_visibility="collapsed")
+    direction_options = ["Bullish ↗", "Neutral →", "Bearish ↘", "High volatility"]
+    def_direction = st.session_state.get("direction_val", "Bullish ↗" if ticker == "GLD" else "Bullish ↗")
+    direction_idx = direction_options.index(def_direction) if def_direction in direction_options else 0
+    st.markdown("<span style='color: #60a5fa; font-weight: bold; font-size: 14px;'>Expected Direction</span>", unsafe_allow_html=True)
+    expected_direction = st.selectbox("Expected Direction", direction_options, index=direction_idx, label_visibility="collapsed")
     
     st.markdown("<span style='color: #60a5fa; font-weight: bold; font-size: 14px;'>Idea URL</span>", unsafe_allow_html=True)
     idea_url = st.text_input("Idea URL", value=st.session_state.get("url_val", ""), label_visibility="collapsed")
@@ -491,7 +491,7 @@ if ticker and current_price > 0:
             trade_to_edit.underlying_name = name
             trade_to_edit.category = category
             trade_to_edit.strategy_type = strategy_type
-            trade_to_edit.expected_move = expected_move
+            trade_to_edit.expected_direction = expected_direction
             trade_to_edit.idea_url = idea_url
             trade_to_edit.date_opened = date_opened
             trade_to_edit.collateral = float(collateral_val)
@@ -534,7 +534,7 @@ if ticker and current_price > 0:
                 underlying_name=name,
                 category=category,
                 strategy_type=strategy_type,
-                expected_move=expected_move,
+                expected_direction=expected_direction,
                 idea_url=idea_url,
                 date_opened=date_opened,
                 collateral=float(collateral_val),

@@ -179,7 +179,7 @@ def generate_pdf(filtered_trades, filter_info):
             "Date Opened": t.date_opened.strftime("%Y-%m-%d"),
             "Date Closed": close_date_str,
             "Strategy": t.strategy_type or "-",
-            "Exp. Move": t.expected_move or "-",
+            "Exp. Direction": t.expected_direction or "-",
             "Contracts": str(contracts),
             "Cost": f"${cost:.2f}",
             "Close Price": f"${close_price:.2f}" if close_txs else "-",
@@ -257,7 +257,7 @@ def generate_pdf(filtered_trades, filter_info):
     # 3. Trades Table
     pdf.chapter_title("Trades List")
     if analyzed_data:
-        cols = ["#", "Ticker", "Name", "Opened", "Closed", "Strategy", "Move", "Contr.", "Cost", "Close", "PnL", "Comm.", "Status"]
+        cols = ["#", "Ticker", "Name", "Opened", "Closed", "Strategy", "Exp. Dir.", "Contr.", "Cost", "Close", "PnL", "Comm.", "Status"]
         # Total width roughly 277 for Landscape A4 (margins are 10mm each side)
         widths = [12, 14, 32, 19, 19, 44, 21, 11, 19, 22, 22, 13, 29]
         
@@ -287,7 +287,7 @@ def generate_pdf(filtered_trades, filter_info):
             pdf.cell(widths[3], 8, sanitize(data['Date Opened']), 1, align='C')
             pdf.cell(widths[4], 8, sanitize(data['Date Closed']), 1, align='C')
             pdf.cell(widths[5], 8, sanitize(data['Strategy'])[:26], 1, align='C')
-            pdf.cell(widths[6], 8, sanitize(data['Exp. Move'])[:15], 1, align='C')
+            pdf.cell(widths[6], 8, sanitize(data['Exp. Direction'])[:15], 1, align='C')
             pdf.cell(widths[7], 8, sanitize(data['Contracts']), 1, align='C')
             pdf.cell(widths[8], 8, sanitize(data['Cost']), 1, align='C')
             pdf.cell(widths[9], 8, sanitize(data['Close Price']), 1, align='C')
@@ -374,7 +374,7 @@ def generate_csv_data(filtered_trades):
             "Underlying Name": t.underlying_name or "",
             "Category": t.category or "",
             "Strategy Type": t.strategy_type or "",
-            "Expected Move": t.expected_move or "",
+            "Expected Direction": t.expected_direction or "",
             "Idea URL": t.idea_url or "",
             "Date Opened": t.date_opened.strftime('%Y-%m-%d %H:%M:%S') if t.date_opened else "",
             "Date Closed": close_date_str,

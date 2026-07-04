@@ -417,24 +417,24 @@ for idx, p in enumerate(filtered_processed):
             pop_sign = "+" if change_pop >= 0 else ""
             pop_html = f"<span style='font-weight: bold;'>{current_pop*100:.1f}%</span> <span style='color: {pop_color}; font-weight: bold;'>({pop_sign}{change_pop*100:.1f}%)</span>"
             
-            # Format and color Expected Move
-            expected_move_text = t.expected_move or "N/A"
-            if "bullish" in expected_move_text.lower():
-                move_color = "#28a745"  # Green
-            elif "bearish" in expected_move_text.lower():
-                move_color = "#dc3545"  # Red
-            elif "neutral" in expected_move_text.lower():
-                move_color = "#ffc107"  # Yellow
+            # Format and color Expected Direction
+            expected_direction_text = t.expected_direction or "N/A"
+            if "bullish" in expected_direction_text.lower():
+                direction_color = "#28a745"  # Green
+            elif "bearish" in expected_direction_text.lower():
+                direction_color = "#dc3545"  # Red
+            elif "neutral" in expected_direction_text.lower():
+                direction_color = "#ffc107"  # Yellow
             else:
-                move_color = "inherit"
-            move_html = f"<span style='color: {move_color}; font-weight: bold;'>{expected_move_text}</span>"
+                direction_color = "inherit"
+            direction_html = f"<span style='color: {direction_color}; font-weight: bold;'>{expected_direction_text}</span>"
             
             # Render Column 1 as a single block-level HTML element to prevent Markdown escaping
             st.markdown(f"""
             <div style="font-size: 1rem; line-height: 2.0; font-family: inherit; color: inherit;">
                 <div style="margin-bottom: 6px;">📈 <b>Underlying Ticker Price:</b> {underlying_html}</div>
                 <div style="margin-bottom: 6px;">🎯 <b>PoP (Current & Change):</b> {pop_html}</div>
-                <div style="margin-bottom: 6px;">🔮 <b>Expected Move:</b> {move_html}</div>
+                <div style="margin-bottom: 6px;">🔮 <b>Expected Direction:</b> {direction_html}</div>
             </div>
             """, unsafe_allow_html=True)
             
