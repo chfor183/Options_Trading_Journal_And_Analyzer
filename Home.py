@@ -89,6 +89,7 @@ pages = {
         st.Page("pages/9_Strategies.py", title="Strategies", icon="📈"),
         st.Page("pages/8_Framework.py", title="Framework", icon="🧠"),
         st.Page("pages/7_Export.py", title="Export", icon="📄"),
+        st.Page("pages/10_Probabilities.py", title="Probabilities", icon="🎲"),
     ],
     "Hidden": [
         st.Page("pages/5_Close Trade.py", title="Close Trade", icon="✖")

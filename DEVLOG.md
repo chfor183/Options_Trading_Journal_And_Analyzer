@@ -1,5 +1,17 @@
 ## Recent Updates
 
+**Session Date: 2026-07-03**
+- **Interactive Probabilities & Quantitative Dashboard**:
+  - **Streak Probability Grid**: Created a widescreen, interactive matrix displaying the exact probability of encountering consecutive losses (drawdowns) over a sequence of trades, mirroring professional Excel analyzers. 
+  - **Dynamic Sidebar Page Registry**: Registered the new dashboard at `pages/10_Probabilities.py` and cleanly hooked it into Streamlit's routing (`Home.py`) immediately following the *Export* page using a gaming die icon ("🎲").
+  - **Exact Recurrence Solver**: Designed and natively implemented an exact mathematical recurrence relation algorithm for streak probabilities (solving $A(n, k) = \sum_{j=1}^{k} p^{j-1} \cdot q \cdot A(n-j, k)$), providing absolute precision rather than rough binomial approximations.
+  - **Customizable Widescreen Grid bounds**: Re-engineered the column slider to range from `10` to `20` consecutive losses and removed physical layout and pixel-width caps, forcing the matrix to stretch fluidly across the entire screen.
+  - **Excel-Style Conditional Color Coding**: Implemented a responsive conditional styling function applying a light red background (`#ffc7ce`) for probabilities $< 10.00\%$ and a high-contrast green layout background (`#c6efce`) for probabilities $\ge 10.00\%$.
+  - **High-Density Data Scaling**: Shortened sequence length checkpoints to standard benchmarks `[1, 10, 20, 30, 40, 50, 100, 200, 500, 1000]`, and removed bulky `# of trades` column headers in favor of a math-standard compact **`N`** index column.
+  - **Responsive Educational Insights**: Formatted the key trade-sequence insight cards to be fully dynamic, recalculating expected streaks of 2 and 5 losses over 100 trades based on the active Strike Rate input.
+  - **Widescreen Instant Run Calculator**: Added a localized, standalone, interactive quick-run calculator widget that updates its metric labels on the fly, summarizing exact outcomes under custom settings (e.g. "Probability of experiencing at least 4 consecutive losses in 50 trades at 75.00% win rate").
+  - **Quantitative Modeling & Mathematics Guide**: Built a dedicated educational resources tab compiling complete LaTeX mathematical proofs of log-normal underlying assets, Riemann numerical integration of Probability of Profit (PoP), and Expected Value (EV) math boundaries, using clean escape-safe raw strings to guarantee perfect KaTeX rendering.
+
 **Session Date: 2026-07-02**
 - **Option Strategies Playbook & Reference Table**:
   - **Short Iron Condor Realignment**: Replaced the high-maintenance **Short Iron Butterfly** strategy in the reference summary table with a regular, credit-based **Short Iron Condor**.
