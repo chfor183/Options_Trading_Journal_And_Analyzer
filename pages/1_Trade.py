@@ -334,7 +334,7 @@ legs_data = []
 
 hcol0, hcol1, hcol2, hcol3, hcol4, hcol5, hcol6, hcol7, hcol8 = st.columns([0.8, 1.2, 1, 2.5, 1.5, 1.2, 1.5, 1.5, 1.5])
 hcol1.markdown("<span style='color: #a1a1aa; font-weight: bold; font-size: 14px;'>Action</span>", unsafe_allow_html=True)
-hcol2.markdown("<span style='color: #a1a1aa; font-weight: bold; font-size: 14px;'>Qty</span>", unsafe_allow_html=True)
+hcol2.markdown("<span style='color: #60a5fa; font-weight: bold; font-size: 14px;'>Qty</span>", unsafe_allow_html=True)
 hcol3.markdown("<span style='color: #a1a1aa; font-weight: bold; font-size: 14px;'>Expiration Date</span>", unsafe_allow_html=True)
 hcol4.markdown("<span style='color: #a1a1aa; font-weight: bold; font-size: 14px;'>Strike</span>", unsafe_allow_html=True)
 hcol5.markdown("<span style='color: #a1a1aa; font-weight: bold; font-size: 14px;'>Type</span>", unsafe_allow_html=True)

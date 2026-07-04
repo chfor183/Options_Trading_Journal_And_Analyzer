@@ -228,8 +228,18 @@ if trades:
 
     filtered_trades.sort(key=sorting_key, reverse=reverse_sort)
     
-    # Select All / Deselect All / Bulk Delete
-    sel_col1, sel_col2, sel_col3, _ = st.columns([1.5, 1, 1.5, 6])
+    # Select All / Deselect All / Bulk Delete / Migrate
+    from src.models import Portfolio
+    all_portfolios = db.query(Portfolio).all()
+    other_portfolios = [p for p in all_portfolios if p.id != active_portfolio_id]
+    
+    selected_ids = [k for k, v in st.session_state.selected_trades.items() if v]
+    
+    if selected_ids and other_portfolios:
+        sel_col1, sel_col2, sel_col3, sel_col4, sel_col5, _ = st.columns([1.0, 1.5, 1.7, 2.0, 1.0, 4.1])
+    else:
+        sel_col1, sel_col2, sel_col3, _ = st.columns([1.0, 1.5, 1.7, 7.1])
+        
     if sel_col1.button("Select All Filtered"):
         for t in filtered_trades:
             st.session_state.selected_trades[t.id] = True
@@ -241,7 +251,6 @@ if trades:
             st.session_state[f"select_{t.id}"] = False
         st.rerun()
         
-    selected_ids = [k for k, v in st.session_state.selected_trades.items() if v]
     if selected_ids:
         if sel_col3.button("Delete all selected", type="primary"):
             trades_to_delete = db.query(Trade).filter(Trade.id.in_(selected_ids)).all()
@@ -249,8 +258,36 @@ if trades:
                 db.delete(td)
             db.commit()
             st.session_state.selected_trades = {}
+            # Clear checkbox states
+            for k in list(st.session_state.keys()):
+                if k.startswith("select_"):
+                    st.session_state[k] = False
             st.success(f"Deleted {len(selected_ids)} trades!")
             st.rerun()
+            
+        if other_portfolios:
+            target_portfolio = sel_col4.selectbox(
+                "Migrate selected to",
+                options=other_portfolios,
+                format_func=lambda p: p.name,
+                key="migrate_target_portfolio",
+                label_visibility="collapsed"
+            )
+            if sel_col5.button("Migrate", use_container_width=True):
+                from sqlalchemy import func
+                max_num = db.query(func.max(Trade.trade_number)).filter(Trade.portfolio_id == target_portfolio.id).scalar() or 0
+                trades_to_migrate = db.query(Trade).filter(Trade.id.in_(selected_ids)).all()
+                for idx, t in enumerate(trades_to_migrate):
+                    t.portfolio_id = target_portfolio.id
+                    t.trade_number = max_num + idx + 1
+                db.commit()
+                st.session_state.selected_trades = {}
+                # Clear checkbox states
+                for k in list(st.session_state.keys()):
+                    if k.startswith("select_"):
+                        st.session_state[k] = False
+                st.success(f"Successfully migrated {len(selected_ids)} trades to '{target_portfolio.name}'!")
+                st.rerun()
             
     # Header row
     col_widths = [0.4, 0.5, 0.7, 1.4, 1.1, 1.1, 1.5, 0.5, 1.0, 1.1, 1.0, 1.2, 1.2, 1.7, 0.8, 0.7, 0.9]
