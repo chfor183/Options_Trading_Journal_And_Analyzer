@@ -210,12 +210,19 @@ with tab2:
 
     st.latex(r"f(S) = \frac{1}{S \sigma_{dist} \sqrt{2\pi}} e^{-\frac{(\ln(S) - \mu)^2}{2\sigma_{dist}^2}}")
 
-    st.markdown("""
+    st.markdown(r"""
     ---
     ### 2. Price Distribution Comparison
     To visualize how Time to Expiration (DTE) affects the probability distribution of the underlying stock price, we can compare a short-term option (e.g., **DTE 10**) and a long-term option (e.g., **DTE 100**).
     
     Over a shorter time frame, there is less time for the price to diffuse, creating a tall, narrow probability density. Over a longer time frame, the price has more time to move, which flattens and widens the distribution, shifting the peak (mode) to the left due to the log-normal asymmetry.
+
+    #### Lognormal Distribution Statistics
+    Due to the asymmetric shape of the log-normal distribution, key statistical metrics of central tendency and dispersion diverge as time to expiration ($t$) increases:
+    - **Mean (Expected Value)**: $E[S] = S_0 e^{r t}$. This is the risk-neutral expected value of the asset price at expiration, which drifts upward over time at the risk-free interest rate $r$.
+    - **Median (50th Percentile)**: $\text{Median} = e^{\mu} = S_0 e^{(r - \frac{1}{2}\sigma^2) t}$. Exactly $50\%$ of the potential outcomes fall below this price, and $50\%$ above.
+    - **Mode (Peak Density)**: $\text{Mode} = e^{\mu - \sigma_{dist}^2} = S_0 e^{(r - \frac{3}{2}\sigma^2) t}$. This is the single most probable price at expiration, represented by the peak of the probability density curve.
+    - **Standard Deviation (Price SD)**: $\text{SD} = E[S] \sqrt{e^{\sigma_{dist}^2} - 1} = S_0 e^{r t} \sqrt{e^{\sigma^2 t} - 1}$. This measures absolute price dispersion in dollar terms.
     """)
 
     # Interactive Controls
@@ -269,6 +276,14 @@ with tab2:
             key="dist_dte_long"
         )
 
+    show_lines = st.multiselect(
+        "🎯 Select statistical markers to overlay on the chart:",
+        options=["Mean", "Median", "Mode", "1-SD Range (Exact)"],
+        default=["1-SD Range (Exact)"],
+        key="dist_show_lines",
+        help="Overlay vertical lines or shaded regions for the chosen statistical measures of both distributions on the chart."
+    )
+
     # Calculate distributions
     t_short = dte_short / 365.0
     t_long = dte_long / 365.0
@@ -278,6 +293,23 @@ with tab2:
     # Standard deviation of log-price for long term:
     sigma_log_long = iv_dist * math.sqrt(t_long)
     mu_log_long = math.log(spot_price_dist) + (r_dist - 0.5 * iv_dist**2) * t_long
+
+    # Standard deviation of log-price for short term:
+    sigma_log_short = iv_dist * math.sqrt(t_short)
+    mu_log_short = math.log(spot_price_dist) + (r_dist - 0.5 * iv_dist**2) * t_short
+
+    # Exact metrics for overlays
+    mean_short = spot_price_dist * math.exp(r_dist * t_short)
+    median_short = math.exp(mu_log_short)
+    mode_short = math.exp(mu_log_short - sigma_log_short**2)
+    exact_lower_short = math.exp(mu_log_short - sigma_log_short)
+    exact_upper_short = math.exp(mu_log_short + sigma_log_short)
+
+    mean_long = spot_price_dist * math.exp(r_dist * t_long)
+    median_long = math.exp(mu_log_long)
+    mode_long = math.exp(mu_log_long - sigma_log_long**2)
+    exact_lower_long = math.exp(mu_log_long - sigma_log_long)
+    exact_upper_long = math.exp(mu_log_long + sigma_log_long)
     
     # Cover 4 standard deviations on each side of the long-term distribution
     # to capture virtually the entire density.
@@ -331,8 +363,84 @@ with tab2:
         line_dash="dash",
         line_color="#7f7f7f",
         annotation_text="Current Spot Price",
-        annotation_position="top right"
+        annotation_position="top right",
+        annotation_y=0.95
     )
+
+    # Statistical overlays
+    if "Mean" in show_lines:
+        fig_dist.add_vline(
+            x=mean_short,
+            line_dash="dash",
+            line_color="rgba(31, 119, 180, 0.8)",
+            annotation_text=f"Mean (S): ${mean_short:.1f}",
+            annotation_position="top right",
+            annotation_y=0.85
+        )
+        fig_dist.add_vline(
+            x=mean_long,
+            line_dash="dash",
+            line_color="rgba(255, 127, 14, 0.8)",
+            annotation_text=f"Mean (L): ${mean_long:.1f}",
+            annotation_position="top right",
+            annotation_y=0.45
+        )
+
+    if "Median" in show_lines:
+        fig_dist.add_vline(
+            x=median_short,
+            line_dash="dot",
+            line_color="rgba(31, 119, 180, 0.8)",
+            annotation_text=f"Med (S): ${median_short:.1f}",
+            annotation_position="top left",
+            annotation_y=0.75
+        )
+        fig_dist.add_vline(
+            x=median_long,
+            line_dash="dot",
+            line_color="rgba(255, 127, 14, 0.8)",
+            annotation_text=f"Med (L): ${median_long:.1f}",
+            annotation_position="top left",
+            annotation_y=0.35
+        )
+
+    if "Mode" in show_lines:
+        fig_dist.add_vline(
+            x=mode_short,
+            line_dash="dashdot",
+            line_color="rgba(31, 119, 180, 0.8)",
+            annotation_text=f"Mode (S): ${mode_short:.1f}",
+            annotation_position="top left",
+            annotation_y=0.65
+        )
+        fig_dist.add_vline(
+            x=mode_long,
+            line_dash="dashdot",
+            line_color="rgba(255, 127, 14, 0.8)",
+            annotation_text=f"Mode (L): ${mode_long:.1f}",
+            annotation_position="top left",
+            annotation_y=0.25
+        )
+
+    if "1-SD Range (Exact)" in show_lines:
+        # Shaded region for Short-term 1-SD Range
+        fig_dist.add_vrect(
+            x0=exact_lower_short,
+            x1=exact_upper_short,
+            fillcolor="rgba(31, 119, 180, 0.04)",
+            line=dict(color="rgba(31, 119, 180, 0.25)", width=1, dash="dot"),
+            annotation_text="Short 1-SD",
+            annotation_position="inside top left"
+        )
+        # Shaded region for Long-term 1-SD Range
+        fig_dist.add_vrect(
+            x0=exact_lower_long,
+            x1=exact_upper_long,
+            fillcolor="rgba(255, 127, 14, 0.04)",
+            line=dict(color="rgba(255, 127, 14, 0.25)", width=1, dash="dot"),
+            annotation_text="Long 1-SD",
+            annotation_position="inside top right"
+        )
 
     fig_dist.update_layout(
         title=dict(
@@ -373,16 +481,23 @@ with tab2:
         
         # Peak of distribution (Mode)
         mode = math.exp(mu_log - sigma_log**2)
+        # Median of distribution (50th Percentile)
+        median = math.exp(mu_log)
         # Expected value (Mean of lognormal is e^(mu + sigma^2/2) = s0 * e^(rt))
         mean = s0 * math.exp(r * t)
+        # Standard deviation of the log-normal price distribution in dollars ($)
+        price_sd_dollar = mean * math.sqrt(math.exp(sigma_log**2) - 1)
         
         return {
             "DTE": dte,
-            "Mode (Peak)": f"${mode:.2f}",
-            "Mean (Expected Value)": f"${mean:.2f}",
-            "Expected Move (±1 SD)": f"±${expected_move:.2f}",
-            "Standard Linear 1-SD Range": f"${linear_lower:.2f} - ${linear_upper:.2f}",
-            "Exact Log-Normal 1-SD Range": f"${exact_lower:.2f} - ${exact_upper:.2f}"
+            "Mode (Peak)": f"\\${mode:.2f}",
+            "Median (50% Prob)": f"\\${median:.2f}",
+            "Mean (Expected Value)": f"\\${mean:.2f}",
+            "Price Std Dev ($)": f"\\${price_sd_dollar:.2f}",
+            "Log-Price Std Dev (σ_dist)": f"{sigma_log:.4f}",
+            "Expected Move (±1 SD)": f"±\\${expected_move:.2f}",
+            "Standard Linear 1-SD Range": f"\\${linear_lower:.2f} - \\${linear_upper:.2f}",
+            "Exact Log-Normal 1-SD Range": f"\\${exact_lower:.2f} - \\${exact_upper:.2f}"
         }
 
     stats_short = calc_stats(spot_price_dist, iv_dist, t_short, r_dist, dte_short)
@@ -393,20 +508,24 @@ with tab2:
     st.subheader("📊 Distribution Comparison Metrics Table")
     st.write(
         "Below is a comparison of key metrics derived from both distributions. Note how the "
-        "**Exact Log-Normal 1-SD Range** is asymmetric, reflecting that stock prices cannot fall below $0 "
+        "**Exact Log-Normal 1-SD Range** is asymmetric, reflecting that stock prices cannot fall below \\$0 "
         "but have theoretically unlimited upside, whereas the standard linear approximation assumes a symmetric normal distribution."
     )
     st.table(df_stats)
 
     st.info(
         "💡 **Key Insights & Trader Application**:\n\n"
-        f"1. **Peak Shifting (Asymmetry)**: Notice that the peak (Mode) of the DTE {dte_long} distribution is at "
-        f"**{stats_long['Mode (Peak)']}** (below the current price of **${spot_price_dist:.2f}**). This is a direct mathematical consequence of "
-        "log-normal distribution skewness. Over time, the median and peak of the distribution shift left, while the right tail gets longer.\n\n"
-        "2. **Premium Decay (Theta)**: Over the first 265 days (going from DTE 365 to DTE 100), the distribution widens slowly. "
+        f"1. **Peak Shifting & Central Tendency Divergence**: Notice that for the longer-term DTE {dte_long} distribution, the Mode (Peak) is at "
+        f"**{stats_long['Mode (Peak)']}**, the Median (50% probability) is at **{stats_long['Median (50% Prob)']}**, and the Mean (Expected Value) is at **{stats_long['Mean (Expected Value)']}**. "
+        f"Even though the spot price is **\\${spot_price_dist:.2f}**, the most probable outcome (Mode) shifts to the left, while the mean drifts upwards. "
+        "This is a direct mathematical consequence of the log-normal distribution asymmetry: the right tail is unbounded, dragging the Mean above the Median and Mode.\n\n"
+        f"2. **Standard Deviation & Volatility**: The absolute standard deviation of the price at expiration scales with time. "
+        f"For DTE {dte_short}, the price standard deviation is only **{stats_short['Price Std Dev ($)']}**, whereas for DTE {dte_long} it increases to **{stats_long['Price Std Dev ($)']}**. "
+        "This shows how uncertainty expands non-linearly with longer durations.\n\n"
+        f"3. **Premium Decay (Theta)**: Over the first 265 days (going from DTE 365 to DTE 100), the distribution widens slowly. "
         "But as we transition from **DTE 100 to DTE 10**, the distribution dramatically narrows and spikes. This rapid concentration of probability "
         "corresponds to the non-linear acceleration of **Theta decay** as expiration approaches.\n\n"
-        "3. **Probability of Profit (PoP)**: This widening of the probability density explains why selling out-of-the-money options "
+        f"4. **Probability of Profit (PoP)**: This widening of the probability density explains why selling out-of-the-money options "
         "with higher DTE has a wider safety buffer (more price movement is required to breach the strikes) but also why "
         "short DTE options can yield rapid profit if the price remains stable."
     )
