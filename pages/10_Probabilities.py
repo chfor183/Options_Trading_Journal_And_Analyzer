@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import math
+import plotly.graph_objects as go
 
 # Page setup
 st.set_page_config(page_title="Probabilities", page_icon="🎲", layout="wide")
@@ -211,7 +212,208 @@ with tab2:
 
     st.markdown("""
     ---
-    ### 2. Probability of Profit (PoP)
+    ### 2. Price Distribution Comparison
+    To visualize how Time to Expiration (DTE) affects the probability distribution of the underlying stock price, we can compare a short-term option (e.g., **DTE 10**) and a long-term option (e.g., **DTE 100**).
+    
+    Over a shorter time frame, there is less time for the price to diffuse, creating a tall, narrow probability density. Over a longer time frame, the price has more time to move, which flattens and widens the distribution, shifting the peak (mode) to the left due to the log-normal asymmetry.
+    """)
+
+    # Interactive Controls
+    st.write("#### ⚙️ Configure Distribution Parameters")
+    col_dist1, col_dist2, col_dist3 = st.columns(3)
+    with col_dist1:
+        spot_price_dist = st.number_input(
+            "Underlying Spot Price ($S_0$):",
+            min_value=1.0,
+            max_value=10000.0,
+            value=100.0,
+            step=5.0,
+            key="dist_spot"
+        )
+    with col_dist2:
+        iv_dist = st.slider(
+            "Implied Volatility (Annualized IV %):",
+            min_value=5.0,
+            max_value=150.0,
+            value=25.0,
+            step=1.0,
+            key="dist_iv"
+        ) / 100.0
+    with col_dist3:
+        r_dist = st.slider(
+            "Risk-Free Interest Rate (%):",
+            min_value=0.0,
+            max_value=15.0,
+            value=5.0,
+            step=0.5,
+            key="dist_r"
+        ) / 100.0
+
+    col_dte1, col_dte2 = st.columns(2)
+    with col_dte1:
+        dte_short = st.slider(
+            "Short-term DTE (DTE 1):",
+            min_value=1,
+            max_value=365,
+            value=10,
+            step=1,
+            key="dist_dte_short"
+        )
+    with col_dte2:
+        dte_long = st.slider(
+            "Long-term DTE (DTE 2):",
+            min_value=1,
+            max_value=365,
+            value=100,
+            step=1,
+            key="dist_dte_long"
+        )
+
+    # Calculate distributions
+    t_short = dte_short / 365.0
+    t_long = dte_long / 365.0
+
+    # We want a dynamic price grid that covers both distributions nicely.
+    # The long-term distribution will have a wider variance.
+    # Standard deviation of log-price for long term:
+    sigma_log_long = iv_dist * math.sqrt(t_long)
+    mu_log_long = math.log(spot_price_dist) + (r_dist - 0.5 * iv_dist**2) * t_long
+    
+    # Cover 4 standard deviations on each side of the long-term distribution
+    # to capture virtually the entire density.
+    grid_min = max(1.0, math.exp(mu_log_long - 4 * sigma_log_long))
+    grid_max = math.exp(mu_log_long + 4 * sigma_log_long)
+    
+    price_grid = np.linspace(grid_min, grid_max, 1000)
+
+    # Function to compute exact lognormal PDF
+    def get_lognormal_pdf(s, s0, sigma, t, r):
+        if t <= 0 or sigma <= 0 or s0 <= 0:
+            return np.zeros_like(s)
+        mu = np.log(s0) + (r - 0.5 * sigma**2) * t
+        sigma_dist = sigma * np.sqrt(t)
+        # Avoid division by zero
+        s_safe = np.where(s <= 0, 1e-5, s)
+        pdf = (1.0 / (s_safe * sigma_dist * np.sqrt(2 * np.pi))) * np.exp(-((np.log(s_safe) - mu)**2) / (2 * sigma_dist**2))
+        return pdf
+
+    pdf_short = get_lognormal_pdf(price_grid, spot_price_dist, iv_dist, t_short, r_dist)
+    pdf_long = get_lognormal_pdf(price_grid, spot_price_dist, iv_dist, t_long, r_dist)
+
+    # Create the Plotly chart
+    fig_dist = go.Figure()
+
+    # Plot short-term distribution
+    fig_dist.add_trace(go.Scatter(
+        x=price_grid,
+        y=pdf_short,
+        mode='lines',
+        name=f"Short-term (DTE {dte_short})",
+        line=dict(color='#1f77b4', width=3),
+        fill='tozeroy',
+        fillcolor='rgba(31, 119, 180, 0.15)'
+    ))
+
+    # Plot long-term distribution
+    fig_dist.add_trace(go.Scatter(
+        x=price_grid,
+        y=pdf_long,
+        mode='lines',
+        name=f"Long-term (DTE {dte_long})",
+        line=dict(color='#ff7f0e', width=3),
+        fill='tozeroy',
+        fillcolor='rgba(255, 127, 14, 0.15)'
+    ))
+
+    # Add vertical line for Spot Price
+    fig_dist.add_vline(
+        x=spot_price_dist,
+        line_dash="dash",
+        line_color="#7f7f7f",
+        annotation_text="Current Spot Price",
+        annotation_position="top right"
+    )
+
+    fig_dist.update_layout(
+        title=dict(
+            text=f"Log-Normal Stock Price Probability Density at Expiration (Spot: ${spot_price_dist})",
+            x=0.5,
+            xanchor='center'
+        ),
+        xaxis_title="Stock Price ($)",
+        yaxis_title="Probability Density",
+        template="plotly_white",
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        ),
+        hovermode="x unified",
+        margin=dict(l=20, r=20, t=60, b=20)
+    )
+
+    st.plotly_chart(fig_dist, use_container_width=True)
+
+    # Metrics comparison tables
+    # Calculate exact statistics
+    def calc_stats(s0, sigma, t, r, dte):
+        mu_log = math.log(s0) + (r - 0.5 * sigma**2) * t
+        sigma_log = sigma * math.sqrt(t)
+        
+        # Exact 1-SD range
+        exact_lower = math.exp(mu_log - sigma_log)
+        exact_upper = math.exp(mu_log + sigma_log)
+        
+        # Linear/Symmetric expected move
+        expected_move = s0 * sigma * math.sqrt(t)
+        linear_lower = s0 - expected_move
+        linear_upper = s0 + expected_move
+        
+        # Peak of distribution (Mode)
+        mode = math.exp(mu_log - sigma_log**2)
+        # Expected value (Mean of lognormal is e^(mu + sigma^2/2) = s0 * e^(rt))
+        mean = s0 * math.exp(r * t)
+        
+        return {
+            "DTE": dte,
+            "Mode (Peak)": f"${mode:.2f}",
+            "Mean (Expected Value)": f"${mean:.2f}",
+            "Expected Move (±1 SD)": f"±${expected_move:.2f}",
+            "Standard Linear 1-SD Range": f"${linear_lower:.2f} - ${linear_upper:.2f}",
+            "Exact Log-Normal 1-SD Range": f"${exact_lower:.2f} - ${exact_upper:.2f}"
+        }
+
+    stats_short = calc_stats(spot_price_dist, iv_dist, t_short, r_dist, dte_short)
+    stats_long = calc_stats(spot_price_dist, iv_dist, t_long, r_dist, dte_long)
+
+    df_stats = pd.DataFrame([stats_short, stats_long]).set_index("DTE")
+
+    st.subheader("📊 Distribution Comparison Metrics Table")
+    st.write(
+        "Below is a comparison of key metrics derived from both distributions. Note how the "
+        "**Exact Log-Normal 1-SD Range** is asymmetric, reflecting that stock prices cannot fall below $0 "
+        "but have theoretically unlimited upside, whereas the standard linear approximation assumes a symmetric normal distribution."
+    )
+    st.table(df_stats)
+
+    st.info(
+        "💡 **Key Insights & Trader Application**:\n\n"
+        f"1. **Peak Shifting (Asymmetry)**: Notice that the peak (Mode) of the DTE {dte_long} distribution is at "
+        f"**{stats_long['Mode (Peak)']}** (below the current price of **${spot_price_dist:.2f}**). This is a direct mathematical consequence of "
+        "log-normal distribution skewness. Over time, the median and peak of the distribution shift left, while the right tail gets longer.\n\n"
+        "2. **Premium Decay (Theta)**: Over the first 265 days (going from DTE 365 to DTE 100), the distribution widens slowly. "
+        "But as we transition from **DTE 100 to DTE 10**, the distribution dramatically narrows and spikes. This rapid concentration of probability "
+        "corresponds to the non-linear acceleration of **Theta decay** as expiration approaches.\n\n"
+        "3. **Probability of Profit (PoP)**: This widening of the probability density explains why selling out-of-the-money options "
+        "with higher DTE has a wider safety buffer (more price movement is required to breach the strikes) but also why "
+        "short DTE options can yield rapid profit if the price remains stable."
+    )
+
+    st.markdown("""
+    ---
+    ### 3. Probability of Profit (PoP)
     The **Probability of Profit (PoP)** represents the total theoretical probability that the strategy will result in a net credit/profit at expiration. It is computed by integrating the log-normal probability density function over all stock prices where the payoff is strictly positive:
     """)
 
@@ -227,10 +429,10 @@ with tab2:
     st.markdown(r"""
     - **Grid Generation**: The system dynamically creates a dense grid of $10,000$ points spanning from $1\%$ to $400\%$ of the current underlying spot price.
     - **Resolution ($\Delta S$)**: The width of each slice is the difference between consecutive price grid points.
-    - **Evaluation**: For each price point, the strategy's exact expiration net payoff is evaluated. If the payoff is $> 0$, the area of the probability slice $f(S) \cdot \Delta S$ is added to the PoP sum.
+    - **// Evaluation**: For each price point, the strategy's exact expiration net payoff is evaluated. If the payoff is $> 0$, the area of the probability slice $f(S) \cdot \Delta S$ is added to the PoP sum.
 
     ---
-    ### 3. Expected Value (EV)
+    ### 4. Expected Value (EV)
     The **Expected Value (EV)** of a trade is the sum of all possible outcomes weighted by their respective probability of occurrence. It represents the average amount a trader can expect to win or lose per trade if the exact same trade was repeated thousands of times.
     """)
 
@@ -248,7 +450,7 @@ with tab2:
 
     st.markdown(r"""
     ---
-    ### 4. Streak Probability Mathematics
+    ### 5. Streak Probability Mathematics
     To calculate the probability of experiencing at least $k$ consecutive losses in $N$ independent trials with win probability $q$ (and loss probability $p = 1 - q$), we use an **exact recurrence relation** rather than a simplified binomial or Poisson approximation.
 
     Let $A(n, k)$ be the probability of **not** encountering $k$ consecutive failures in $n$ trials.
