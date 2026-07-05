@@ -140,6 +140,12 @@ with st.spinner("Fetching live market data and calculating valuations..."):
                     near_strike_val = leg.strike
                     break
         
+        # Calculate days since opened and days remaining to expiry
+        days_to_expiry = None
+        if t.legs:
+            min_expiry = min(leg.expiry for leg in t.legs)
+            days_to_expiry = (min_expiry - datetime.now().date()).days
+
         processed_trades.append({
             "trade": t,
             "entry_net_premium": entry_net_premium,
@@ -150,15 +156,26 @@ with st.spinner("Fetching live market data and calculating valuations..."):
             "is_live_pricing": is_live,
             "in_profit_zone": in_profit_zone,
             "is_near_strike": is_near_strike,
-            "near_strike_val": near_strike_val
+            "near_strike_val": near_strike_val,
+            "days_to_expiry": days_to_expiry
         })
+
+# Sort processed_trades by days_to_expiry left ascending (non-option trades or None goes last)
+processed_trades.sort(key=lambda x: (x["days_to_expiry"] is None, x["days_to_expiry"]))
+
+# Calculate trades expiring within 7 days
+expiring_within_7_days = sum(
+    1 for p in processed_trades 
+    if p["days_to_expiry"] is not None and 0 <= p["days_to_expiry"] <= 7
+)
 
 if has_live_pricing_warning:
     st.info("💡 Some option chain prices are showing entry values because live options data is currently unavailable (e.g. off-market hours or rate limits).")
 
 # 3. Key Summary Cards
-mcol1, mcol2, mcol3, mcol4 = st.columns(4)
+mcol1, mcol1_sub, mcol2, mcol3, mcol4 = st.columns([1, 1.2, 1.2, 1.2, 1.4])
 mcol1.metric("Active Trades", len(open_trades))
+mcol1_sub.metric("Trades Expiring ≤ 7d", expiring_within_7_days, help="Trades expiring within the next 7 days.")
 
 # Display net portfolio premium at open
 premium_label = "Net Portfolio Cost" if total_entry_net_premium < 0 else "Net Portfolio Credit"
@@ -171,13 +188,20 @@ mcol3.metric(liq_label, f"${total_liquidation_value:,.2f}", help="Current estima
 # Display combined unrealized P&L
 pnl_color = "green" if total_unrealized_pnl >= 0 else "red"
 pnl_prefix = "+" if total_unrealized_pnl >= 0 else ""
+
+if total_entry_net_premium != 0:
+    total_pnl_pct = (total_unrealized_pnl / abs(total_entry_net_premium)) * 100
+    pnl_pct_str = f" ({pnl_prefix}{total_pnl_pct:.2f}%)"
+else:
+    pnl_pct_str = ""
+
 mcol4.markdown(
     f"""
     <div style="background-color: {'rgba(40, 167, 69, 0.1)' if total_unrealized_pnl >= 0 else 'rgba(220, 53, 69, 0.1)'}; 
                 padding: 10px; border-radius: 8px; text-align: center; border: 1px solid {'#28a745' if total_unrealized_pnl >= 0 else '#dc3545'}">
         <span style="font-size: 0.85rem; color: #6c757d; font-weight: bold; text-transform: uppercase;">Unrealized Portfolio P&L</span><br/>
         <span style="font-size: 1.8rem; color: {'#28a745' if total_unrealized_pnl >= 0 else '#dc3545'}; font-weight: bold;">
-            {pnl_prefix}${total_unrealized_pnl:,.2f}
+            {pnl_prefix}${total_unrealized_pnl:,.2f}{pnl_pct_str}
         </span>
     </div>
     """,
@@ -271,8 +295,7 @@ for idx, p in enumerate(filtered_processed):
         
         initial_dte_badge = f'<span style="background-color: rgba(0, 123, 255, 0.15); color: #339af0; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; margin-left: 10px; font-weight: bold; border: 1px solid rgba(0, 123, 255, 0.3);">⏱️ {dte_at_open_val} DTE at Open</span>'
         
-        min_expiry = min(leg.expiry for leg in t.legs)
-        days_to_expiry = (min_expiry - datetime.now().date()).days
+        days_to_expiry = p["days_to_expiry"]
         if days_to_expiry < 0:
             expiry_badge = f'<span style="background-color: rgba(220, 53, 69, 0.15); color: #ff6b6b; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; margin-left: 10px; font-weight: bold; border: 1px solid rgba(220, 53, 69, 0.3);">⏳ Expired</span>'
         else:
@@ -367,10 +390,18 @@ for idx, p in enumerate(filtered_processed):
         underlying_desc = f"${t.underlying_price_at_open:.2f} (Entry)"
 
     # Build Trade Status Label for Quick Visual Health Assessment
+    entry_net = p['entry_net_premium']
+    liq_val = p['liquidation_value']
+    pct_suffix = ""
+    if entry_net != 0:
+        pct_val = (abs(liq_val) / abs(entry_net)) * 100
+        pct_diff = abs(pct_val - 100)
+        pct_suffix = f" | {pct_diff:.2f}%"
+
     if is_profit:
-        status_banner = f"🟢 DOING WELL ({pnl_symbol} +${abs(upnl):,.2f})"
+        status_banner = f"🟢 DOING WELL ({pnl_symbol} +${abs(upnl):,.2f}{pct_suffix})"
     else:
-        status_banner = f"🔴 IN THE RED ({pnl_symbol} -${abs(upnl):,.2f})"
+        status_banner = f"🔴 IN THE RED ({pnl_symbol} -${abs(upnl):,.2f}{pct_suffix})"
 
     # Render trade card
     with st.container():
@@ -383,11 +414,11 @@ for idx, p in enumerate(filtered_processed):
                     <span style="background-color: #f1f3f5; color: #495057; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; margin-left: 10px; font-weight: bold;">{t.strategy_type}</span>
                     {time_details_html}
                 </div>
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <div style="font-size: 1.15rem; font-weight: bold; color: {zone_color}; padding: 5px 12px; border-radius: 4px; border: 1px solid {zone_color}; background-color: rgba(0,0,0,0.2);">
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <div style="font-size: 0.9rem; font-weight: bold; color: {zone_color}; padding: 4px 10px; border-radius: 4px; border: 1px solid {zone_color}; background-color: rgba(0,0,0,0.2);">
                         {zone_banner}
                     </div>
-                    <div style="font-size: 1.15rem; font-weight: bold; color: {color_hex}; padding: 5px 12px; border-radius: 4px; border: 1px solid {color_hex}; background-color: rgba(0,0,0,0.2);">
+                    <div style="font-size: 1.10rem; font-weight: bold; color: {color_hex}; padding: 5px 11px; border-radius: 4px; border: 1px solid {color_hex}; background-color: rgba(0,0,0,0.2);">
                         {status_banner}
                     </div>
                 </div>
@@ -449,7 +480,35 @@ for idx, p in enumerate(filtered_processed):
             liq_val = p['liquidation_value']
             liq_color = "#28a745" if liq_val >= 0 else "#dc3545"
             liq_sign = "+" if liq_val >= 0 else ""
-            liq_html = f"<span style='color: {liq_color}; font-weight: bold;'>{liq_sign}${liq_val:,.2f}</span>"
+            
+            if entry_net != 0:
+                pct_val = (abs(liq_val) / abs(entry_net)) * 100
+                # Determine if it's a credit strategy
+                is_credit = False
+                if p["trade"].strategy_type:
+                    strat_lower = p["trade"].strategy_type.lower()
+                    if "credit" in strat_lower:
+                        is_credit = True
+                    elif "debit" in strat_lower:
+                        is_credit = False
+                    else:
+                        is_credit = (entry_net > 0)
+                else:
+                    is_credit = (entry_net > 0)
+                
+                # Colors: green if <= 100% for credit, red if > 100%
+                # Debit: green if >= 100%, red if < 100%
+                if is_credit:
+                    pct_color = "#28a745" if pct_val <= 100 else "#dc3545"
+                else:
+                    pct_color = "#28a745" if pct_val >= 100 else "#dc3545"
+                    
+                pct_diff = abs(pct_val - 100)
+                pct_html = f" <span style='color: {pct_color}; font-weight: bold;'>({pct_diff:.2f}%)</span>"
+            else:
+                pct_html = ""
+                
+            liq_html = f"<span style='color: {liq_color}; font-weight: bold;'>{liq_sign}${liq_val:,.2f}</span>{pct_html}"
             
             # Format Collateral Held
             col_val = t.collateral or 0.0
