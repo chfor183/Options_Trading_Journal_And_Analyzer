@@ -7,7 +7,13 @@ A local, Python-based web application built with Streamlit to track, journal, an
 - **Portfolio Management**: Create, switch between, and manage multiple portfolios with dynamic filtering across all dashboards.
 - **Strategy Builder & Visualizer**: Construct multi-leg options strategies (up to 8 legs) with accurate quantity sizing. Generates interactive Plotly payoff charts (expiration & T+0 curves) with standard deviation overlays.
 - **Automated OCR Trade Input**: Instantly parse TWS/Interactive Brokers screenshots from your clipboard to extract trade legs, prices, and tickers automatically.
-- **Advanced Probability Metrics**: Calculates Probability of Profit (PoP), Probability of Loss (PoL), Probability of Max Profit/Loss, Expected Value (EV), and ROI based on log-normal distribution models.
+- **Advanced Probability & Quant Metrics**: Calculates Probability of Profit (PoP), Probability of Loss (PoL), Probability of Max Profit/Loss, Expected Value (EV), and ROI based on log-normal distribution models.
+- **Discounted Cash Flow (DCF) Evaluation**: A highly sophisticated valuation engine featuring a **10-Year 2-Stage Unlevered Free Cash Flow (FCFF) model** with linear tapering in Years 6-10. Includes:
+  - **Live Financial Data Extraction**: Pre-populates default starting FCF, outstanding shares, cash, debt, and beta directly from annual balance sheets and cash flow statements via `yfinance`.
+  - **Dynamic WACC Calculator**: Estimator based on the Capital Asset Pricing Model (CAPM) using live market-capitalized debt/equity weights, beta, tax rates, risk-free rates, and equity risk premiums.
+  - **Tightly Coupled Growth Scenarios**: Side-by-side comparison of Conservative (80% of consensus growth, +0.5% discount), Base Case (consensus analyst estimates), and Aggressive (115% of consensus growth, -0.5% discount) scenarios.
+  - **Reverse DCF (Market-Implied Expectations)**: Uses a fast binary search algorithm to solve for the exact growth rate priced into the current stock price, revealing whether expectations are overhyped or undervalued compared to analyst consensus.
+  - **Plotly Visualizations**: Elegant line charts tracking historical Free Cash Flows alongside forward projections, and vertical bar charts highlighting scenario valuations against current prices and Wall Street target consensus lines.
 - **Real-Time Market Data**: Integrates with `yfinance` and `Barchart` to fetch live underlying prices, ticker metadata, and real-time options chain data.
 - **Trading Journal & Ledger**: Local PostgreSQL database integration tracking open/closed trades with custom pagination, sorting, dynamic filters (status, debit/credit, ticker), and bulk management. Includes a mechanism to seamlessly reopen closed trades.
 - **Probabilities & Quantitative Analyzer**: Dedicated dashboard calculating exact consecutive drawdown streak probabilities using recurrence relations. Includes comprehensive educational math guides on Geometric Brownian Motion (GBM), Log-normal Distributions, Probability of Profit (PoP), and Expected Value (EV).
@@ -45,7 +51,8 @@ finance/
 │   ├── 7_Export.py         # Dynamic PDF Report generation and downloading
 │   ├── 8_Framework.py      # Interactive pre-trade checklists and mindset guidelines
 │   ├── 9_Strategies.py     # Responsive reference tables and setup rules
-│   └── 10_Probabilities.py # Interactive streak calculator and quantitative math guide
+│   ├── 10_Probabilities.py # Interactive streak calculator and quantitative math guide
+│   └── 11_DCF_Evaluation.py # Dynamic 10-Year 2-Stage DCF scenarios & Reverse DCF analyzer
 └── src/
     ├── db.py               # Database connection, finance schema setup, and session management
     ├── market_data.py      # yfinance API wrappers

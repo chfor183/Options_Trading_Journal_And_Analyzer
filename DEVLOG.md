@@ -1,5 +1,15 @@
 ## Recent Updates
 
+**Session Date: 2026-07-07**
+- **Discounted Cash Flow (DCF) Evaluation & Scenario Analyzer**:
+  - **10-Year 2-Stage DCF Engine**: Created a high-fidelity Unlevered Free Cash Flow to the Firm (FCFF) valuation model. Stage 1 (Years 1-5) grows at the user's customized growth rate. Stage 2 (Years 6-10) smoothly tapers that growth rate down linearly to the terminal growth rate (perpetual growth) to represent business maturation.
+  - **Dynamic CAPM & WACC Calculator**: Built an interactive corporate discount rate estimator utilizing the Capital Asset Pricing Model ($\text{Re} = \text{Rf} + \beta \cdot \text{ERP}$). Blends debt and equity weights based on the asset's real-time market capitalization (shares $\times$ price) and balance sheet debt loads. Features tax-rate adjustments and cost of debt parameters.
+  - **Tightly Coupled Realistic Scenarios**: Implemented conservative, base-case, and aggressive projection scenarios. Narrowed the spread defaults (Conservative: 80% growth / +0.5% discount; Aggressive: 115% growth / -0.5% discount) to align valuations with historical trading ranges and prevent wild outliers.
+  - **Reverse DCF Expectations Engine**: Designed an exact bisection numerical solver that computes the Market-Implied Growth Rate. It reverse-calculates the precise cash flow growth rate required to justify the stock's current market price, enabling users to evaluate whether market expectations are overhyped compared to Wall Street analyst estimates.
+  - **Robust Financial Fallbacks**: Designed deep financial parsing helpers inside `src/market_data.py` (`get_dcf_financial_data`) that scrape balance sheets and cash flow statements dynamically for shares, cash, debt, beta, and historical FCF with multiple layers of safety-checks if specific metadata keys are missing.
+  - **Visual Plotly Timeline Charts**: Integrated comprehensive dual-chart modules. An FCF Projections Chart plots historical Free Cash Flow bars linked cleanly with three categorical string-aligned forward-looking projection paths. A Value Comparison Chart compares our calculated intrinsic values against the current market price and Wall Street target mean lines.
+  - **Sidebar Registry & Routing**: Hooked `pages/11_DCF_Evaluation.py` directly into `Home.py` navigation under the "Navigation" page definitions right after the "Research" page, assigned the money-bag emoji ("💵") for streamlined routing.
+
 **Session Date: 2026-07-03**
 - **Interactive Probabilities & Quantitative Dashboard**:
   - **Streak Probability Grid**: Created a widescreen, interactive matrix displaying the exact probability of encountering consecutive losses (drawdowns) over a sequence of trades, mirroring professional Excel analyzers. 

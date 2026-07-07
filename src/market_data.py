@@ -129,3 +129,112 @@ def get_barchart_live_option_leg_data(ticker_symbol: str, expiry_date: str, stri
             continue
             
     return None
+
+@st.cache_data(ttl=300)
+def get_dcf_financial_data(ticker_symbol: str) -> dict:
+    try:
+        ticker = yf.Ticker(ticker_symbol)
+        info = ticker.info
+        
+        name = info.get("longName") or info.get("shortName") or ticker_symbol
+        current_price = info.get("currentPrice") or info.get("regularMarketPrice") or 0.0
+        
+        shares = info.get("sharesOutstanding") or info.get("impliedSharesOutstanding")
+        cash = info.get("totalCash")
+        debt = info.get("totalDebt")
+        beta = info.get("beta") or 1.0
+        
+        bs = ticker.balance_sheet
+        if bs is not None and not bs.empty:
+            if not shares:
+                if "Ordinary Shares Number" in bs.index:
+                    shares = bs.loc["Ordinary Shares Number"].iloc[0]
+                elif "Share Issued" in bs.index:
+                    shares = bs.loc["Share Issued"].iloc[0]
+            if not cash:
+                if "Cash Cash Equivalents And Short Term Investments" in bs.index:
+                    cash = bs.loc["Cash Cash Equivalents And Short Term Investments"].iloc[0]
+                elif "Cash And Cash Equivalents" in bs.index:
+                    cash = bs.loc["Cash And Cash Equivalents"].iloc[0]
+            if not debt:
+                if "Total Debt" in bs.index:
+                    debt = bs.loc["Total Debt"].iloc[0]
+                elif "Net Debt" in bs.index:
+                    net_debt = bs.loc["Net Debt"].iloc[0]
+                    if cash:
+                        debt = net_debt + cash
+                    else:
+                        debt = net_debt
+                        
+        shares = float(shares) if shares else 1.0
+        cash = float(cash) if cash else 0.0
+        debt = float(debt) if debt else 0.0
+        beta = float(beta) if beta else 1.0
+        
+        cf = ticker.cashflow
+        fcf_history = {}
+        if cf is not None and not cf.empty:
+            fcf_series = None
+            if "Free Cash Flow" in cf.index:
+                fcf_series = cf.loc["Free Cash Flow"]
+            elif "Operating Cash Flow" in cf.index:
+                ocf = cf.loc["Operating Cash Flow"]
+                capex = cf.loc["Capital Expenditure"] if "Capital Expenditure" in cf.index else 0.0
+                fcf_series = ocf + capex
+                
+            if fcf_series is not None:
+                if isinstance(fcf_series, pd.DataFrame):
+                    fcf_series = fcf_series.iloc[0]
+                for idx, val in fcf_series.items():
+                    if pd.notna(val) and pd.notna(idx):
+                        date_str = str(idx.date()) if hasattr(idx, "date") else str(idx)
+                        fcf_history[date_str] = float(val)
+                        
+        sorted_fcf = dict(sorted(fcf_history.items()))
+        
+        target_high = info.get("targetHighPrice")
+        target_mean = info.get("targetMeanPrice")
+        target_low = info.get("targetLowPrice")
+        analyst_count = info.get("numberOfAnalystOpinions")
+        recommendation = info.get("recommendationKey") or "hold"
+        
+        rev_growth = info.get("revenueGrowth")
+        earn_growth = info.get("earningsGrowth")
+        
+        return {
+            "symbol": ticker_symbol,
+            "name": name,
+            "current_price": float(current_price) if current_price else 0.0,
+            "shares_outstanding": shares,
+            "total_cash": cash,
+            "total_debt": debt,
+            "beta": beta,
+            "fcf_history": sorted_fcf,
+            "target_high": float(target_high) if target_high else None,
+            "target_mean": float(target_mean) if target_mean else None,
+            "target_low": float(target_low) if target_low else None,
+            "analyst_count": int(analyst_count) if analyst_count else None,
+            "recommendation": str(recommendation).capitalize(),
+            "revenue_growth": float(rev_growth) if rev_growth else None,
+            "earnings_growth": float(earn_growth) if earn_growth else None,
+        }
+    except Exception as e:
+        print(f"Error fetching DCF data for {ticker_symbol}: {e}")
+        return {
+            "symbol": ticker_symbol,
+            "name": ticker_symbol,
+            "current_price": 0.0,
+            "shares_outstanding": 1.0,
+            "total_cash": 0.0,
+            "total_debt": 0.0,
+            "beta": 1.0,
+            "fcf_history": {},
+            "target_high": None,
+            "target_mean": None,
+            "target_low": None,
+            "analyst_count": None,
+            "recommendation": "N/A",
+            "revenue_growth": None,
+            "earnings_growth": None,
+        }
+

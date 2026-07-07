@@ -86,6 +86,7 @@ pages = {
         st.Page("pages/3_Open_Trades.py", title="Open Trades Review", icon="🔓"),
         st.Page("pages/4_Closed Trades Review.py", title="Closed Trades Review", icon="📊"),
         st.Page("pages/6_Research.py", title="Research", icon="🔍"),
+        st.Page("pages/11_DCF_Evaluation.py", title="DCF Evaluation", icon="💵"),
         st.Page("pages/9_Strategies.py", title="Strategies", icon="📈"),
         st.Page("pages/8_Framework.py", title="Framework", icon="🧠"),
         st.Page("pages/7_Export.py", title="Export", icon="📄"),
