@@ -216,7 +216,7 @@ if ticker_input:
         
         # Get decay start year from session state or default to determine consensus growth
         decay_pattern = st.session_state.get("decay_pattern_selectbox", "Continuous (Decay from Year 2)")
-        decay_x_increment = st.session_state.get("decay_x_increment", 2.0)
+        decay_x_increment = st.session_state.get("decay_x_increment", 1.0)
         current_x_val = decay_x_increment / 100.0 if "each year" in decay_pattern else 0.0
 
         # Fetch the current slider values or defaults to calculate consensus growth dynamically
@@ -267,6 +267,9 @@ if ticker_input:
             st.session_state.spread_slider = 5.0
             st.session_state.con_growth_val = float(round(consensus_growth * 100.0 - 5.0, 1))
             st.session_state.agg_growth_val = float(round(consensus_growth * 100.0 + 5.0, 1))
+            if decay_changed:
+                if "decay_x_increment" in st.session_state:
+                    del st.session_state.decay_x_increment
 
         # State tracking: Force reset starting session state keys when ticker changes
         if "last_ticker_symbol" not in st.session_state or st.session_state.last_ticker_symbol != ticker_input:
@@ -276,7 +279,8 @@ if ticker_input:
             st.session_state.discount_rate_slider = 8.0
             st.session_state.terminal_growth_slider = 3.0
             st.session_state.decay_pattern_selectbox = "Continuous (Decay from Year 2)"
-            st.session_state.decay_x_increment = 2.0
+            if "decay_x_increment" in st.session_state:
+                del st.session_state.decay_x_increment
             st.session_state.base_growth_slider = float(round(consensus_growth * 100.0, 1))
             st.session_state.spread_slider = 5.0
             st.session_state.con_growth_val = float(round(consensus_growth * 100.0 - 5.0, 1))
@@ -285,7 +289,7 @@ if ticker_input:
             st.session_state.prev_discount_rate = 0.08
             st.session_state.prev_terminal_growth = 0.03
             st.session_state.prev_decay_pattern = "Continuous (Decay from Year 2)"
-            st.session_state.prev_decay_x_increment = 2.0
+            st.session_state.prev_decay_x_increment = 1.0
             
             st.rerun()
         
@@ -331,26 +335,28 @@ if ticker_input:
                 
             st.markdown("**Core Rates (Applies to Base Scenario):**")
             
-            user_discount_percent = st.slider(
-                "Discount Rate (%)",
-                min_value=4.0,
-                max_value=20.0,
-                value=float(st.session_state.get("discount_rate_slider", 8.0)),
-                step=0.1,
-                key="discount_rate_slider",
-                help="The rate used to discount future cash flows. Higher discount rate lowers valuation."
-            )
+            discount_kwargs = {
+                "min_value": 4.0,
+                "max_value": 20.0,
+                "step": 0.1,
+                "key": "discount_rate_slider",
+                "help": "The rate used to discount future cash flows. Higher discount rate lowers valuation."
+            }
+            if "discount_rate_slider" not in st.session_state:
+                discount_kwargs["value"] = 8.0
+            user_discount_percent = st.slider("Discount Rate (%)", **discount_kwargs)
             user_discount_rate = user_discount_percent / 100.0
             
-            user_terminal_growth_percent = st.slider(
-                "Terminal Growth Rate (%)",
-                min_value=0.5,
-                max_value=5.0,
-                value=float(st.session_state.get("terminal_growth_slider", 3.0)),
-                step=0.1,
-                key="terminal_growth_slider",
-                help="The rate at which the company is assumed to grow forever after Year 10. Typically matches long-term inflation/GDP growth."
-            )
+            terminal_kwargs = {
+                "min_value": 0.5,
+                "max_value": 5.0,
+                "step": 0.1,
+                "key": "terminal_growth_slider",
+                "help": "The rate at which the company is assumed to grow forever after Year 10. Typically matches long-term inflation/GDP growth."
+            }
+            if "terminal_growth_slider" not in st.session_state:
+                terminal_kwargs["value"] = 3.0
+            user_terminal_growth_percent = st.slider("Terminal Growth Rate (%)", **terminal_kwargs)
             user_terminal_growth = user_terminal_growth_percent / 100.0
 
             if user_discount_rate <= user_terminal_growth:
@@ -361,29 +367,31 @@ if ticker_input:
                 st.caption(f"Wall Street Consensus Growth Estimate: **{consensus_growth * 100:.1f}%**")
                 
                 # Base Growth input
-                base_growth_percent = st.slider(
-                    "Initial FCF Growth Rate (%)",
-                    min_value=-30.0,
-                    max_value=120.0, # Expanded range to accommodate hyper-growth expectations
-                    value=float(st.session_state.get("base_growth_slider", float(round(consensus_growth * 100.0, 1)))),
-                    step=0.5,
-                    key="base_growth_slider",
-                    on_change=on_base_growth_change,
-                    help="Starting growth rate for Year 1. Future years decay continuously towards your perpetual Terminal Growth Rate."
-                )
+                base_growth_kwargs = {
+                    "min_value": -30.0,
+                    "max_value": 120.0,
+                    "step": 0.5,
+                    "key": "base_growth_slider",
+                    "on_change": on_base_growth_change,
+                    "help": "Starting growth rate for Year 1. Future years decay continuously towards your perpetual Terminal Growth Rate."
+                }
+                if "base_growth_slider" not in st.session_state:
+                    base_growth_kwargs["value"] = float(round(consensus_growth * 100.0, 1))
+                base_growth_percent = st.slider("Initial FCF Growth Rate (%)", **base_growth_kwargs)
                 base_growth_rate = base_growth_percent / 100.0
 
                 # Spread Slider (+-% from base case)
-                spread_val = st.slider(
-                    "Scenario Growth Spread (+/- % from Base Case)",
-                    min_value=0.5,
-                    max_value=25.0,
-                    value=float(st.session_state.get("spread_slider", 5.0)),
-                    step=0.5,
-                    key="spread_slider",
-                    on_change=on_spread_change,
-                    help="Sets the percentage point offset for Conservative (Base minus Spread) and Aggressive (Base plus Spread) scenarios."
-                )
+                spread_kwargs = {
+                    "min_value": 0.5,
+                    "max_value": 25.0,
+                    "step": 0.5,
+                    "key": "spread_slider",
+                    "on_change": on_spread_change,
+                    "help": "Sets the percentage point offset for Conservative (Base minus Spread) and Aggressive (Base plus Spread) scenarios."
+                }
+                if "spread_slider" not in st.session_state:
+                    spread_kwargs["value"] = 5.0
+                spread_val = st.slider("Scenario Growth Spread (+/- % from Base Case)", **spread_kwargs)
 
                 # Control for FCF Growth Rate decay start year or keeping it stable
                 decay_option = st.selectbox(
@@ -402,15 +410,19 @@ if ticker_input:
                 # Show 2 digit float input box only if required by chosen pattern
                 decay_x_val = 0.0
                 if "each year" in decay_option:
+                    decay_increment_kwargs = {
+                        "min_value": 0.0,
+                        "max_value": 50.0,
+                        "step": 0.01,
+                        "format": "%.2f",
+                        "key": "decay_x_increment",
+                        "help": "Enter the percentage point change to add or remove sequentially starting in Year 2."
+                    }
+                    if "decay_x_increment" not in st.session_state:
+                        decay_increment_kwargs["value"] = 1.0
                     decay_x_increment = st.number_input(
                         "Yearly Adjust Amount (X%)",
-                        min_value=0.0,
-                        max_value=50.0,
-                        value=float(st.session_state.get("decay_x_increment", 2.0)),
-                        step=0.01,
-                        format="%.2f",
-                        key="decay_x_increment",
-                        help="Enter the percentage point change to add or remove sequentially starting in Year 2."
+                        **decay_increment_kwargs
                     )
                     decay_x_val = decay_x_increment / 100.0
                 else:
