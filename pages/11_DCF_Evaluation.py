@@ -217,7 +217,7 @@ if ticker_input:
         # Get decay start year from session state or default to determine consensus growth
         decay_pattern = st.session_state.get("decay_pattern_selectbox", "Continuous (Decay from Year 2)")
         decay_x_increment = st.session_state.get("decay_x_increment", 2.0)
-        current_x_val = decay_x_increment / 100.0 if "each year to" in decay_pattern else 0.0
+        current_x_val = decay_x_increment / 100.0 if "each year" in decay_pattern else 0.0
 
         # Fetch the current slider values or defaults to calculate consensus growth dynamically
         current_discount = st.session_state.get("discount_rate_slider", 8.0) / 100.0
@@ -392,8 +392,8 @@ if ticker_input:
                         "Continuous (Decay from Year 2)",
                         "Keep Stable (Entire 10 Years)",
                         "Delayed (Decay starts in Year 6)",
-                        "Add X% each year to the Initial FCF Growth Rate",
-                        "Remove X% each year to the Initial FCF Growth Rate"
+                        "Add X% each year",
+                        "Remove X% each year"
                     ],
                     key="decay_pattern_selectbox",
                     help="Determine when the initial growth rate starts decaying linearly toward the Perpetual Terminal Growth Rate. Or choose to add/remove a fixed percentage of growth each year starting in Year 2."
@@ -401,7 +401,7 @@ if ticker_input:
 
                 # Show 2 digit float input box only if required by chosen pattern
                 decay_x_val = 0.0
-                if "each year to" in decay_option:
+                if "each year" in decay_option:
                     decay_x_increment = st.number_input(
                         "Yearly Adjust Amount (X%)",
                         min_value=0.0,
