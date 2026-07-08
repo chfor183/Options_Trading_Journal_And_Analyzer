@@ -198,9 +198,35 @@ def get_dcf_financial_data(ticker_symbol: str) -> dict:
         analyst_count = info.get("numberOfAnalystOpinions")
         recommendation = info.get("recommendationKey") or "hold"
         
+        # Determine logical forward growth rate consensus from yfinance estimates
+        forward_growth = None
+        try:
+            # Try EPS estimate +1y growth rate first (standard analyst projection)
+            ee = ticker.earnings_estimate
+            if ee is not None and "+1y" in ee.index:
+                g = ee.loc["+1y", "growth"]
+                if g is not None and -0.50 < g < 0.95: # Skip negative anomalies and NVDA-like 100%+ triple-digit spikes
+                    forward_growth = float(g)
+            
+            # Try Revenue estimate +1y growth if EPS growth is missing or anomalous
+            if forward_growth is None:
+                re = ticker.revenue_estimate
+                if re is not None and "+1y" in re.index:
+                    g = re.loc["+1y", "growth"]
+                    if g is not None and -0.50 < g < 0.95:
+                        forward_growth = float(g)
+        except:
+            pass
+            
+        # Fallbacks to historical values if forward consensus is not available or over-inflated
         rev_growth = info.get("revenueGrowth")
         earn_growth = info.get("earningsGrowth")
         
+        if forward_growth is None:
+            # Safe fallbacks (caps at 25% max growth rate to prevent hyper-inflation)
+            g_cand = earn_growth or rev_growth or 0.10
+            forward_growth = min(0.25, max(-0.25, float(g_cand)))
+            
         return {
             "symbol": ticker_symbol,
             "name": name,
@@ -216,7 +242,7 @@ def get_dcf_financial_data(ticker_symbol: str) -> dict:
             "analyst_count": int(analyst_count) if analyst_count else None,
             "recommendation": str(recommendation).capitalize(),
             "revenue_growth": float(rev_growth) if rev_growth else None,
-            "earnings_growth": float(earn_growth) if earn_growth else None,
+            "earnings_growth": float(forward_growth), # Use filtered consensus
         }
     except Exception as e:
         print(f"Error fetching DCF data for {ticker_symbol}: {e}")

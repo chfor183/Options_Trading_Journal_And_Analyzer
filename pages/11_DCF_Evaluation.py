@@ -23,6 +23,11 @@ st.markdown("""
         padding: 12px;
         border: 1px solid #334155;
         text-align: center;
+        min-height: 110px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
     }
     .metric-value {
         font-size: 1.5rem;
@@ -43,20 +48,41 @@ def run_dcf_model(
     shares_m: float,         # Shares outstanding in Millions
     cash_m: float,           # Cash in Millions
     debt_m: float,           # Debt in Millions
-    growth_rate: float,      # Stage 1 Growth Rate (Years 1-5)
+    growth_rate: float,      # Initial Growth Rate (Year 1)
     terminal_growth: float,  # Terminal Growth Rate (perpetual)
     discount_rate: float,    # Discount Rate / WACC
+    decay_pattern: str = "Continuous (Decay from Year 2)",
+    x_val: float = 0.0       # Fixed percentage points (fraction) added or subtracted each year starting in Year 2
 ) -> dict:
     # 1. Project Growth Rates for 10 Years
     growths = []
-    for t in range(1, 11):
-        if t <= 5:
-            growths.append(growth_rate)
+    if "Add X% each year" in decay_pattern:
+        for t in range(1, 11):
+            growths.append(growth_rate + (t - 1) * x_val)
+    elif "Remove X% each year" in decay_pattern:
+        for t in range(1, 11):
+            growths.append(growth_rate - (t - 1) * x_val)
+    else:
+        if decay_pattern == "Continuous (Decay from Year 2)":
+            decay_start_year = 2
+        elif decay_pattern == "Keep Stable (Entire 10 Years)":
+            decay_start_year = 11
         else:
-            # Stage 2: Linear Taper from growth_rate to terminal_growth
-            taper_factor = (t - 5) / 5.0
-            g_t = growth_rate - taper_factor * (growth_rate - terminal_growth)
-            growths.append(g_t)
+            decay_start_year = 6
+
+        for t in range(1, 11):
+            if t < decay_start_year:
+                # Stable initial growth rate
+                growths.append(growth_rate)
+            else:
+                # Linear decay from decay_start_year to Year 10 down to terminal_growth
+                if 10 - decay_start_year <= 0:
+                    # If decay starts at Year 10, or is stable throughout (e.g. decay_start_year >= 11)
+                    growths.append(terminal_growth)
+                else:
+                    fraction = (t - decay_start_year) / (10 - decay_start_year)
+                    g_t = growth_rate - fraction * (growth_rate - terminal_growth)
+                    growths.append(g_t)
             
     # 2. Project Free Cash Flows (Millions)
     fcf_projections = []
@@ -102,6 +128,8 @@ def solve_implied_growth(
     debt_m: float,
     terminal_growth: float,
     discount_rate: float,
+    decay_pattern: str = "Continuous (Decay from Year 2)",
+    x_val: float = 0.0
 ) -> float:
     # Solves for growth_rate such that intrinsic_value == current_price
     if fcf_base_m <= 0 or current_price <= 0 or shares_m <= 0:
@@ -111,8 +139,8 @@ def solve_implied_growth(
     high = 3.0
     
     # Verify bounds
-    val_low = run_dcf_model(fcf_base_m, shares_m, cash_m, debt_m, low, terminal_growth, discount_rate)["intrinsic_value"]
-    val_high = run_dcf_model(fcf_base_m, shares_m, cash_m, debt_m, high, terminal_growth, discount_rate)["intrinsic_value"]
+    val_low = run_dcf_model(fcf_base_m, shares_m, cash_m, debt_m, low, terminal_growth, discount_rate, decay_pattern, x_val)["intrinsic_value"]
+    val_high = run_dcf_model(fcf_base_m, shares_m, cash_m, debt_m, high, terminal_growth, discount_rate, decay_pattern, x_val)["intrinsic_value"]
     
     if current_price <= val_low:
         return low
@@ -121,7 +149,7 @@ def solve_implied_growth(
         
     for _ in range(100):
         mid = (low + high) / 2.0
-        val_mid = run_dcf_model(fcf_base_m, shares_m, cash_m, debt_m, mid, terminal_growth, discount_rate)["intrinsic_value"]
+        val_mid = run_dcf_model(fcf_base_m, shares_m, cash_m, debt_m, mid, terminal_growth, discount_rate, decay_pattern, x_val)["intrinsic_value"]
         
         if abs(val_mid - current_price) < 0.01:
             return mid
@@ -132,13 +160,33 @@ def solve_implied_growth(
             high = mid
             
     return (low + high) / 2.0
+            
+    return (low + high) / 2.0
+
+
+# -------------------------------------------------------------
+# CALLBACKS FOR REACTIVE RESET & MOVEMENT
+# -------------------------------------------------------------
+def on_base_growth_change():
+    if "base_growth_slider" in st.session_state and "spread_slider" in st.session_state:
+        base_val = st.session_state.base_growth_slider
+        spread_val = st.session_state.spread_slider
+        st.session_state.con_growth_val = base_val - spread_val
+        st.session_state.agg_growth_val = base_val + spread_val
+
+def on_spread_change():
+    if "base_growth_slider" in st.session_state and "spread_slider" in st.session_state:
+        base_val = st.session_state.base_growth_slider
+        spread_val = st.session_state.spread_slider
+        st.session_state.con_growth_val = base_val - spread_val
+        st.session_state.agg_growth_val = base_val + spread_val
 
 
 # -------------------------------------------------------------
 # USER INTERFACE SETUP
 # -------------------------------------------------------------
 st.title("💵 Discounted Cash Flow (DCF) Evaluation")
-st.markdown("Assess a stock's intrinsic value using a **10-Year 2-Stage Free Cash Flow** model and reverse-engineer market expectations.")
+st.markdown("Assess a stock's intrinsic value using a **10-Year Free Cash Flow** model and reverse-engineer market expectations.")
 
 # Ticker selection bar
 ticker_input = st.text_input("Enter Ticker Symbol:", value="MSFT").strip().upper()
@@ -166,8 +214,80 @@ if ticker_input:
         # Get starting FCF default (most recent historical, or fallback)
         default_fcf_base_m = list(fcf_hist_m.values())[-1] if fcf_hist_m else 1000.0
         
-        # Suggested growth rates based on analyst consensus (default to 10% if missing)
-        consensus_growth = raw_data["earnings_growth"] or raw_data["revenue_growth"] or 0.10
+        # Get decay start year from session state or default to determine consensus growth
+        decay_pattern = st.session_state.get("decay_pattern_selectbox", "Continuous (Decay from Year 2)")
+        decay_x_increment = st.session_state.get("decay_x_increment", 2.0)
+        current_x_val = decay_x_increment / 100.0 if "each year to" in decay_pattern else 0.0
+
+        # Fetch the current slider values or defaults to calculate consensus growth dynamically
+        current_discount = st.session_state.get("discount_rate_slider", 8.0) / 100.0
+        current_terminal = st.session_state.get("terminal_growth_slider", 3.0) / 100.0
+
+        # Calculate implied consensus growth rate from Wall Street Target Mean Price
+        target_mean_val = raw_data.get("target_mean")
+        if target_mean_val and target_mean_val > 0 and default_fcf_base_m > 0:
+            consensus_growth = solve_implied_growth(
+                fcf_base_m=default_fcf_base_m,
+                current_price=target_mean_val,
+                shares_m=shares_m,
+                cash_m=cash_m,
+                debt_m=debt_m,
+                terminal_growth=current_terminal,
+                discount_rate=current_discount,
+                decay_pattern=decay_pattern,
+                x_val=current_x_val
+            )
+            if consensus_growth is None or consensus_growth <= -0.90 or consensus_growth >= 3.0:
+                consensus_growth = 0.10
+        else:
+            consensus_growth = 0.10
+            
+        # Check if discount rate, terminal growth, decay pattern, or increment has changed since the last execution
+        discount_changed = False
+        terminal_changed = False
+        decay_changed = False
+        increment_changed = False
+        
+        if "prev_discount_rate" in st.session_state and st.session_state.prev_discount_rate != current_discount:
+            discount_changed = True
+        if "prev_terminal_growth" in st.session_state and st.session_state.prev_terminal_growth != current_terminal:
+            terminal_changed = True
+        if "prev_decay_pattern" in st.session_state and st.session_state.prev_decay_pattern != decay_pattern:
+            decay_changed = True
+        if "prev_decay_x_increment" in st.session_state and st.session_state.prev_decay_x_increment != decay_x_increment:
+            increment_changed = True
+            
+        st.session_state.prev_discount_rate = current_discount
+        st.session_state.prev_terminal_growth = current_terminal
+        st.session_state.prev_decay_pattern = decay_pattern
+        st.session_state.prev_decay_x_increment = decay_x_increment
+        
+        if discount_changed or terminal_changed or decay_changed or increment_changed:
+            st.session_state.base_growth_slider = float(round(consensus_growth * 100.0, 1))
+            st.session_state.spread_slider = 5.0
+            st.session_state.con_growth_val = float(round(consensus_growth * 100.0 - 5.0, 1))
+            st.session_state.agg_growth_val = float(round(consensus_growth * 100.0 + 5.0, 1))
+
+        # State tracking: Force reset starting session state keys when ticker changes
+        if "last_ticker_symbol" not in st.session_state or st.session_state.last_ticker_symbol != ticker_input:
+            st.session_state.last_ticker_symbol = ticker_input
+            
+            # Explicitly pre-populate clean defaults for the newly selected ticker
+            st.session_state.discount_rate_slider = 8.0
+            st.session_state.terminal_growth_slider = 3.0
+            st.session_state.decay_pattern_selectbox = "Continuous (Decay from Year 2)"
+            st.session_state.decay_x_increment = 2.0
+            st.session_state.base_growth_slider = float(round(consensus_growth * 100.0, 1))
+            st.session_state.spread_slider = 5.0
+            st.session_state.con_growth_val = float(round(consensus_growth * 100.0 - 5.0, 1))
+            st.session_state.agg_growth_val = float(round(consensus_growth * 100.0 + 5.0, 1))
+            
+            st.session_state.prev_discount_rate = 0.08
+            st.session_state.prev_terminal_growth = 0.03
+            st.session_state.prev_decay_pattern = "Continuous (Decay from Year 2)"
+            st.session_state.prev_decay_x_increment = 2.0
+            
+            st.rerun()
         
         # --- UI LAYOUT ---
         col_inputs, col_results = st.columns([1, 2], gap="large")
@@ -179,7 +299,7 @@ if ticker_input:
             st.subheader("🛠️ Valuation Inputs")
             
             # Expander 1: Core Financial Overrides
-            with st.expander("💼 Financial Parameters (Millions USD)", expanded=True):
+            with st.expander("💼 Financial Parameters (Millions USD)", expanded=False):
                 user_fcf_base_m = st.number_input(
                     "Starting Free Cash Flow (FCF_0)",
                     value=float(default_fcf_base_m),
@@ -209,67 +329,30 @@ if ticker_input:
                     help="Total short-term and long-term debt to subtract from Enterprise Value."
                 )
                 
-            # Expander 2: WACC & CAPM Estimator
-            with st.expander("🧬 Discount Rate (WACC) Calculator", expanded=False):
-                st.markdown("**Capital Asset Pricing Model (CAPM) Inputs:**")
-                risk_free_rate = st.slider("Risk-Free Rate (%)", min_value=1.0, max_value=10.0, value=4.20, step=0.05, help="Typically the yield on 10-year US Treasury bonds.") / 100.0
-                equity_risk_premium = st.slider("Equity Risk Premium (ERP) (%)", min_value=3.0, max_value=8.0, value=5.50, step=0.1, help="Expected market return minus risk-free rate.") / 100.0
-                user_beta = st.number_input("Beta (Risk Coefficient)", value=float(beta), min_value=0.1, max_value=5.0, step=0.05, help="Measures historical volatility relative to the index.")
-                
-                # Cost of Equity
-                cost_of_equity = risk_free_rate + (user_beta * equity_risk_premium)
-                st.write(f"**Cost of Equity (Re):** {cost_of_equity*100:.2f}%")
-                
-                st.markdown("---")
-                st.markdown("**Cost of Debt Inputs:**")
-                cost_of_debt = st.slider("Cost of Debt (%)", min_value=1.0, max_value=15.0, value=5.0, step=0.1) / 100.0
-                tax_rate = st.slider("Corporate Tax Rate (%)", min_value=0.0, max_value=40.0, value=21.0, step=1.0) / 100.0
-                after_tax_debt_cost = cost_of_debt * (1 - tax_rate)
-                st.write(f"**After-Tax Cost of Debt:** {after_tax_debt_cost*100:.2f}%")
-                
-                st.markdown("---")
-                st.markdown("**Capital Weights:**")
-                # Equity Market Value = Share Price * Outstanding Shares
-                market_equity_m = current_price * user_shares_m
-                total_capital_m = market_equity_m + user_debt_m
-                
-                if total_capital_m > 0:
-                    weight_equity = market_equity_m / total_capital_m
-                    weight_debt = user_debt_m / total_capital_m
-                else:
-                    weight_equity = 1.0
-                    weight_debt = 0.0
-                    
-                st.write(f"**Market Equity Value:** ${market_equity_m:,.2f} M ({weight_equity*100:.1f}%)")
-                st.write(f"**Debt Value:** ${user_debt_m:,.2f} M ({weight_debt*100:.1f}%)")
-                
-                calculated_wacc = (weight_equity * cost_of_equity) + (weight_debt * after_tax_debt_cost)
-                st.success(f"**Calculated WACC:** {calculated_wacc*100:.2f}%")
-                
-                apply_calculated_wacc = st.checkbox("Use Calculated WACC as base Discount Rate", value=True)
-                
-            # Standing Discount and Terminal Growth Rates
-            discount_base = calculated_wacc if apply_calculated_wacc else 0.08
-            
             st.markdown("**Core Rates (Applies to Base Scenario):**")
-            user_discount_rate = st.slider(
-                "Discount Rate / Base WACC (%)",
+            
+            user_discount_percent = st.slider(
+                "Discount Rate (%)",
                 min_value=4.0,
                 max_value=20.0,
-                value=float(round(discount_base * 100.0, 2)),
+                value=float(st.session_state.get("discount_rate_slider", 8.0)),
                 step=0.1,
+                key="discount_rate_slider",
                 help="The rate used to discount future cash flows. Higher discount rate lowers valuation."
-            ) / 100.0
+            )
+            user_discount_rate = user_discount_percent / 100.0
             
-            user_terminal_growth = st.slider(
+            user_terminal_growth_percent = st.slider(
                 "Terminal Growth Rate (%)",
                 min_value=0.5,
                 max_value=5.0,
-                value=2.50,
+                value=float(st.session_state.get("terminal_growth_slider", 3.0)),
                 step=0.1,
+                key="terminal_growth_slider",
                 help="The rate at which the company is assumed to grow forever after Year 10. Typically matches long-term inflation/GDP growth."
-            ) / 100.0
-            
+            )
+            user_terminal_growth = user_terminal_growth_percent / 100.0
+
             if user_discount_rate <= user_terminal_growth:
                 st.error("❌ Discount Rate must be strictly greater than Terminal Growth Rate to maintain mathematical sanity.")
                 
@@ -278,34 +361,64 @@ if ticker_input:
                 st.caption(f"Wall Street Consensus Growth Estimate: **{consensus_growth * 100:.1f}%**")
                 
                 # Base Growth input
-                base_growth_rate = st.slider(
-                    "Base FCF Growth Rate (Years 1-5) (%)",
+                base_growth_percent = st.slider(
+                    "Initial FCF Growth Rate (%)",
                     min_value=-30.0,
-                    max_value=60.0,
-                    value=float(round(consensus_growth * 100.0, 1)),
+                    max_value=120.0, # Expanded range to accommodate hyper-growth expectations
+                    value=float(st.session_state.get("base_growth_slider", float(round(consensus_growth * 100.0, 1)))),
                     step=0.5,
-                    help="Growth rate for the first 5 years under standard expectations."
-                ) / 100.0
+                    key="base_growth_slider",
+                    on_change=on_base_growth_change,
+                    help="Starting growth rate for Year 1. Future years decay continuously towards your perpetual Terminal Growth Rate."
+                )
+                base_growth_rate = base_growth_percent / 100.0
+
+                # Spread Slider (+-% from base case)
+                spread_val = st.slider(
+                    "Scenario Growth Spread (+/- % from Base Case)",
+                    min_value=0.5,
+                    max_value=25.0,
+                    value=float(st.session_state.get("spread_slider", 5.0)),
+                    step=0.5,
+                    key="spread_slider",
+                    on_change=on_spread_change,
+                    help="Sets the percentage point offset for Conservative (Base minus Spread) and Aggressive (Base plus Spread) scenarios."
+                )
+
+                # Control for FCF Growth Rate decay start year or keeping it stable
+                decay_option = st.selectbox(
+                    "Growth Rate Decay Pattern",
+                    options=[
+                        "Continuous (Decay from Year 2)",
+                        "Keep Stable (Entire 10 Years)",
+                        "Delayed (Decay starts in Year 6)",
+                        "Add X% each year to the Initial FCF Growth Rate",
+                        "Remove X% each year to the Initial FCF Growth Rate"
+                    ],
+                    key="decay_pattern_selectbox",
+                    help="Determine when the initial growth rate starts decaying linearly toward the Perpetual Terminal Growth Rate. Or choose to add/remove a fixed percentage of growth each year starting in Year 2."
+                )
+
+                # Show 2 digit float input box only if required by chosen pattern
+                decay_x_val = 0.0
+                if "each year to" in decay_option:
+                    decay_x_increment = st.number_input(
+                        "Yearly Adjust Amount (X%)",
+                        min_value=0.0,
+                        max_value=50.0,
+                        value=float(st.session_state.get("decay_x_increment", 2.0)),
+                        step=0.01,
+                        format="%.2f",
+                        key="decay_x_increment",
+                        help="Enter the percentage point change to add or remove sequentially starting in Year 2."
+                    )
+                    decay_x_val = decay_x_increment / 100.0
+                else:
+                    decay_x_val = 0.0
                 
-                # Conservative Inputs
-                st.markdown("**Conservative Preset Overrides:**")
-                con_col1, con_col2 = st.columns(2)
-                with con_col1:
-                    # Narrowed: 80% of Base growth (was 60%)
-                    con_growth = st.number_input("Growth Rate (%)", value=float(round(base_growth_rate * 0.8 * 100, 1)), format="%.1f", key="con_growth") / 100.0
-                with con_col2:
-                    # Narrowed: +0.5% on discount rate (was +1.5%)
-                    con_discount = st.number_input("Discount Rate (%)", value=float(round((user_discount_rate + 0.005) * 100, 1)), format="%.1f", key="con_discount") / 100.0
-                    
-                # Aggressive Inputs
-                st.markdown("**Aggressive Preset Overrides:**")
-                agg_col1, agg_col2 = st.columns(2)
-                with agg_col1:
-                    # Narrowed: 1.15x of Base growth (was 1.3x)
-                    agg_growth = st.number_input("Growth Rate (%)", value=float(round(base_growth_rate * 1.15 * 100, 1)), format="%.1f", key="agg_growth") / 100.0
-                with agg_col2:
-                    # Narrowed: -0.5% on discount rate (was -1.0%)
-                    agg_discount = st.number_input("Discount Rate (%)", value=float(max(4.0, round((user_discount_rate - 0.005) * 100, 1))), format="%.1f", key="agg_discount") / 100.0
+                # Derive final growth rates
+                con_growth = (base_growth_percent - spread_val) / 100.0
+                agg_growth = (base_growth_percent + spread_val) / 100.0
 
         # -------------------------------------------------------------
         # RIGHT COLUMN: RESULTS & CHARTS
@@ -314,7 +427,9 @@ if ticker_input:
             st.subheader(f"📊 {raw_data['name']} ({ticker_input}) Valuation")
             
             # Metric Card Header row
-            rec_color = "#22c55e" if "buy" in raw_data["recommendation"].lower() else ("#ef4444" if "sell" in raw_data["recommendation"].lower() else "#eab308")
+            raw_rec = raw_data["recommendation"]
+            clean_rec = str(raw_rec).replace("_", " ").title() if raw_rec else "N/A"
+            rec_color = "#22c55e" if "buy" in clean_rec.lower() else ("#ef4444" if "sell" in clean_rec.lower() else "#eab308")
             
             summary_cols = st.columns(4)
             with summary_cols[0]:
@@ -327,21 +442,23 @@ if ticker_input:
             with summary_cols[1]:
                 st.markdown(f"""
                 <div class="metric-card">
-                    <div class="metric-value" style="color: {rec_color};">{raw_data["recommendation"]}</div>
+                    <div class="metric-value" style="color: {rec_color};">{clean_rec}</div>
                     <div class="metric-label">Analyst Recommendation</div>
                 </div>
                 """, unsafe_allow_html=True)
             with summary_cols[2]:
+                ws_mean_display = f"${raw_data['target_mean']:.2f}" if raw_data.get("target_mean") else "N/A"
+                analyst_count_display = f"({raw_data['analyst_count']} analysts)" if raw_data.get("analyst_count") else "(0 analysts)"
                 st.markdown(f"""
                 <div class="metric-card">
-                    <div class="metric-value">${raw_data["target_mean"] or "N/A"}</div>
-                    <div class="metric-label">Wall Street Target Mean ({raw_data["analyst_count"] or 0} analysts)</div>
+                    <div class="metric-value">{ws_mean_display}</div>
+                    <div class="metric-label">Wall Street Target Mean<br><span style="font-size: 0.75rem; color: #64748b;">{analyst_count_display}</span></div>
                 </div>
                 """, unsafe_allow_html=True)
             with summary_cols[3]:
                 st.markdown(f"""
                 <div class="metric-card">
-                    <div class="metric-value">{user_beta:,.2f}</div>
+                    <div class="metric-value">{beta:,.2f}</div>
                     <div class="metric-label">Beta Coefficient</div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -349,9 +466,25 @@ if ticker_input:
             st.markdown("<br>", unsafe_allow_html=True)
             
             # --- CALCULATE SCENARIOS ---
-            con_res = run_dcf_model(user_fcf_base_m, user_shares_m, user_cash_m, user_debt_m, con_growth, user_terminal_growth, con_discount)
-            base_res = run_dcf_model(user_fcf_base_m, user_shares_m, user_cash_m, user_debt_m, base_growth_rate, user_terminal_growth, user_discount_rate)
-            agg_res = run_dcf_model(user_fcf_base_m, user_shares_m, user_cash_m, user_debt_m, agg_growth, user_terminal_growth, agg_discount)
+            ws_target_price = raw_data.get("target_mean") if raw_data.get("target_mean") and raw_data.get("target_mean") > 0 else current_price
+            ws_growth = solve_implied_growth(
+                fcf_base_m=user_fcf_base_m,
+                current_price=ws_target_price,
+                shares_m=user_shares_m,
+                cash_m=user_cash_m,
+                debt_m=user_debt_m,
+                terminal_growth=user_terminal_growth,
+                discount_rate=user_discount_rate,
+                decay_pattern=decay_option,
+                x_val=decay_x_val
+            )
+            if ws_growth is None:
+                ws_growth = consensus_growth
+
+            con_res = run_dcf_model(user_fcf_base_m, user_shares_m, user_cash_m, user_debt_m, con_growth, user_terminal_growth, user_discount_rate, decay_pattern=decay_option, x_val=decay_x_val)
+            base_res = run_dcf_model(user_fcf_base_m, user_shares_m, user_cash_m, user_debt_m, base_growth_rate, user_terminal_growth, user_discount_rate, decay_pattern=decay_option, x_val=decay_x_val)
+            ws_res = run_dcf_model(user_fcf_base_m, user_shares_m, user_cash_m, user_debt_m, ws_growth, user_terminal_growth, user_discount_rate, decay_pattern=decay_option, x_val=decay_x_val)
+            agg_res = run_dcf_model(user_fcf_base_m, user_shares_m, user_cash_m, user_debt_m, agg_growth, user_terminal_growth, user_discount_rate, decay_pattern=decay_option, x_val=decay_x_val)
             
             # Calculate Margin of Safety
             def get_mos(intrinsic, current):
@@ -360,10 +493,11 @@ if ticker_input:
                 
             con_mos = get_mos(con_res["intrinsic_value"], current_price)
             base_mos = get_mos(base_res["intrinsic_value"], current_price)
+            ws_mos = get_mos(ws_res["intrinsic_value"], current_price)
             agg_mos = get_mos(agg_res["intrinsic_value"], current_price)
             
             # Scenario Metrics Grid
-            result_cols = st.columns(3)
+            result_cols = st.columns(4)
             with result_cols[0]:
                 mos_color = "green" if con_mos >= 0 else "red"
                 st.markdown(f"""
@@ -391,39 +525,29 @@ if ticker_input:
                     <div class="metric-label" style="color: {mos_color};">Margin of Safety: <b>{agg_mos:+.1f}%</b></div>
                 </div>
                 """, unsafe_allow_html=True)
+            with result_cols[3]:
+                mos_color = "green" if ws_mos >= 0 else "red"
+                st.markdown(f"""
+                <div class="metric-card" style="border-top: 4px solid #eab308;">
+                    <div class="metric-label">WALL STREET INTRINSIC VALUE</div>
+                    <div class="metric-value" style="color: #eab308;">${ws_res["intrinsic_value"]:,.2f}</div>
+                    <div class="metric-label" style="color: {mos_color};">Margin of Safety: <b>{ws_mos:+.1f}%</b></div>
+                </div>
+                """, unsafe_allow_html=True)
                 
             st.markdown("<br>", unsafe_allow_html=True)
             
-            # --- IMPLIED GROWTH (REVERSE DCF) ---
-            implied_growth_raw = solve_implied_growth(
-                fcf_base_m=user_fcf_base_m,
-                current_price=current_price,
-                shares_m=user_shares_m,
-                cash_m=user_cash_m,
-                debt_m=user_debt_m,
-                terminal_growth=user_terminal_growth,
-                discount_rate=user_discount_rate
-            )
-            
-            if implied_growth_raw is not None:
-                st.info(
-                    f"🕵️ **Reverse DCF Analysis:** To justify the current market price of **${current_price:,.2f}**, the market is pricing in an "
-                    f"implied Free Cash Flow annual growth rate of **{implied_growth_raw * 100:.2f}%** for the next 5 years (assuming a "
-                    f"{user_discount_rate*100:.1f}% discount rate and {user_terminal_growth*100:.1f}% terminal growth). "
-                    f"\n\n*If you expect {raw_data['name']} to grow faster than **{implied_growth_raw * 100:.2f}%** per year, the stock is historically undervalued.*"
-                )
-            else:
-                st.info("🕵️ **Reverse DCF Analysis:** Implied growth calculation requires a positive starting Free Cash Flow.")
-                
             # --- DETAIL TABLE ---
             st.markdown("### 📋 Scenario Comparison Details")
             comparison_df = pd.DataFrame({
                 "Parameter": [
                     "Starting FCF",
-                    "Growth Rate (Y1-5)",
+                    "Initial Growth (Y1)",
                     "Terminal Growth Rate",
                     "Discount Rate",
                     "Enterprise Value",
+                    "Cash (+)",
+                    "Debt (-)",
                     "Equity Value",
                     "Shares Outstanding",
                     "Intrinsic Value",
@@ -434,8 +558,10 @@ if ticker_input:
                     f"${user_fcf_base_m:,.2f} M",
                     f"{con_growth*100:.1f}%",
                     f"{user_terminal_growth*100:.1f}%",
-                    f"{con_discount*100:.1f}%",
+                    f"{user_discount_rate*100:.1f}%",
                     f"${con_res['enterprise_value']:,.1f} M",
+                    f"${user_cash_m:,.1f} M",
+                    f"${user_debt_m:,.1f} M",
                     f"${con_res['equity_value']:,.1f} M",
                     f"{user_shares_m:,.1f} M",
                     f"${con_res['intrinsic_value']:,.2f}",
@@ -448,6 +574,8 @@ if ticker_input:
                     f"{user_terminal_growth*100:.1f}%",
                     f"{user_discount_rate*100:.1f}%",
                     f"${base_res['enterprise_value']:,.1f} M",
+                    f"${user_cash_m:,.1f} M",
+                    f"${user_debt_m:,.1f} M",
                     f"${base_res['equity_value']:,.1f} M",
                     f"{user_shares_m:,.1f} M",
                     f"${base_res['intrinsic_value']:,.2f}",
@@ -458,153 +586,177 @@ if ticker_input:
                     f"${user_fcf_base_m:,.2f} M",
                     f"{agg_growth*100:.1f}%",
                     f"{user_terminal_growth*100:.1f}%",
-                    f"{agg_discount*100:.1f}%",
+                    f"{user_discount_rate*100:.1f}%",
                     f"${agg_res['enterprise_value']:,.1f} M",
+                    f"${user_cash_m:,.1f} M",
+                    f"${user_debt_m:,.1f} M",
                     f"${agg_res['equity_value']:,.1f} M",
                     f"{user_shares_m:,.1f} M",
                     f"${agg_res['intrinsic_value']:,.2f}",
                     f"{agg_mos:+.1f}%",
                     "Undervalued" if agg_mos >= 15 else ("Fairly Valued" if abs(agg_mos) < 15 else "Overvalued")
+                ],
+                "Wall Street": [
+                    f"${user_fcf_base_m:,.2f} M",
+                    f"{ws_growth*100:.1f}%" if ws_growth is not None else "N/A",
+                    f"{user_terminal_growth*100:.1f}%",
+                    f"{user_discount_rate*100:.1f}%",
+                    f"${ws_res['enterprise_value']:,.1f} M",
+                    f"${user_cash_m:,.1f} M",
+                    f"${user_debt_m:,.1f} M",
+                    f"${ws_res['equity_value']:,.1f} M",
+                    f"{user_shares_m:,.1f} M",
+                    f"${ws_res['intrinsic_value']:,.2f}",
+                    f"{ws_mos:+.1f}%",
+                    "Undervalued" if ws_mos >= 15 else ("Fairly Valued" if abs(ws_mos) < 15 else "Overvalued")
                 ]
             })
-            st.dataframe(comparison_df.set_index("Parameter"), use_container_width=True)
+            st.dataframe(comparison_df.set_index("Parameter"), use_container_width=True, height=460)
             
-            # --- CHART 1: PLOTLY FREE CASH FLOW PROJECTIONS ---
-            st.markdown("### 📈 10-Year Free Cash Flow Projections")
-            
-            # Build FCF timeline (Historical + Projected)
-            hist_dates = list(fcf_hist_m.keys())
-            hist_vals = list(fcf_hist_m.values())
-            
-            # Extract last historical year as integer
-            if hist_dates:
-                try:
-                    last_year = int(hist_dates[-1].split("-")[0])
-                except:
-                    last_year = 2025
-            else:
-                last_year = 2025
-                
-            # Create friendly string-based categorical x-axis labels
-            hist_x = [f"{d.split('-')[0]} (Hist)" for d in hist_dates]
-            proj_x = [f"{last_year + t} (Y{t})" for t in range(1, 11)]
-            
-            # Fallback if no history
-            if not hist_x:
-                hist_x = ["Base (Est)"]
-                hist_vals = [user_fcf_base_m]
-                
-            fig_fcf = go.Figure()
-            
-            # Plot historical FCF as a solid bar series
-            fig_fcf.add_trace(go.Bar(
-                x=hist_x,
-                y=hist_vals,
-                name="Historical FCF",
-                marker_color="#475569",
-                opacity=0.85
-            ))
-            
-            # Historical last year link line
-            last_hist_label = hist_x[-1]
-            last_hist_val = hist_vals[-1]
-            
-            # Combine link point + projections
-            x_line = [last_hist_label] + proj_x
-            y_con = [last_hist_val] + con_res["fcf_projections"]
-            y_base = [last_hist_val] + base_res["fcf_projections"]
-            y_agg = [last_hist_val] + agg_res["fcf_projections"]
-            
-            fig_fcf.add_trace(go.Scatter(
-                x=x_line, y=y_con, name="Conservative Projection",
-                line=dict(color="#ef4444", width=3, dash="dash")
-            ))
-            
-            fig_fcf.add_trace(go.Scatter(
-                x=x_line, y=y_base, name="Base Case Projection",
-                line=dict(color="#3b82f6", width=4)
-            ))
-            
-            fig_fcf.add_trace(go.Scatter(
-                x=x_line, y=y_agg, name="Aggressive Projection",
-                line=dict(color="#22c55e", width=3, dash="dot")
-            ))
-            
-            fig_fcf.update_layout(
-                margin=dict(l=20, r=20, t=10, b=10),
-                height=350,
-                template="plotly_dark",
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-                xaxis=dict(gridcolor="#334155"),
-                yaxis=dict(title="FCF (Millions USD)", gridcolor="#334155")
-            )
-            st.plotly_chart(fig_fcf, use_container_width=True)
-            
-            # --- CHART 2: PRICE TARGET VS INTRINSIC VALUES BAR CHART ---
-            st.markdown("### 🎯 Value Comparison Chart")
-            
-            labels = ["Conservative Value", "Base Case Value", "Aggressive Value"]
-            values = [con_res["intrinsic_value"], base_res["intrinsic_value"], agg_res["intrinsic_value"]]
-            colors = ["#ef4444", "#3b82f6", "#22c55e"]
-            
-            fig_prices = go.Figure()
-            
-            # Add intrinsic value bars
-            fig_prices.add_trace(go.Bar(
-                x=labels,
-                y=values,
-                marker_color=colors,
-                width=0.4,
-                text=[f"${v:,.2f}" for v in values],
-                textposition='auto',
-                name="Intrinsic Value"
-            ))
-            
-            # Current price horizontal reference line
+        # --- END OF TWO-COLUMN LAYOUT ---
+        # Close the column context. Sub-components below this will automatically render taking the ENTIRE page width.
+        st.markdown("<br><hr>", unsafe_allow_html=True)
+        
+        # --- SECTION 1: PRICE TARGET VS INTRINSIC VALUES BAR CHART (FULL WIDTH) ---
+        st.markdown("### 🎯 Value Comparison Chart")
+        
+        labels = ["Conservative Value", "Base Case Value", "Aggressive Value", "Wall Street Target"]
+        values = [con_res["intrinsic_value"], base_res["intrinsic_value"], agg_res["intrinsic_value"], ws_res["intrinsic_value"]]
+        colors = ["#ef4444", "#3b82f6", "#22c55e", "#eab308"]
+        
+        fig_prices = go.Figure()
+        
+        # Add intrinsic value bars
+        fig_prices.add_trace(go.Bar(
+            x=labels,
+            y=values,
+            marker_color=colors,
+            width=0.35,
+            text=[f"${v:,.2f}" for v in values],
+            textposition='auto',
+            name="Intrinsic Value"
+        ))
+        
+        # Current price horizontal reference line
+        fig_prices.add_shape(type="line",
+            x0=-0.5, y0=current_price, x1=3.5, y1=current_price,
+            line=dict(color="#ffffff", width=2, dash="dash"),
+            name="Current Price"
+        )
+        fig_prices.add_annotation(
+            x=0.5, y=current_price,
+            text=f"<b>Current Price: ${current_price:,.2f}</b>",
+            showarrow=False,
+            yshift=12,
+            font=dict(color="#ffffff", size=11)
+        )
+        
+        # Wall Street Mean Target horizontal line
+        if raw_data["target_mean"]:
+            ws_mean = raw_data["target_mean"]
             fig_prices.add_shape(type="line",
-                x0=-0.5, y0=current_price, x1=2.5, y1=current_price,
-                line=dict(color="#ffffff", width=2, dash="dash"),
-                name="Current Price"
+                x0=-0.5, y0=ws_mean, x1=3.5, y1=ws_mean,
+                line=dict(color="#eab308", width=2, dash="dot"),
+                name="Wall Street Target Mean"
             )
             fig_prices.add_annotation(
-                x=0.5, y=current_price,
-                text=f"<b>Current Price: ${current_price:,.2f}</b>",
+                x=2.5, y=ws_mean,
+                text=f"<b>Wall Street Target Mean: ${ws_mean:,.2f}</b>",
                 showarrow=False,
                 yshift=12,
-                font=dict(color="#ffffff", size=11)
+                font=dict(color="#eab308", size=11)
             )
             
-            # Wall Street Mean Target horizontal line
-            if raw_data["target_mean"]:
-                ws_mean = raw_data["target_mean"]
-                fig_prices.add_shape(type="line",
-                    x0=-0.5, y0=ws_mean, x1=2.5, y1=ws_mean,
-                    line=dict(color="#eab308", width=2, dash="dot"),
-                    name="Wall Street Target Mean"
-                )
-                fig_prices.add_annotation(
-                    x=1.8, y=ws_mean,
-                    text=f"<b>Wall Street Target Mean: ${ws_mean:,.2f}</b>",
-                    showarrow=False,
-                    yshift=12,
-                    font=dict(color="#eab308", size=11)
-                )
-                
-            fig_prices.update_layout(
-                margin=dict(l=20, r=20, t=10, b=10),
-                height=300,
-                template="plotly_dark",
-                yaxis=dict(title="Stock Price ($)", gridcolor="#334155"),
-                xaxis=dict(gridcolor="#334155")
-            )
-            st.plotly_chart(fig_prices, use_container_width=True)
-            
-            # --- EDUCATIONAL FOOTNOTE ---
-            with st.expander("📚 How to read the Discounted Cash Flow model parameters?", expanded=False):
-                st.markdown("""
-                * **Starting Free Cash Flow ($FCF_0$)**: This is the cash generated by the business that is free to be distributed to debt and equity holders. It is computed as `Cash Flow from Operations - Capital Expenditures`.
-                * **Discount Rate / WACC**: The Weighted Average Cost of Capital reflects the blended cost of debt and equity capital. A higher discount rate represents higher risk or opportunity cost and dramatically lowers present value valuation.
-                * **Terminal Growth Rate**: The perpetual growth rate assumed for the business after Year 10. This must strictly be lower than the discount rate and is usually set near the long-term rate of GDP growth or inflation (2.0% - 3.0%).
-                * **2-Stage Tapering**: Years 1-5 use your input high-growth Stage 1. Years 6-10 smoothly taper that growth down linearly to your Terminal Growth Rate. This mimics the real-life competitive cycle of maturing companies.
-                * **Margin of Safety (MoS)**: The discount of the current stock price relative to its intrinsic value. A value of **+20%** means the stock is trading 20% below our calculated fair value, suggesting a margin of safety for investment.
-                """)
+        fig_prices.update_layout(
+            margin=dict(l=20, r=20, t=10, b=10),
+            height=320,
+            template="plotly_dark",
+            yaxis=dict(title="Stock Price ($)", gridcolor="#334155"),
+            xaxis=dict(gridcolor="#334155")
+        )
+        st.plotly_chart(fig_prices, use_container_width=True)
+        
+        # --- SECTION 2: ANNUAL PROJECTIONS FLOW TABULAR VIEW (FULL WIDTH) ---
+        st.markdown("### 🗓️ Annual FCF Projection & Present Value (PV) Flow")
+        
+        # Construct a row index for each of the 10 years, terminal value, and total sum
+        years_list = [f"Year {t}" for t in range(1, 11)] + ["Terminal Value", "Total"]
+        
+        flow_df = pd.DataFrame({
+            "Year": years_list,
+            # Growth Rates
+            "Con Growth Rate": [f"{g * 100:.1f}%" for g in con_res["growths"]] + ["", ""],
+            "Base Growth Rate": [f"{g * 100:.1f}%" for g in base_res["growths"]] + ["", ""],
+            "Agg Growth Rate": [f"{g * 100:.1f}%" for g in agg_res["growths"]] + ["", ""],
+            "WS Growth Rate": [f"{g * 100:.1f}%" for g in ws_res["growths"]] + ["", ""],
+            # FCF Projections
+            "Con Projected FCF": [f"${val:,.2f} M" for val in con_res["fcf_projections"]] + [
+                f"${con_res['terminal_value']:,.2f} M",
+                f"${sum(con_res['fcf_projections']) + con_res['terminal_value']:,.2f} M"
+            ],
+            "Base Projected FCF": [f"${val:,.2f} M" for val in base_res["fcf_projections"]] + [
+                f"${base_res['terminal_value']:,.2f} M",
+                f"${sum(base_res['fcf_projections']) + base_res['terminal_value']:,.2f} M"
+            ],
+            "Agg Projected FCF": [f"${val:,.2f} M" for val in agg_res["fcf_projections"]] + [
+                f"${agg_res['terminal_value']:,.2f} M",
+                f"${sum(agg_res['fcf_projections']) + agg_res['terminal_value']:,.2f} M"
+            ],
+            "WS Projected FCF": [f"${val:,.2f} M" for val in ws_res["fcf_projections"]] + [
+                f"${ws_res['terminal_value']:,.2f} M",
+                f"${sum(ws_res['fcf_projections']) + ws_res['terminal_value']:,.2f} M"
+            ],
+            # PV of FCFs
+            "Con PV of FCF": [f"${val:,.2f} M" for val in con_res["pv_fcfs"]] + [
+                f"${con_res['pv_terminal_value']:,.2f} M",
+                f"${con_res['enterprise_value']:,.2f} M"
+            ],
+            "Base PV of FCF": [f"${val:,.2f} M" for val in base_res["pv_fcfs"]] + [
+                f"${base_res['pv_terminal_value']:,.2f} M",
+                f"${base_res['enterprise_value']:,.2f} M"
+            ],
+            "Agg PV of FCF": [f"${val:,.2f} M" for val in agg_res["pv_fcfs"]] + [
+                f"${agg_res['pv_terminal_value']:,.2f} M",
+                f"${agg_res['enterprise_value']:,.2f} M"
+            ],
+            "WS PV of FCF": [f"${val:,.2f} M" for val in ws_res["pv_fcfs"]] + [
+                f"${ws_res['pv_terminal_value']:,.2f} M",
+                f"${ws_res['enterprise_value']:,.2f} M"
+            ]
+        })
+
+        def style_rows(row):
+            if row["Year"] == "Terminal Value":
+                return ["background-color: #1e293b; font-weight: bold; color: #3b82f6;"] * len(row)
+            elif row["Year"] == "Total":
+                return ["background-color: #0f172a; font-weight: bold; color: #10b981;"] * len(row)
+            return [""] * len(row)
+
+        styled_flow_df = flow_df.style.apply(style_rows, axis=1)
+
+        # Map column widths to small sizes so that the entire table fits full width without horizontal scrolling
+        col_config = {
+            "Year": st.column_config.TextColumn("Year", width=110),
+            "Con Growth Rate": st.column_config.TextColumn("Con Growth", width=85),
+            "Base Growth Rate": st.column_config.TextColumn("Base Growth", width=85),
+            "Agg Growth Rate": st.column_config.TextColumn("Agg Growth", width=85),
+            "WS Growth Rate": st.column_config.TextColumn("WS Growth", width=85),
+            "Con Projected FCF": st.column_config.TextColumn("Con FCF", width=105),
+            "Base Projected FCF": st.column_config.TextColumn("Base FCF", width=105),
+            "Agg Projected FCF": st.column_config.TextColumn("Agg FCF", width=105),
+            "WS Projected FCF": st.column_config.TextColumn("WS FCF", width=105),
+            "Con PV of FCF": st.column_config.TextColumn("Con PV", width=105),
+            "Base PV of FCF": st.column_config.TextColumn("Base PV", width=105),
+            "Agg PV of FCF": st.column_config.TextColumn("Agg PV", width=105),
+            "WS PV of FCF": st.column_config.TextColumn("WS PV", width=105)
+        }
+
+        st.dataframe(
+            styled_flow_df,
+            use_container_width=True,
+            hide_index=True,
+            height=490,  # High enough to accommodate 12 rows + headers perfectly without vertical scrollbar
+            column_config=col_config
+        )
+
+
