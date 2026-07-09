@@ -353,5 +353,157 @@ elif all_trades:
             st.plotly_chart(fig, width='stretch')
         else:
             st.info("No timeline data to display equity curve.")
+            
+        st.divider()
+
+        tooltip_text = (
+            "| Tier | Bullish | Bearish | Neutral | High Volatility |\n"
+            "|---|---|---|---|---|\n"
+            "| **Very Right** | > +5% | < -5% | ±1% | > ±10% |\n"
+            "| **Right** | 0% to +5% | -5% to 0% | ±1% to ±2% | ±5% to ±10% |\n"
+            "| **Wrong** | -5% to 0% | 0% to +5% | ±2% to ±5% | ±2% to ±5% |\n"
+            "| **Very Wrong** | < -5% | > +5% | > ±5% | < ±2% |"
+        )
+        st.subheader("Expected Direction Analysis", help=tooltip_text)
+        st.write("Analyze if you were right about the Expected Direction based on the Underlying Price at Open vs Close.")
+        
+        # Analyze directions
+        direction_stats = {
+            "Very Right": {"count": 0, "trades": []},
+            "Right": {"count": 0, "trades": []},
+            "Wrong": {"count": 0, "trades": []},
+            "Very Wrong": {"count": 0, "trades": []},
+            "N/A (Missing Data)": {"count": 0, "trades": []}
+        }
+        
+        for t_dict in filtered_data:
+            trade = t_dict["Trade"]
+            direction = trade.expected_direction
+            
+            # Clean string like "Bullish ↗" to just "Bullish"
+            if direction:
+                if "Bullish" in direction: direction = "Bullish"
+                elif "Bearish" in direction: direction = "Bearish"
+                elif "Neutral" in direction: direction = "Neutral"
+                elif "High volatility" in direction: direction = "High volatility"
+            else:
+                direction = "N/A"
+                
+            open_p = trade.underlying_price_at_open
+            close_p = getattr(trade, 'underlying_price_at_close', None)
+            
+            if open_p is None or close_p is None or direction == "N/A":
+                direction_stats["N/A (Missing Data)"]["count"] += 1
+                direction_stats["N/A (Missing Data)"]["trades"].append(t_dict)
+                continue
+                
+            pct_change = (close_p - open_p) / open_p
+            
+            tier = "Unknown"
+            if direction == "Bullish":
+                if pct_change > 0.05:
+                    tier = "Very Right"
+                elif 0 < pct_change <= 0.05:
+                    tier = "Right"
+                elif -0.05 <= pct_change <= 0:
+                    tier = "Wrong"
+                elif pct_change < -0.05:
+                    tier = "Very Wrong"
+            elif direction == "Bearish":
+                if pct_change < -0.05:
+                    tier = "Very Right"
+                elif -0.05 <= pct_change < 0:
+                    tier = "Right"
+                elif 0 <= pct_change <= 0.05:
+                    tier = "Wrong"
+                elif pct_change > 0.05:
+                    tier = "Very Wrong"
+            elif direction == "Neutral":
+                if -0.01 <= pct_change <= 0.01:
+                    tier = "Very Right"
+                elif (-0.02 <= pct_change < -0.01) or (0.01 < pct_change <= 0.02):
+                    tier = "Right"
+                elif (-0.05 <= pct_change < -0.02) or (0.02 < pct_change <= 0.05):
+                    tier = "Wrong"
+                elif pct_change < -0.05 or pct_change > 0.05:
+                    tier = "Very Wrong"
+            elif direction == "High volatility":
+                if pct_change < -0.10 or pct_change > 0.10:
+                    tier = "Very Right"
+                elif (-0.10 <= pct_change < -0.05) or (0.05 < pct_change <= 0.10):
+                    tier = "Right"
+                elif (-0.05 <= pct_change < -0.02) or (0.02 < pct_change <= 0.05):
+                    tier = "Wrong"
+                elif -0.02 <= pct_change <= 0.02:
+                    tier = "Very Wrong"
+            else:
+                tier = "N/A (Missing Data)"
+                
+            if tier != "Unknown":
+                direction_stats[tier]["count"] += 1
+                direction_stats[tier]["trades"].append(t_dict)
+                
+        # Display Stats
+        stat_cols = st.columns(4)
+        colors = {"Very Right": "#21c354", "Right": "#6ee7b7", "Wrong": "#fca5a5", "Very Wrong": "#ff4b4b"}
+        
+        stat_keys = ["Very Right", "Right", "Wrong", "Very Wrong"]
+        for idx, key in enumerate(stat_keys):
+            with stat_cols[idx]:
+                st.markdown(f"""
+                <div style="padding: 1rem; border-radius: 0.5rem; background-color: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">
+                    <div style="font-size: 1.2rem; font-weight: bold; color: {colors[key]};">{key}</div>
+                    <div style="font-size: 2rem; font-weight: bold; margin-top: 0.5rem;">{direction_stats[key]["count"]}</div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+        st.write("")
+        st.write("### View Trades by Tier")
+        
+        selected_tier = st.selectbox("Select Tier to view trades:", ["Very Right", "Right", "Wrong", "Very Wrong", "N/A (Missing Data)"])
+        trades_to_show = direction_stats[selected_tier]["trades"]
+        
+        if not trades_to_show:
+            st.info(f"No trades in the '{selected_tier}' tier.")
+        else:
+            tier_data = []
+            for t_dict in trades_to_show:
+                t = t_dict["Trade"]
+                pnl = t_dict["PnL"]
+                open_p = t.underlying_price_at_open
+                close_p = getattr(t, 'underlying_price_at_close', None)
+                pct_change = ((close_p - open_p) / open_p * 100) if open_p and close_p else 0
+                
+                tier_data.append({
+                    "#": t.trade_number,
+                    "Date Opened": t.date_opened.strftime("%Y-%m-%d"),
+                    "Ticker": t.ticker,
+                    "Expected Direction": t.expected_direction,
+                    "Price at Open": f"${open_p:.2f}" if open_p else "N/A",
+                    "Price at Close": f"${close_p:.2f}" if close_p else "N/A",
+                    "% Change": f"{pct_change:+.2f}%" if open_p and close_p else "N/A",
+                    "Final PnL": f"${pnl:.2f}",
+                    "Status": t.status
+                })
+            
+            # Style the Final PnL column to be green or red
+            df_tier = pd.DataFrame(tier_data)
+            def style_pnl(val):
+                try:
+                    v = float(val.replace('$', '').replace(',', ''))
+                    if v > 0:
+                        return "color: #21c354; font-weight: bold;"
+                    elif v < 0:
+                        return "color: #ff4b4b; font-weight: bold;"
+                except:
+                    pass
+                return ""
+                
+            try:
+                styled_tier = df_tier.style.map(style_pnl, subset=["Final PnL"])
+            except AttributeError:
+                styled_tier = df_tier.style.applymap(style_pnl, subset=["Final PnL"])
+                
+            st.table(styled_tier)
 
 db.close()

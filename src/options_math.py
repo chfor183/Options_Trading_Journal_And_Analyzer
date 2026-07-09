@@ -26,7 +26,7 @@ def calculate_payoff_array(legs, spot_prices):
         total_payoff += payoff * multiplier * leg['qty'] * 100
     return total_payoff
 
-def generate_payoff_chart(legs, current_price, ticker=""):
+def generate_payoff_chart(legs, current_price, ticker="", open_price=None, current_price_label="Current Price"):
     if not legs:
         return go.Figure()
         
@@ -138,16 +138,28 @@ def generate_payoff_chart(legs, current_price, ticker=""):
             be_anchor = "right"
 
     fig.add_vline(x=current_price, line_dash="dot", line_color="#0066cc")
-    # Annotate current price at the top of the chart to prevent overlap
+    # Annotate current/close price at the top of the chart to prevent overlap
     fig.add_annotation(
         x=current_price, y=0.85, yref="paper",
-        text=f"<b>Current Price: {current_price:.2f}</b>", 
+        text=f"<b>{current_price_label}: {current_price:.2f}</b>", 
         textangle=90, showarrow=False, 
         xanchor=cp_anchor, yanchor="middle",
         font=dict(size=12, color="#3b82f6", weight="bold"), # Bigger, bolder font matching theme
         bgcolor="rgba(15, 23, 42, 0.95)", # Highly opaque background
         bordercolor="#3b82f6", borderwidth=1.5, borderpad=5
     )
+    
+    if open_price is not None:
+        fig.add_vline(x=open_price, line_dash="dot", line_color="#8b5cf6")
+        fig.add_annotation(
+            x=open_price, y=0.02, yref="paper",
+            text=f"<b>Open price: {open_price:.2f}</b>", 
+            textangle=90, showarrow=False, 
+            xanchor="right" if open_price > current_price else "left", yanchor="bottom",
+            font=dict(size=12, color="#8b5cf6", weight="bold"),
+            bgcolor="rgba(15, 23, 42, 0.95)",
+            bordercolor="#8b5cf6", borderwidth=1.5, borderpad=5
+        )
     
     # Breakevens annotated at the bottom of the chart
     for i_zc, be_price in enumerate(bes_list):

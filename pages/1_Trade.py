@@ -175,7 +175,12 @@ with col1:
         category = st.selectbox("Category", cat_options, index=cat_options.index(default_cat), label_visibility="collapsed")
         
         st.markdown("<span style='color: #a1a1aa; font-weight: bold; font-size: 14px;'>Underlying Price</span>", unsafe_allow_html=True)
-        current_price = st.number_input("Underlying Price", value=float(373.63) if ticker == "GLD" else (float(info['current_price']) if info.get('current_price') else 1151.38), format="%.2f", label_visibility="collapsed")
+        
+        default_price = float(373.63) if ticker == "GLD" else (float(info['current_price']) if info.get('current_price') else 1151.38)
+        if trade_to_edit and trade_to_edit.status != "Open" and getattr(trade_to_edit, 'underlying_price_at_close', None):
+            default_price = float(trade_to_edit.underlying_price_at_close)
+            
+        current_price = st.number_input("Underlying Price", value=default_price, format="%.2f", label_visibility="collapsed")
         
         strat_options = [
             "Bull Put Spread (credit)",
@@ -404,7 +409,14 @@ for leg in legs_data:
 st.divider()
 
 if ticker and current_price > 0:
-    fig = generate_payoff_chart(legs_data, current_price, ticker)
+    open_price = None
+    price_label = "Current Price"
+    if trade_to_edit:
+        open_price = float(trade_to_edit.underlying_price_at_open) if trade_to_edit.underlying_price_at_open else None
+        if trade_to_edit.status != "Open" and getattr(trade_to_edit, 'underlying_price_at_close', None):
+            price_label = "Close price"
+
+    fig = generate_payoff_chart(legs_data, current_price, ticker, open_price=open_price, current_price_label=price_label)
     st.plotly_chart(fig, width='stretch')
     
     metrics = calculate_metrics(legs_data, current_price)

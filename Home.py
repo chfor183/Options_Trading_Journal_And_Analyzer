@@ -93,10 +93,11 @@ pages = {
         st.Page("pages/10_Probabilities.py", title="Probabilities", icon="🎲"),
     ],
     "Hidden": [
-        st.Page("pages/5_Close Trade.py", title="Close Trade", icon="✖")
+        st.Page("pages/5_Close Trade.py", title="Close Trade", icon="✖"),
+        st.Page("pages/12_Trade_Details.py", title="Trade Details", icon="ℹ️")
     ]
 }
 
-pg = st.navigation(pages)
+pg = st.navigation(pages, expanded=True)
 pg.run()
 

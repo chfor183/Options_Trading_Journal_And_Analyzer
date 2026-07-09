@@ -3,6 +3,7 @@ import pandas as pd
 from datetime import datetime
 from src.db import SessionLocal
 from src.models import Trade, Transaction
+from src.market_data import get_ticker_info
 
 st.set_page_config(page_title="Close Trade", page_icon="✖", layout="wide")
 st.title("Close Trade")
@@ -36,12 +37,18 @@ def format_percentage(val):
 def format_string(val):
     return str(val) if val is not None else "N/A"
 
+ticker_info = get_ticker_info(trade.ticker)
+current_price_str = "N/A"
+if ticker_info and ticker_info.get("current_price"):
+    current_price_str = format_currency(float(ticker_info["current_price"]))
+
 st.markdown(f"""
 #### Underlying
 <div style='display: flex; gap: 40px; margin-bottom: 15px; font-size: 1.1rem;'>
     <div style='display: flex; flex-direction: column;'><b>Ticker</b> <span>{trade.ticker}</span></div>
     <div style='display: flex; flex-direction: column;'><b>Name</b> <span>{format_string(trade.underlying_name)}</span></div>
     <div style='display: flex; flex-direction: column;'><b>Price at Open</b> <span>{format_currency(trade.underlying_price_at_open)}</span></div>
+    <div style='display: flex; flex-direction: column;'><b style='color: #4da6ff;'>Current Price</b> <span style='color: #4da6ff; font-weight: bold;'>{current_price_str}</span></div>
 </div>
 
 #### Position

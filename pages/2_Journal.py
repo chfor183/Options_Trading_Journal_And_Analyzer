@@ -88,6 +88,11 @@ if trades:
                     p.style.color = 'inherit';
                     p.style.margin = '0';
                 }
+            } else if (text === '🔼') {
+                const p = b.querySelector('p');
+                if (p) {
+                    p.style.color = '#3b82f6';
+                }
             }
         });
     });
@@ -290,7 +295,7 @@ if trades:
                 st.rerun()
             
     # Header row
-    col_widths = [0.4, 0.5, 0.7, 1.4, 1.1, 1.1, 1.5, 0.5, 1.0, 1.1, 1.0, 1.2, 1.2, 1.7, 0.8, 0.7, 0.9]
+    col_widths = [0.4, 0.5, 0.7, 1.4, 1.1, 1.1, 1.5, 0.5, 1.0, 1.1, 1.0, 1.2, 1.2, 1.7, 0.8, 0.7, 0.9, 0.4]
     cols = st.columns(col_widths)
     headers_config = [
         ("", False),
@@ -309,7 +314,8 @@ if trades:
         ("Status", True),
         ("Details", False),
         ("Edit", False),
-        ("Action", False)
+        ("Action", False),
+        ("", False)
     ]
     
     for col, (header, sortable) in zip(cols, headers_config):
@@ -424,12 +430,8 @@ if trades:
                 except Exception as e:
                     pass
             else:
-                close_tx = next((tx for tx in t.transactions if tx.action != "Open"), None)
-                if close_tx:
-                    if close_tx.price < 0:
-                        current_price = f"-${abs(close_tx.price):.2f}"
-                    else:
-                        current_price = f"${close_tx.price:.2f}"
+                if getattr(t, 'underlying_price_at_close', None) is not None:
+                    current_price = f"${t.underlying_price_at_close:.2f}"
                 else:
                     current_price = "N/A"
                 
@@ -539,11 +541,8 @@ if trades:
             st.session_state.expanded_trade_id = None
             
         if cols[14].button("Details", key=f"details_btn_{t.id}", use_container_width=True):
-            if st.session_state.expanded_trade_id == t.id:
-                st.session_state.expanded_trade_id = None
-            else:
-                st.session_state.expanded_trade_id = t.id
-            st.rerun()
+            st.session_state.details_trade_id = t.id
+            st.switch_page("pages/12_Trade_Details.py")
         
         if cols[15].button("Edit", key=f"edit_{t.id}", use_container_width=True):
             st.session_state.edit_trade_id = t.id
@@ -564,8 +563,17 @@ if trades:
                         db.delete(tx)
                     db.commit()
                     st.rerun()
+                    
+        is_expanded = st.session_state.expanded_trade_id == t.id
+        arrow_icon = "🔼" if is_expanded else "🔽"
+        if cols[17].button(arrow_icon, key=f"expand_btn_{t.id}", use_container_width=True):
+            if is_expanded:
+                st.session_state.expanded_trade_id = None
+            else:
+                st.session_state.expanded_trade_id = t.id
+            st.rerun()
             
-        if st.session_state.expanded_trade_id == t.id:
+        if is_expanded:
             st.write("**Legs**")
             legs_df = []
             
@@ -622,17 +630,14 @@ if trades:
                 
             if t.status == "Open":
                 comp_cols[0].metric("Underlying Price", curr_up, delta=safe_delta(curr_up, open_up, True))
-                comp_cols[1].metric("Probability of Profit", curr_pop, delta=safe_delta(curr_pop, open_pop))
-                comp_cols[2].metric("Probability of Loss", curr_pol, delta=safe_delta(curr_pol, open_pol, inverse=True), delta_color="inverse")
-                comp_cols[3].metric("Prob. of Max Profit", curr_pmp, delta=safe_delta(curr_pmp, open_pmp))
-                comp_cols[4].metric("Prob. of Max Loss", curr_pml, delta=safe_delta(curr_pml, open_pml, inverse=True), delta_color="inverse")
             else:
-                comp_cols[0].metric("Closing Price", curr_up)
                 close_up = f"${t.underlying_price_at_close:.2f}" if getattr(t, 'underlying_price_at_close', None) is not None else "N/A"
-                comp_cols[1].metric("Underlying at Close", close_up, delta=safe_delta(close_up, open_up, True))
-                comp_cols[2].metric("Probability of Profit", curr_pop)
-                comp_cols[3].metric("Probability of Loss", curr_pol)
-                comp_cols[4].metric("Prob. of Max Profit", curr_pmp)
+                comp_cols[0].metric("Underlying Price", close_up, delta=safe_delta(close_up, open_up, True))
+                
+            comp_cols[1].metric("Probability of Profit", curr_pop, delta=safe_delta(curr_pop, open_pop))
+            comp_cols[2].metric("Probability of Loss", curr_pol, delta=safe_delta(curr_pol, open_pol, inverse=True), delta_color="inverse")
+            comp_cols[3].metric("Prob. of Max Profit", curr_pmp, delta=safe_delta(curr_pmp, open_pmp))
+            comp_cols[4].metric("Prob. of Max Loss", curr_pml, delta=safe_delta(curr_pml, open_pml, inverse=True), delta_color="inverse")
             
             st.write(f"*Opening values:* Price: {open_up} | POP: {open_pop} | POL: {open_pol} | Prob Max Profit: {open_pmp} | Prob Max Loss: {open_pml}")
             
@@ -674,17 +679,17 @@ if trades:
             cost_str = f"${abs(display_cost):.2f} {cost_suffix}"
             pop_str = f"{t.probability_of_profit*100:.1f}%" if t.probability_of_profit is not None else "N/A"
             
-            idea_text = f"{t.ticker} - {t.strategy_type or 'N/A'} ({days_to_expiry} DTE) @ {cost_str}\n" \
-                        f"Ticker : {t.ticker}\n" \
-                        f"Name : {t.underlying_name or 'N/A'}\n" \
-                        f"Date Opened : {t.date_opened.strftime('%Y-%m-%d')}\n" \
-                        f"Price of underlying at opening : {f'${t.underlying_price_at_open:.2f}' if t.underlying_price_at_open else 'N/A'}\n" \
-                        f"Expected Move : ±{em_pct*100:.1f}% [{lower_bound:.2f},{upper_bound:.2f}]\n" \
-                        f"Strategy : {t.strategy_type or 'N/A'}\n" \
-                        f"Legs : \n" \
-                        f"{legs_text}\n" \
-                        f"Cost of trade : {cost_str}\n" \
-                        f"Probability of profit : {pop_str}"
+            idea_text = (f"{t.ticker} - {t.strategy_type or 'N/A'} ({days_to_expiry} DTE) @ {cost_str}\n"
+                         f"Ticker : {t.ticker}\n"
+                         f"Name : {t.underlying_name or 'N/A'}\n"
+                         f"Date Opened : {t.date_opened.strftime('%Y-%m-%d')}\n"
+                         f"Price of underlying at opening : {f'${t.underlying_price_at_open:.2f}' if t.underlying_price_at_open else 'N/A'}\n"
+                         f"Expected Move : ±{em_pct*100:.1f}% [{lower_bound:.2f},{upper_bound:.2f}]\n"
+                         f"Strategy : {t.strategy_type or 'N/A'}\n"
+                         f"Legs : \n"
+                         f"{legs_text}\n"
+                         f"Cost of trade : {cost_str}\n"
+                         f"Probability of profit : {pop_str}")
             
             # Formulate the JSON structure precisely as expected by the Pinescript
             import json
@@ -714,7 +719,7 @@ if trades:
             with idea_col2:
                 st.write("**TradingView Pine Script JSON**")
                 st.code(pinescript_json_str, language="json")
-            # ------------------------------------
+            
             
     st.divider()
     
