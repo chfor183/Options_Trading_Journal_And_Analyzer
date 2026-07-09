@@ -133,9 +133,9 @@ with st.spinner("Fetching live market data and calculating valuations..."):
             except Exception:
                 pass
                 
-            # Check if current price is within 5% of any strike
+            # Check if current price is within 3% of any strike
             for leg in t.legs:
-                if abs(current_underlying_price - leg.strike) / leg.strike <= 0.05:
+                if abs(current_underlying_price - leg.strike) / leg.strike <= 0.03:
                     is_near_strike = True
                     near_strike_val = leg.strike
                     break
