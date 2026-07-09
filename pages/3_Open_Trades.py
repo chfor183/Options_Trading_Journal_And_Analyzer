@@ -418,7 +418,7 @@ for idx, p in enumerate(filtered_processed):
                     <div style="font-size: 0.9rem; font-weight: bold; color: {zone_color}; padding: 4px 10px; border-radius: 4px; border: 1px solid {zone_color}; background-color: rgba(0,0,0,0.2);">
                         {zone_banner}
                     </div>
-                    <div style="font-size: 1.10rem; font-weight: bold; color: {color_hex}; padding: 5px 11px; border-radius: 4px; border: 1px solid {color_hex}; background-color: rgba(0,0,0,0.2);">
+                    <div style="font-size: 0.9rem; font-weight: bold; color: {color_hex}; padding: 5px 11px; border-radius: 4px; border: 1px solid {color_hex}; background-color: rgba(0,0,0,0.2);">
                         {status_banner}
                     </div>
                 </div>
