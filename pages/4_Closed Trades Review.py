@@ -460,7 +460,28 @@ elif all_trades:
         st.write("")
         st.write("### View Trades by Tier")
         
-        selected_tier = st.selectbox("Select Tier to view trades:", ["Very Right", "Right", "Wrong", "Very Wrong", "N/A (Missing Data)"])
+        st.write("Select Tier to view trades:")
+        if "selected_tier" not in st.session_state:
+            st.session_state.selected_tier = "Very Right"
+            
+        tier_btn_cols = st.columns(5)
+        if tier_btn_cols[0].button("Very Right", use_container_width=True, type="primary" if st.session_state.selected_tier == "Very Right" else "secondary", key="tier_very_right"):
+            st.session_state.selected_tier = "Very Right"
+            st.rerun()
+        if tier_btn_cols[1].button("Right", use_container_width=True, type="primary" if st.session_state.selected_tier == "Right" else "secondary", key="tier_right"):
+            st.session_state.selected_tier = "Right"
+            st.rerun()
+        if tier_btn_cols[2].button("Wrong", use_container_width=True, type="primary" if st.session_state.selected_tier == "Wrong" else "secondary", key="tier_wrong"):
+            st.session_state.selected_tier = "Wrong"
+            st.rerun()
+        if tier_btn_cols[3].button("Very Wrong", use_container_width=True, type="primary" if st.session_state.selected_tier == "Very Wrong" else "secondary", key="tier_very_wrong"):
+            st.session_state.selected_tier = "Very Wrong"
+            st.rerun()
+        if tier_btn_cols[4].button("N/A (Missing Data)", use_container_width=True, type="primary" if st.session_state.selected_tier == "N/A (Missing Data)" else "secondary", key="tier_na"):
+            st.session_state.selected_tier = "N/A (Missing Data)"
+            st.rerun()
+            
+        selected_tier = st.session_state.selected_tier
         trades_to_show = direction_stats[selected_tier]["trades"]
         
         if not trades_to_show:
