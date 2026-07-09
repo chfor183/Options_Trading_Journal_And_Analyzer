@@ -29,58 +29,6 @@ def get_leg_current_price(ticker, expiry_date, strike, option_type, position, fa
         pass
     return float(fallback_price)
 
-components.html("""
-<script>
-const observer = new MutationObserver(() => {
-    const parentDoc = window.parent.document;
-    
-    // Inject stylesheet if it doesn't exist
-    if (!parentDoc.getElementById('custom-trade-styles')) {
-        const styleEl = parentDoc.createElement('style');
-        styleEl.id = 'custom-trade-styles';
-        styleEl.textContent = `
-            .fixed-save-button {
-                position: fixed !important;
-                bottom: 24px !important;
-                right: 24px !important;
-                width: 190px !important;
-                z-index: 99999 !important;
-                background-color: #2e7d32 !important; /* Nice Material green 800 */
-                color: #ffffff !important;
-                border: 1px solid #1b5e20 !important;
-                border-radius: 8px !important;
-                padding: 10px 24px !important;
-                font-weight: 600 !important;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
-                transition: background-color 0.2s, transform 0.1s !important;
-            }
-            .fixed-save-button:hover {
-                background-color: #1b5e20 !important;
-                transform: scale(1.03) !important;
-                cursor: pointer !important;
-            }
-            .fixed-save-button:active {
-                transform: scale(0.97) !important;
-            }
-            .fixed-save-button p {
-                color: #ffffff !important;
-                font-weight: 600 !important;
-            }
-        `;
-        parentDoc.head.appendChild(styleEl);
-    }
-    
-    const buttons = parentDoc.querySelectorAll('.stButton button');
-    buttons.forEach(b => {
-        if (['⬅️ Back to Journal'].includes(b.innerText)) {
-            b.classList.add('fixed-save-button');
-        }
-    });
-});
-observer.observe(window.parent.document.body, {childList: true, subtree: true});
-</script>
-""", height=0, width=0)
-
 st.title("Trade Details")
 
 if "details_trade_id" not in st.session_state or st.session_state.details_trade_id is None:
@@ -430,9 +378,5 @@ with idea_col2:
     st.code(pinescript_json_str, language="json")
 
 st.divider()
-
-if st.button("⬅️ Back to Journal", type="primary"):
-    st.session_state.details_trade_id = None
-    st.switch_page("pages/2_Journal.py")
 
 db.close()
