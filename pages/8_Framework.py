@@ -168,9 +168,9 @@ with tabs[1]:
     st.markdown("""
     - **Note 1 :** Together, selling cash-secured puts and selling covered calls forms **The Wheel Strategy** (efficient yield generation on stocks you are happy to own long-term).
     - **Note 2 :** Always keep a fraction of capital reserved for: **medium-to-high risk plays** and/or **liquidity** to strike on outstanding market opportunities.
-    - **Note 3 :** You can always experiment with speculative option strategies or new plays, but keep allocation restricted to **less than 5% of total capital**.
-    - **Note 4 : ⚠️ POSITION SIZING is the ultimate key to survival in the markets!** Never risk too much on any single trade or ticker. The probability of profit and good research will do the rest.
-    """)
+    - **Note 3 :** You can always experiment with speculative option strategies or new plays, but keep allocation restricted to <span style="font-size: 1.3em;">**less than 10% of total capital for the total of those strategies.**</span>
+    - **Note 4 : ⚠️ POSITION SIZING is the ultimate key to survival in the markets!** Never risk too much on any single trade or ticker. Keep allocation to <span style="font-size: 1.3em;">**less than 5% of total capital per trade.**</span> The probability of profit and good research will do the rest.
+    """, unsafe_allow_html=True)
 
 with tabs[2]:
     st.subheader("⚖️ Rules & Mindset")
