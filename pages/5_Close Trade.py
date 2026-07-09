@@ -89,7 +89,7 @@ st.divider()
 st.subheader("Closing Information")
 
 with st.form("close_trade_form"):
-    fcol1, fcol2, fcol3, fcol4 = st.columns(4)
+    fcol1, fcol2, fcol3, fcol4, fcol5 = st.columns(5)
     
     close_date = fcol1.date_input("Close Date", value=datetime.today())
     
@@ -106,11 +106,15 @@ with st.form("close_trade_form"):
     
     commission = fcol4.number_input("Closing Commission", value=0.0, step=0.01, format="%.2f")
     
+    underlying_price_at_close = fcol5.number_input("Underlying Price", value=None, step=0.01, format="%.2f", help="Price of the underlying asset when closing")
+    
     submit = st.form_submit_button("Submit Close")
     
     if submit:
         # Update trade status
         trade.status = close_type
+        if underlying_price_at_close is not None:
+            trade.underlying_price_at_close = underlying_price_at_close
         
         # Add closing transaction
         new_tx = Transaction(

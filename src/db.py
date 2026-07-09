@@ -54,6 +54,15 @@ def init_db():
             conn.execute(text("ALTER TABLE finance.trades RENAME COLUMN expected_move TO expected_direction"))
             conn.commit()
 
+        # Check if underlying_price_at_close column exists and add it if not
+        res_underlying_price_at_close = conn.execute(text(
+            "SELECT 1 FROM information_schema.columns "
+            "WHERE table_schema = 'finance' AND table_name = 'trades' AND column_name = 'underlying_price_at_close'"
+        )).fetchone()
+        if not res_underlying_price_at_close:
+            conn.execute(text("ALTER TABLE finance.trades ADD COLUMN underlying_price_at_close DOUBLE PRECISION"))
+            conn.commit()
+
     # Create default portfolio if none exist
     db = SessionLocal()
     from src.models import Portfolio

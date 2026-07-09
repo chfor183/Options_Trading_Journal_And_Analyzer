@@ -38,6 +38,7 @@ class Trade(Base):
     probability_max_loss = Column(Float)
     expected_value = Column(Float)
     underlying_price_at_open = Column(Float)
+    underlying_price_at_close = Column(Float)
     
     portfolio = relationship("Portfolio", back_populates="trades")
     legs = relationship("Leg", back_populates="trade", cascade="all, delete-orphan")

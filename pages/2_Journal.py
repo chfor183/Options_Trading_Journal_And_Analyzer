@@ -622,13 +622,17 @@ if trades:
                 
             if t.status == "Open":
                 comp_cols[0].metric("Underlying Price", curr_up, delta=safe_delta(curr_up, open_up, True))
+                comp_cols[1].metric("Probability of Profit", curr_pop, delta=safe_delta(curr_pop, open_pop))
+                comp_cols[2].metric("Probability of Loss", curr_pol, delta=safe_delta(curr_pol, open_pol, inverse=True), delta_color="inverse")
+                comp_cols[3].metric("Prob. of Max Profit", curr_pmp, delta=safe_delta(curr_pmp, open_pmp))
+                comp_cols[4].metric("Prob. of Max Loss", curr_pml, delta=safe_delta(curr_pml, open_pml, inverse=True), delta_color="inverse")
             else:
                 comp_cols[0].metric("Closing Price", curr_up)
-                
-            comp_cols[1].metric("Probability of Profit", curr_pop, delta=safe_delta(curr_pop, open_pop))
-            comp_cols[2].metric("Probability of Loss", curr_pol, delta=safe_delta(curr_pol, open_pol, inverse=True), delta_color="inverse")
-            comp_cols[3].metric("Prob. of Max Profit", curr_pmp, delta=safe_delta(curr_pmp, open_pmp))
-            comp_cols[4].metric("Prob. of Max Loss", curr_pml, delta=safe_delta(curr_pml, open_pml, inverse=True), delta_color="inverse")
+                close_up = f"${t.underlying_price_at_close:.2f}" if getattr(t, 'underlying_price_at_close', None) is not None else "N/A"
+                comp_cols[1].metric("Underlying at Close", close_up, delta=safe_delta(close_up, open_up, True))
+                comp_cols[2].metric("Probability of Profit", curr_pop)
+                comp_cols[3].metric("Probability of Loss", curr_pol)
+                comp_cols[4].metric("Prob. of Max Profit", curr_pmp)
             
             st.write(f"*Opening values:* Price: {open_up} | POP: {open_pop} | POL: {open_pol} | Prob Max Profit: {open_pmp} | Prob Max Loss: {open_pml}")
             
