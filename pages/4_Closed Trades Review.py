@@ -466,7 +466,19 @@ elif all_trades:
         if not trades_to_show:
             st.info(f"No trades in the '{selected_tier}' tier.")
         else:
-            tier_data = []
+            header_cols = st.columns([1, 2, 1.5, 2, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5])
+            header_cols[0].markdown("**#**")
+            header_cols[1].markdown("**Date Opened**")
+            header_cols[2].markdown("**Ticker**")
+            header_cols[3].markdown("**Expected Direction**")
+            header_cols[4].markdown("**Open $**")
+            header_cols[5].markdown("**Close $**")
+            header_cols[6].markdown("**% Change**")
+            header_cols[7].markdown("**Final PnL**")
+            header_cols[8].markdown("**Status**")
+            header_cols[9].markdown("**Action**")
+            st.markdown("<hr style='margin:0.5rem 0'>", unsafe_allow_html=True)
+
             for t_dict in trades_to_show:
                 t = t_dict["Trade"]
                 pnl = t_dict["PnL"]
@@ -474,36 +486,23 @@ elif all_trades:
                 close_p = getattr(t, 'underlying_price_at_close', None)
                 pct_change = ((close_p - open_p) / open_p * 100) if open_p and close_p else 0
                 
-                tier_data.append({
-                    "#": t.trade_number,
-                    "Date Opened": t.date_opened.strftime("%Y-%m-%d"),
-                    "Ticker": t.ticker,
-                    "Expected Direction": t.expected_direction,
-                    "Price at Open": f"${open_p:.2f}" if open_p else "N/A",
-                    "Price at Close": f"${close_p:.2f}" if close_p else "N/A",
-                    "% Change": f"{pct_change:+.2f}%" if open_p and close_p else "N/A",
-                    "Final PnL": f"${pnl:.2f}",
-                    "Status": t.status
-                })
-            
-            # Style the Final PnL column to be green or red
-            df_tier = pd.DataFrame(tier_data)
-            def style_pnl(val):
-                try:
-                    v = float(val.replace('$', '').replace(',', ''))
-                    if v > 0:
-                        return "color: #21c354; font-weight: bold;"
-                    elif v < 0:
-                        return "color: #ff4b4b; font-weight: bold;"
-                except:
-                    pass
-                return ""
+                cols = st.columns([1, 2, 1.5, 2, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5])
+                cols[0].write(t.trade_number)
+                cols[1].write(t.date_opened.strftime("%Y-%m-%d"))
+                cols[2].write(t.ticker)
+                cols[3].write(t.expected_direction)
+                cols[4].write(f"${open_p:.2f}" if open_p else "N/A")
+                cols[5].write(f"${close_p:.2f}" if close_p else "N/A")
+                cols[6].write(f"{pct_change:+.2f}%" if open_p and close_p else "N/A")
                 
-            try:
-                styled_tier = df_tier.style.map(style_pnl, subset=["Final PnL"])
-            except AttributeError:
-                styled_tier = df_tier.style.applymap(style_pnl, subset=["Final PnL"])
+                pnl_color = "#21c354" if pnl > 0 else "#ff4b4b" if pnl < 0 else "inherit"
+                cols[7].markdown(f"<span style='color: {pnl_color}; font-weight: bold;'>${pnl:.2f}</span>", unsafe_allow_html=True)
                 
-            st.table(styled_tier)
+                cols[8].write(t.status)
+                if cols[9].button("ℹ️ Details", key=f"details_tier_{t.id}", use_container_width=True):
+                    st.session_state.details_trade_id = t.id
+                    st.switch_page("pages/12_Trade_Details.py")
+                
+                st.markdown("<hr style='margin:0.25rem 0; opacity: 0.3'>", unsafe_allow_html=True)
 
 db.close()

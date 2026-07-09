@@ -524,11 +524,18 @@ for idx, p in enumerate(filtered_processed):
             
         with cc3:
             # Action controls
-            # Link to Idea URL
-            if t.idea_url:
-                st.link_button("🔗 View Trade Idea", t.idea_url, use_container_width=True)
-            else:
-                st.button("🔗 No Idea URL Saved", disabled=True, use_container_width=True, key=f"no_url_{t.id}")
+            col_url, col_details = st.columns(2)
+            
+            with col_url:
+                if t.idea_url:
+                    st.link_button("🔗 View Trade Idea", t.idea_url, use_container_width=True)
+                else:
+                    st.button("🔗 No Idea URL", disabled=True, use_container_width=True, key=f"no_url_{t.id}")
+            
+            with col_details:
+                if st.button("ℹ️ Details", key=f"details_btn_{t.id}", use_container_width=True):
+                    st.session_state.details_trade_id = t.id
+                    st.switch_page("pages/12_Trade_Details.py")
                 
             # Edit / Close buttons side-by-side or stacked
             col_act1, col_act2 = st.columns(2)
