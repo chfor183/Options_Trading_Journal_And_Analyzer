@@ -153,24 +153,20 @@ else:
     val_amount = sum((tx.price - tx.commission) for tx in close_dates)
 
 val_pct = 0.0
-if display_cost != 0:
-    val_pct = ((display_cost + val_amount) / abs(display_cost)) * 100
-    val_pct_str = f"{'+' if val_pct > 0 else ''}{val_pct:.2f}%"
+pos_return_dollars = pnl + val_amount
+if pnl != 0:
+    val_pct = (pos_return_dollars / abs(pnl)) * 100
+    val_pct_str = f"{format_currency(pos_return_dollars)}({'+' if val_pct > 0 else ''}{val_pct:.2f}%)"
 else:
-    val_pct_str = "N/A"
+    val_pct_str = f"{format_currency(pos_return_dollars)}(N/A)"
 
-val_color = "#28a745" if pnl > 0 else "#dc3545" if pnl < 0 else "inherit"
 val_sign = "+" if val_amount > 0 else ""
-val_display_str = f"<span style='color:{val_color}; font-weight:bold;'>{val_sign}{format_currency(val_amount)}</span>"
+val_display_str = f"<span>{val_sign}{format_currency(val_amount)}</span>"
 
-pct_color = "#28a745" if val_pct > 0 else "#dc3545" if val_pct < 0 else "inherit"
+pct_color = "#28a745" if pos_return_dollars > 0 else "#dc3545" if pos_return_dollars < 0 else "inherit"
 pct_display_str = f"<span style='color:{pct_color}; font-weight:bold;'>{val_pct_str}</span>"
 
 st.markdown(f"### {trade.ticker} - {format_string(trade.underlying_name)}")
-
-pnl_color = "#28a745" if pnl > 0 else "#dc3545" if pnl < 0 else "inherit"
-
-idea_url_str = f"<a href='{trade.idea_url}' target='_blank'>{trade.idea_url}</a>" if trade.idea_url else 'N/A'
 
 st.markdown(f"""
 #### General Information
@@ -184,16 +180,12 @@ st.markdown(f"""
     <div style='display: flex; flex-direction: column;'><b>Trade Number</b> <span>{trade.trade_number if trade.trade_number else 'N/A'}</span></div>
 </div>
 
-<div style='display: flex; flex-wrap: wrap; gap: 40px; margin-bottom: 25px; font-size: 1.1rem; background-color: rgba(255, 255, 255, 0.05); padding: 20px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1);'>
-    <div style='display: flex; flex-direction: column; width: 100%;'><b>Idea URL</b> <span>{idea_url_str}</span></div>
-</div>
-
 #### Financial & Market Data
 <div style='display: flex; flex-wrap: nowrap; justify-content: space-between; gap: 15px; margin-bottom: 25px; font-size: 0.95rem; background-color: rgba(255, 255, 255, 0.05); padding: 20px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1);'>
     <div style='display: flex; flex-direction: column;'><b>Cost of Trade</b> <span>{format_currency(display_cost)}</span></div>
     <div style='display: flex; flex-direction: column;'><b>Collateral</b> <span>{format_currency(trade.collateral)}</span></div>
     <div style='display: flex; flex-direction: column;'><b>Total Commissions</b> <span>{format_currency(total_commission)}</span></div>
-    <div style='display: flex; flex-direction: column;'><b>Net PnL</b> <span style='color:{pnl_color}; font-weight:bold;'>{format_currency(pnl)}</span></div>
+    <div style='display: flex; flex-direction: column;'><b>Net PnL</b> <span>{format_currency(pnl)}</span></div>
     <div style='display: flex; flex-direction: column;'><b>{value_label}</b> {val_display_str}</div>
     <div style='display: flex; flex-direction: column;'><b>Position Return</b> {pct_display_str}</div>
     <div style='display: flex; flex-direction: column;'><b>Underlying Price at Open</b> <span>{format_currency(trade.underlying_price_at_open)}</span></div>
@@ -201,6 +193,9 @@ st.markdown(f"""
     <div style='display: flex; flex-direction: column;'><b style='color: #4da6ff;'>Current Market Price</b> <span style='color: #4da6ff; font-weight: bold;'>{current_price_str}</span></div>
 </div>
 """, unsafe_allow_html=True)
+
+if trade.idea_url:
+    st.write(f"**Idea URL:** [{trade.idea_url}]({trade.idea_url})")
 
 st.divider()
 
@@ -307,6 +302,59 @@ st.markdown(f"*Opening values:* Price: {open_up} | POP: {open_pop} | POL: {open_
 
 st.divider()
 
+if is_open:
+    chart_price = cp
+    price_label = "Current Price"
+else:
+    chart_price = float(trade.underlying_price_at_close) if getattr(trade, 'underlying_price_at_close', None) else cp
+    price_label = "Close price"
+
+open_price = float(trade.underlying_price_at_open) if trade.underlying_price_at_open else None
+
+if trade.legs and chart_price > 0:
+    fig = generate_payoff_chart(legs_for_chart, chart_price, trade.ticker, open_price=open_price, current_price_label=price_label)
+    st.plotly_chart(fig, width='stretch')
+
+st.subheader("Position Legs")
+if trade.legs:
+    legs_data = []
+    for leg in trade.legs:
+        legs_data.append({
+            "Action": leg.position,
+            "Quantity": leg.quantity if leg.quantity else 1,
+            "Type": leg.option_type,
+            "Strike": f"${leg.strike:.2f}",
+            "Price": f"${leg.price:.3f}",
+            "Delta": f"{leg.delta:.4f}",
+            "IV": f"{leg.iv:.2f}%",
+            "Expiry": leg.expiry,
+        })
+    st.table(pd.DataFrame(legs_data))
+else:
+    st.info("No legs found for this trade.")
+
+st.divider()
+
+st.subheader("Transaction History")
+if trade.transactions:
+    tx_data = []
+    for tx in trade.transactions:
+        # DB stores Open price as Cost (Positive for Debit, Negative for Credit).
+        # We invert it to display as Cashflow (Positive for Credit, Negative for Debit) to match closing txs.
+        disp_price = -tx.price if tx.action == "Open" else tx.price
+        tx_data.append({
+            "Date": tx.date.strftime('%Y-%m-%d %H:%M'),
+            "Action": tx.action,
+            "Quantity": tx.quantity,
+            "Price": f"${disp_price:.2f}",
+            "Commission": f"${tx.commission:.2f}"
+        })
+    st.table(pd.DataFrame(tx_data))
+else:
+    st.info("No transactions found.")
+
+st.divider()
+
 idea_col1, idea_col2 = st.columns(2)
 
 if trade.legs:
@@ -380,59 +428,6 @@ with idea_col1:
 with idea_col2:
     st.subheader("TradingView Pine Script JSON")
     st.code(pinescript_json_str, language="json")
-
-st.divider()
-
-if is_open:
-    chart_price = cp
-    price_label = "Current Price"
-else:
-    chart_price = float(trade.underlying_price_at_close) if getattr(trade, 'underlying_price_at_close', None) else cp
-    price_label = "Close price"
-
-open_price = float(trade.underlying_price_at_open) if trade.underlying_price_at_open else None
-
-if trade.legs and chart_price > 0:
-    fig = generate_payoff_chart(legs_for_chart, chart_price, trade.ticker, open_price=open_price, current_price_label=price_label)
-    st.plotly_chart(fig, width='stretch')
-
-st.subheader("Position Legs")
-if trade.legs:
-    legs_data = []
-    for leg in trade.legs:
-        legs_data.append({
-            "Action": leg.position,
-            "Quantity": leg.quantity if leg.quantity else 1,
-            "Type": leg.option_type,
-            "Strike": f"${leg.strike:.2f}",
-            "Price": f"${leg.price:.3f}",
-            "Delta": f"{leg.delta:.4f}",
-            "IV": f"{leg.iv:.2f}%",
-            "Expiry": leg.expiry,
-        })
-    st.table(pd.DataFrame(legs_data))
-else:
-    st.info("No legs found for this trade.")
-
-st.divider()
-
-st.subheader("Transaction History")
-if trade.transactions:
-    tx_data = []
-    for tx in trade.transactions:
-        # DB stores Open price as Cost (Positive for Debit, Negative for Credit).
-        # We invert it to display as Cashflow (Positive for Credit, Negative for Debit) to match closing txs.
-        disp_price = -tx.price if tx.action == "Open" else tx.price
-        tx_data.append({
-            "Date": tx.date.strftime('%Y-%m-%d %H:%M'),
-            "Action": tx.action,
-            "Quantity": tx.quantity,
-            "Price": f"${disp_price:.2f}",
-            "Commission": f"${tx.commission:.2f}"
-        })
-    st.table(pd.DataFrame(tx_data))
-else:
-    st.info("No transactions found.")
 
 st.divider()
 
