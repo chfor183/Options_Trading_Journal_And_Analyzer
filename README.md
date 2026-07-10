@@ -5,7 +5,7 @@ A local, Python-based web application built with Streamlit to track, journal, an
 ## Features
 
 - **Portfolio Management**: Create, switch between, and manage multiple portfolios with dynamic filtering across all dashboards.
-- **Strategy Builder & Visualizer**: Construct multi-leg options strategies (up to 8 legs) with accurate quantity sizing. Generates interactive Plotly payoff charts (expiration & T+0 curves) with standard deviation overlays.
+- **Strategy Builder & Visualizer**: Construct multi-leg options strategies (up to 8 legs) with accurate quantity sizing. Generates interactive Plotly payoff charts (expiration & T+0 curves) with standard deviation overlays, including simultaneous dynamic tracking of **Current Expected Move** vs **Expected Move at Open**.
 - **Automated OCR Trade Input**: Instantly parse TWS/Interactive Brokers screenshots from your clipboard to extract trade legs, prices, and tickers automatically.
 - **Advanced Probability & Quant Metrics**: Calculates Probability of Profit (PoP), Probability of Loss (PoL), Probability of Max Profit/Loss, Expected Value (EV), and ROI based on log-normal distribution models.
 - **Discounted Cash Flow (DCF) Evaluation**: A highly sophisticated valuation engine featuring an advanced **10-Year Multi-Scenario Free Cash Flow (FCFF) model** with customizable growth decay patterns. Includes:

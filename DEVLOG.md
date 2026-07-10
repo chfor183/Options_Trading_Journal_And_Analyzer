@@ -1,5 +1,21 @@
 ## Recent Updates
 
+**Session Date: 2026-07-09**
+- **Payoff Chart Visualizer Upgrades**:
+  - **Expected Move Dual Display**: Updated `options_math.py` to calculate and simultaneously plot both the **Current Expected Move** (relative to the live ticker price) and the **Expected Move at Open** (relative to the historical open price) on the payoff chart. 
+  - **Dynamic Toggle Controls**: Added native Streamlit toggle switches above the payoff charts in both the *Trade* and *Trade Details* pages. Users can turn the visual display of the current and open expected move boundary bands on or off at will (the "At Open" band defaults to off to keep charts clean).
+  - **X-Axis Expansion**: Ensured the Plotly X-axis boundaries scale intelligently to accommodate both expected move ranges, preventing any data cutoff.
+  - **Annotation Avoidance**: Configured dynamic Y-axis label anchoring to prevent the expected move annotations from overlapping when both toggles are enabled.
+- **UI & Layout Optimizations**:
+  - **Trade Page Results Grid**: Rebuilt the "Results" metrics section on the *Trade* page to utilize a strict 6-column grid structure, resulting in perfectly left-aligned indicators that no longer awkwardly spread out across widescreen displays.
+  - **Consolidated Stock Metrics**: Streamlined the layout by moving "Commissions" into the "Stock" metrics subsection and entirely removed the generic "Others" subsection.
+  - **Closed Trades Review Metrics**: 
+    - Re-ordered the "Key Metrics" grid to visually spell out the mathematical formula: `Premium Collected` $\rightarrow$ `Premium Paid` $\rightarrow$ `Total Commission` $\rightarrow$ `Net PnL`.
+    - Hardcoded explicit red color coding for `Premium Paid` and `Total Commission` to visually reinforce that they are subtractions/expenses.
+    - Adjusted the `Total Trades` tile to span the full height (`152px`) of the dual-row metrics grid with a massive, centered `3.5rem` font, anchoring the left side of the dashboard beautifully.
+  - **Closed Trades Missing Data Catch**: Added an `N/A (Missing Data)` bucket to the "Expected Direction Analysis" tally, formatted in a neutral slate gray, ensuring legacy or improperly saved trades do not silently disappear from the review tally.
+  - **Data Table Formatting**: Injected aggressive negative-margin CSS (`<hr style='margin-top: -45px; margin-bottom: -20px;'>`) between the "View Trades by Tier" table headers and the underlying data row iterations to bypass Streamlit's rigid container paddings, pulling the headers snugly against the data.
+
 **Session Date: 2026-07-07**
 - **Discounted Cash Flow (DCF) Evaluation & Scenario Analyzer**:
   - **10-Year Multi-Scenario DCF Engine**: Created a high-fidelity Unlevered Free Cash Flow to the Firm (FCFF) valuation model supporting 5 customizable growth rate trajectory configurations ("Continuous Decay from Year 2", "Keep Stable (Entire 10 Years)", "Delayed (Decay starts in Year 6)", "Add X% each year", and "Remove X% each year") to represent mature, decaying, or growing corporate lifecycles.
