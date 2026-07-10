@@ -26,7 +26,7 @@ def calculate_payoff_array(legs, spot_prices):
         total_payoff += payoff * multiplier * leg['qty'] * 100
     return total_payoff
 
-def generate_payoff_chart(legs, current_price, ticker="", open_price=None, current_price_label="Current Price"):
+def generate_payoff_chart(legs, current_price, ticker="", open_price=None, current_price_label="Current Price", trade_date=None, show_current_em=True, show_open_em=True):
     if not legs:
         return go.Figure()
         
@@ -71,9 +71,30 @@ def generate_payoff_chart(legs, current_price, ticker="", open_price=None, curre
     em_lower = current_price - expected_move
     em_upper = current_price + expected_move
 
+    em_open_lower = None
+    em_open_upper = None
+    expected_move_open = None
+
+    if trade_date and open_price:
+        try:
+            days_to_expiry_open = (pd.to_datetime(legs[0]['expiry']).date() - pd.to_datetime(trade_date).date()).days
+            if days_to_expiry_open <= 0: days_to_expiry_open = 1
+        except:
+            days_to_expiry_open = 30
+            
+        t_open = days_to_expiry_open / 365.0
+        expected_move_open = open_price * iv * np.sqrt(t_open)
+        em_open_lower = open_price - expected_move_open
+        em_open_upper = open_price + expected_move_open
+        
+        if show_open_em:
+            lower_bound = min(lower_bound, em_open_lower * 0.95)
+            upper_bound = max(upper_bound, em_open_upper * 1.05)
+
     # Ensure boundaries cover both current price and +/- 1 SD expected move
-    lower_bound = min(lower_bound, current_price * 0.95, em_lower * 0.95)
-    upper_bound = max(upper_bound, current_price * 1.05, em_upper * 1.05)
+    if show_current_em:
+        lower_bound = min(lower_bound, current_price * 0.95, em_lower * 0.95)
+        upper_bound = max(upper_bound, current_price * 1.05, em_upper * 1.05)
         
     spot_prices = np.linspace(lower_bound, upper_bound, 1000)
     
@@ -82,25 +103,49 @@ def generate_payoff_chart(legs, current_price, ticker="", open_price=None, curre
     fig = go.Figure()
 
     # Add Expected Move range with a premium semi-transparent blue
-    fig.add_vrect(
-        x0=em_lower, x1=em_upper,
-        fillcolor="rgba(59, 130, 246, 0.05)", opacity=1.0,
-        layer="below", line_width=1, line_dash="dash", line_color="rgba(59, 130, 246, 0.35)"
-    )
-    
-    # Beautiful non-overlapping box for the Expected Move metric
-    fig.add_annotation(
-        xref="paper", yref="paper",
-        x=0.02, y=0.98,
-        text=f"<b>Expected Move (±1 SD):</b> ±${expected_move:.2f} [${em_lower:.2f}, ${em_upper:.2f}]",
-        showarrow=False,
-        font=dict(size=12, color="#3b82f6", weight="bold"), # Bigger, bolder font
-        align="left",
-        bgcolor="rgba(15, 23, 42, 0.95)", # Darker, highly opaque slate background
-        bordercolor="rgba(59, 130, 246, 0.8)", # Stronger border opacity
-        borderwidth=1.5,
-        borderpad=6
-    )
+    if show_current_em:
+        fig.add_vrect(
+            x0=em_lower, x1=em_upper,
+            fillcolor="rgba(59, 130, 246, 0.05)", opacity=1.0,
+            layer="below", line_width=1, line_dash="dash", line_color="rgba(59, 130, 246, 0.35)"
+        )
+        
+        # Beautiful non-overlapping box for the Expected Move metric
+        fig.add_annotation(
+            xref="paper", yref="paper",
+            x=0.02, y=0.98,
+            text=f"<b>Expected Move (±1 SD):</b> ±${expected_move:.2f} [${em_lower:.2f}, ${em_upper:.2f}]",
+            showarrow=False,
+            font=dict(size=12, color="#3b82f6", weight="bold"), # Bigger, bolder font
+            align="left",
+            bgcolor="rgba(15, 23, 42, 0.95)", # Darker, highly opaque slate background
+            bordercolor="rgba(59, 130, 246, 0.8)", # Stronger border opacity
+            borderwidth=1.5,
+            borderpad=6
+        )
+
+    if show_open_em and em_open_lower is not None and em_open_upper is not None:
+        fig.add_vrect(
+            x0=em_open_lower, x1=em_open_upper,
+            fillcolor="rgba(139, 92, 246, 0.05)", opacity=1.0,
+            layer="below", line_width=1, line_dash="dash", line_color="rgba(139, 92, 246, 0.35)"
+        )
+        
+        # Adjust y position based on whether the current EM is also displayed to prevent overlap
+        y_pos = 0.88 if show_current_em else 0.98
+        
+        fig.add_annotation(
+            xref="paper", yref="paper",
+            x=0.02, y=y_pos,
+            text=f"<b>Expected Move at Open (±1 SD):</b> ±${expected_move_open:.2f} [${em_open_lower:.2f}, ${em_open_upper:.2f}]",
+            showarrow=False,
+            font=dict(size=12, color="#8b5cf6", weight="bold"),
+            align="left",
+            bgcolor="rgba(15, 23, 42, 0.95)",
+            bordercolor="rgba(139, 92, 246, 0.8)",
+            borderwidth=1.5,
+            borderpad=6
+        )
     
     # Add fill above and below 0
     fig.add_trace(go.Scatter(

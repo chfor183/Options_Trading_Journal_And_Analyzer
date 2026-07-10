@@ -83,12 +83,17 @@ with col2:
         st.markdown("<div class='link-item'><a href='https://truflation.com/indexes' target='_blank' style='text-decoration: none;'>🔗 Truflation</a></div>", unsafe_allow_html=True)
         st.markdown("<div class='link-item'><a href='https://www.currentmarketvaluation.com/' target='_blank' style='text-decoration: none;'>🔗 Current Market Valuation</a></div>", unsafe_allow_html=True)
 
+    with st.container(border=True):
+        st.markdown('<div class="compact-header">💰 Earnings</div>', unsafe_allow_html=True)
+        st.markdown("<div class='link-item'><a href='https://earningshub.com/earnings-calendar/this-week' target='_blank' style='text-decoration: none;'>🔗 Earnings Hub</a></div>", unsafe_allow_html=True)
+
 with col3:
     with st.container(border=True):
         st.markdown('<div class="compact-header">📰 News</div>', unsafe_allow_html=True)
-        st.markdown("<div class='link-item'><a href='https://ground.news/' target='_blank' style='text-decoration: none;'>🔗 Ground News</a></div>", unsafe_allow_html=True)
-        st.markdown("<div class='link-item'><a href='https://www.nbcnews.com/' target='_blank' style='text-decoration: none;'>🔗 NBC News</a></div>", unsafe_allow_html=True)
         st.markdown("<div class='link-item'><a href='https://www.cnbc.com/' target='_blank' style='text-decoration: none;'>🔗 CNBC</a></div>", unsafe_allow_html=True)
+        st.markdown("<div class='link-item'><a href='https://www.nbcnews.com/' target='_blank' style='text-decoration: none;'>🔗 NBC News</a></div>", unsafe_allow_html=True)
+        st.markdown("<div class='link-item'><a href='https://ground.news/' target='_blank' style='text-decoration: none;'>🔗 Ground News</a></div>", unsafe_allow_html=True)
+
 
     with st.container(border=True):
         st.markdown('<div class="compact-header">🎥 YouTube</div>', unsafe_allow_html=True)
@@ -103,7 +108,3 @@ with col3:
         st.markdown("<div class='link-item'><a href='https://www.youtube.com/@LearntoInvest' target='_blank' style='text-decoration: none;'>🔗 Learn to Invest</a></div>", unsafe_allow_html=True)
         st.markdown("<div class='link-item'><a href='https://www.youtube.com/@inthemoneypod' target='_blank' style='text-decoration: none;'>🔗 In The Money</a></div>", unsafe_allow_html=True)
 
-
-    with st.container(border=True):
-        st.markdown('<div class="compact-header">💰 Earnings</div>', unsafe_allow_html=True)
-        st.markdown("<div class='link-item'><a href='https://earningshub.com/earnings-calendar/this-week' target='_blank' style='text-decoration: none;'>🔗 Earnings Hub</a></div>", unsafe_allow_html=True)

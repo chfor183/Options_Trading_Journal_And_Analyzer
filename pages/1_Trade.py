@@ -416,7 +416,11 @@ if ticker and current_price > 0:
         if trade_to_edit.status != "Open" and getattr(trade_to_edit, 'underlying_price_at_close', None):
             price_label = "Close price"
 
-    fig = generate_payoff_chart(legs_data, current_price, ticker, open_price=open_price, current_price_label=price_label)
+    col_toggles = st.columns([1, 1, 2])
+    show_current_em = col_toggles[0].toggle("Show Current Expected Move", value=True)
+    show_open_em = col_toggles[1].toggle("Show Expected Move at Open", value=False) if trade_to_edit else False
+
+    fig = generate_payoff_chart(legs_data, current_price, ticker, open_price=open_price, current_price_label=price_label, trade_date=date_opened, show_current_em=show_current_em, show_open_em=show_open_em)
     st.plotly_chart(fig, width='stretch')
     
     metrics = calculate_metrics(legs_data, current_price)
@@ -439,15 +443,17 @@ if ticker and current_price > 0:
     st.header("Results")
     
     st.subheader("Stock")
-    scol1, scol2 = st.columns(2)
+    scol1, scol2, scol3, _ = st.columns([1, 1, 1, 3])
     scol1.metric("Stock current price", f"${current_price:.2f}", help="The current market price of the underlying asset.")
     
     bes = metrics.get('breakevens', [])
     be_str = ", ".join([f"&#36;{b:.2f}" for b in bes]) if bes else "N/A"
     scol2.metric("Breakeven price", be_str, help="The price(s) at which the strategy neither makes nor loses money at expiration.")
     
+    scol3.metric("Commissions", f"${commissions:.2f}", help="Calculated as $0.65 per contract.")
+    
     st.subheader("Trade Details")
-    tcol1, tcol2, tcol3, tcol4, tcol5 = st.columns(5)
+    tcol1, tcol2, tcol3, tcol4, tcol5, _ = st.columns([1, 1, 1, 1, 1, 1])
     # Cost of Trade logic: net_cost is negative for debit (paid) and positive for credit (received).
     tcol1.metric("Cost of trade", f"${-net_cost:.2f}", help="Total cost of the transaction. Positive if premium is received, negative if premium is paid.")
     tcol2.metric("Collateral amount", collateral, help="Calculated as Maximum Loss * 1.6")
@@ -469,14 +475,14 @@ if ticker and current_price > 0:
     tcol5.metric("ROI", roi_str, help="Calculated as Abs(Max profit / Max loss).")
     
     st.subheader("Probability analysis")
-    pcol1, pcol2, pcol3, pcol4 = st.columns(4)
+    pcol1, pcol2, pcol3, pcol4, _ = st.columns([1, 1, 1, 1, 2])
     pcol1.metric("Probability of profit", f"{metrics.get('pop', 0)*100:.1f}%", help="The theoretical probability of making at least $0.01 on this trade at expiration.")
     pcol2.metric("Probability of loss", f"{metrics.get('pol', 0)*100:.1f}%", help="The theoretical probability of losing money on this trade at expiration.")
     pcol3.metric("Probability of max profit", f"{metrics.get('pop_max_profit', 0)*100:.1f}%", help="The theoretical probability of achieving the maximum profit at expiration.")
     pcol4.metric("Probability of max loss", f"{metrics.get('pop_max_loss', 0)*100:.1f}%", help="The theoretical probability of hitting the maximum loss at expiration.")
     
     st.subheader("Risk reward analysis")
-    rcol1, rcol2, rcol3 = st.columns(3)
+    rcol1, rcol2, rcol3, _ = st.columns([1, 1, 1, 3])
     ev = metrics.get('ev', 0)
     rcol1.metric("Expected value (EV)", f"${ev:.2f}", help="The mathematically expected profit or loss per trade if executed many times.")
     
@@ -486,10 +492,6 @@ if ticker and current_price > 0:
     rr = metrics.get('rr', 0)
     rr_str = f"{rr:.2f}" if rr != float('inf') else "Infinite"
     rcol3.metric("Risk to reward ratio", rr_str, help="Ratio of Maximum Loss to Maximum Profit.")
-    
-    st.subheader("Others")
-    ocol1 = st.columns(1)[0]
-    ocol1.metric("Commissions", f"${commissions:.2f}", help="Calculated as $0.65 per contract.")
     
     st.divider()
     

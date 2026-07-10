@@ -178,11 +178,12 @@ elif all_trades:
         
         st.subheader("Key Metrics")
         
-        def styled_metric(label, value, color="inherit"):
+        def styled_metric(label, value, color="inherit", height="auto", val_size="1.6rem", center=False):
+            align_style = "align-items: center; text-align: center;" if center else ""
             st.markdown(f"""
-                <div style="padding: 0.75rem; border-radius: 0.5rem; background-color: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); margin-bottom: 0.5rem;">
+                <div style="height: {height}; display: flex; flex-direction: column; justify-content: center; {align_style} padding: 0.75rem; border-radius: 0.5rem; background-color: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); margin-bottom: 0.5rem;">
                     <div style="font-size: 0.85rem; color: #aaa; margin-bottom: 0.2rem;">{label}</div>
-                    <div style="font-size: 1.6rem; font-weight: 600; color: {color}; line-height: 1.2;">{value}</div>
+                    <div style="font-size: {val_size}; font-weight: 600; color: {color}; line-height: 1.2;">{value}</div>
                 </div>
             """, unsafe_allow_html=True)
             
@@ -192,29 +193,31 @@ elif all_trades:
         def get_batting_color(val):
             return "#ff4b4b" if val <= 50 else "#faca2b" if val <= 75 else "#21c354"
         
-        m1, m2, m3, m4, m5 = st.columns(5)
-        with m1:
-            styled_metric("Total Trades", total_trades)
-        with m2:
-            styled_metric("Batting Avg", f"{batting_avg:.1f}%", get_batting_color(batting_avg))
-        with m3:
-            styled_metric("Wins / Losses", f"{wins} / {losses}")
-        with m4:
-            styled_metric("Average Win", f"${avg_win:.2f}", get_currency_color(avg_win))
-        with m5:
-            styled_metric("Average Loss", f"${avg_loss:.2f}", get_currency_color(avg_loss))
-        
-        m6, m7, m8, m9, m10 = st.columns(5)
-        with m6:
-            st.empty() # First column is now empty to center the row visually
-        with m7:
-            styled_metric("Total Commission", f"${total_comm:.2f}", get_currency_color(total_comm))
-        with m8:
-            styled_metric("Premium Collected", f"${total_prem_col:.2f}", get_currency_color(total_prem_col))
-        with m9:
-            styled_metric("Premium Paid", f"${total_prem_paid:.2f}", get_currency_color(total_prem_paid))
-        with m10:
-            styled_metric("Net PnL", f"${total_pnl:.2f}", get_currency_color(total_pnl))
+        col_left, col_right = st.columns([1, 4])
+        with col_left:
+            # Increased height slightly to perfectly match two rows of Streamlit columns + gaps
+            styled_metric("Total Trades", total_trades, height="172px", val_size="5rem", center=True)
+            
+        with col_right:
+            r1c1, r1c2, r1c3, r1c4 = st.columns(4)
+            with r1c1:
+                styled_metric("Batting Avg", f"{batting_avg:.1f}%", get_batting_color(batting_avg))
+            with r1c2:
+                styled_metric("Wins / Losses", f"{wins} / {losses}")
+            with r1c3:
+                styled_metric("Average Win", f"${avg_win:.2f}", get_currency_color(avg_win))
+            with r1c4:
+                styled_metric("Average Loss", f"${avg_loss:.2f}", get_currency_color(avg_loss))
+            
+            r2c1, r2c2, r2c3, r2c4 = st.columns(4)
+            with r2c1:
+                styled_metric("Premium Collected", f"${total_prem_col:.2f}", get_currency_color(total_prem_col))
+            with r2c2:
+                styled_metric("Premium Paid", f"${total_prem_paid:.2f}", "#ff4b4b")
+            with r2c3:
+                styled_metric("Total Commission", f"${total_comm:.2f}", "#ff4b4b")
+            with r2c4:
+                styled_metric("Net PnL", f"${total_pnl:.2f}", get_currency_color(total_pnl))
         
         st.divider()
         
@@ -444,10 +447,10 @@ elif all_trades:
                 direction_stats[tier]["trades"].append(t_dict)
                 
         # Display Stats
-        stat_cols = st.columns(4)
-        colors = {"Very Right": "#21c354", "Right": "#6ee7b7", "Wrong": "#fca5a5", "Very Wrong": "#ff4b4b"}
+        stat_cols = st.columns(5)
+        colors = {"Very Right": "#21c354", "Right": "#6ee7b7", "Wrong": "#fca5a5", "Very Wrong": "#ff4b4b", "N/A (Missing Data)": "#a1a1aa"}
         
-        stat_keys = ["Very Right", "Right", "Wrong", "Very Wrong"]
+        stat_keys = ["Very Right", "Right", "Wrong", "Very Wrong", "N/A (Missing Data)"]
         for idx, key in enumerate(stat_keys):
             with stat_cols[idx]:
                 st.markdown(f"""
@@ -488,17 +491,19 @@ elif all_trades:
             st.info(f"No trades in the '{selected_tier}' tier.")
         else:
             header_cols = st.columns([1, 2, 1.5, 2, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5])
-            header_cols[0].markdown("**#**")
-            header_cols[1].markdown("**Date Opened**")
-            header_cols[2].markdown("**Ticker**")
-            header_cols[3].markdown("**Expected Direction**")
-            header_cols[4].markdown("**Open $**")
-            header_cols[5].markdown("**Close $**")
-            header_cols[6].markdown("**% Change**")
-            header_cols[7].markdown("**Final PnL**")
-            header_cols[8].markdown("**Status**")
-            header_cols[9].markdown("**Action**")
-            st.markdown("<hr style='margin:0.5rem 0'>", unsafe_allow_html=True)
+            header_cols[0].markdown("<span style='font-weight: bold; font-size: 14px;'>#</span>", unsafe_allow_html=True)
+            header_cols[1].markdown("<span style='font-weight: bold; font-size: 14px;'>Date Opened</span>", unsafe_allow_html=True)
+            header_cols[2].markdown("<span style='font-weight: bold; font-size: 14px;'>Ticker</span>", unsafe_allow_html=True)
+            header_cols[3].markdown("<span style='font-weight: bold; font-size: 14px;'>Expected Direction</span>", unsafe_allow_html=True)
+            header_cols[4].markdown("<span style='font-weight: bold; font-size: 14px;'>Open $</span>", unsafe_allow_html=True)
+            header_cols[5].markdown("<span style='font-weight: bold; font-size: 14px;'>Close $</span>", unsafe_allow_html=True)
+            header_cols[6].markdown("<span style='font-weight: bold; font-size: 14px;'>% Change</span>", unsafe_allow_html=True)
+            header_cols[7].markdown("<span style='font-weight: bold; font-size: 14px;'>Final PnL</span>", unsafe_allow_html=True)
+            header_cols[8].markdown("<span style='font-weight: bold; font-size: 14px;'>Status</span>", unsafe_allow_html=True)
+            header_cols[9].markdown("<span style='font-weight: bold; font-size: 14px;'>Action</span>", unsafe_allow_html=True)
+            
+            # Use an aggressive negative margin to collapse Streamlit's default vertical gaps
+            st.markdown("<div style='margin-top: -45px; margin-bottom: -20px;'><hr></div>", unsafe_allow_html=True)
 
             for t_dict in trades_to_show:
                 t = t_dict["Trade"]
