@@ -260,9 +260,14 @@ else:
 open_price = float(trade.underlying_price_at_open) if trade.underlying_price_at_open else None
 
 if trade.legs and chart_price > 0:
-    col_toggles = st.columns([1, 1, 2])
-    show_current_em = col_toggles[0].toggle("Show Current Expected Move", value=True)
-    show_open_em = col_toggles[1].toggle("Show Expected Move at Open", value=False)
+    if is_open:
+        col_toggles = st.columns([1, 1, 2])
+        show_current_em = col_toggles[0].toggle("Show Current Expected Move", value=True)
+        show_open_em = col_toggles[1].toggle("Show Expected Move at Open", value=False)
+    else:
+        col_toggles = st.columns([1, 3])
+        show_current_em = False
+        show_open_em = col_toggles[0].toggle("Show Expected Move at Open", value=True)
 
     fig = generate_payoff_chart(legs_for_chart, chart_price, trade.ticker, open_price=open_price, current_price_label=price_label, trade_date=trade.date_opened, show_current_em=show_current_em, show_open_em=show_open_em)
     st.plotly_chart(fig, width='stretch')

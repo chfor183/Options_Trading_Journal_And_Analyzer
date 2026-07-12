@@ -287,6 +287,17 @@ const observer = new MutationObserver(() => {
         // Style Save/Update Trade buttons
         if (['Save Trade', 'Update Trade'].includes(b.innerText)) {
             b.classList.add('fixed-save-button');
+            if (!b.dataset.clickDisabled) {
+                b.dataset.clickDisabled = "true";
+                b.addEventListener('click', () => {
+                    b.style.pointerEvents = 'none';
+                    b.style.opacity = '0.7';
+                    setTimeout(() => {
+                        b.style.pointerEvents = 'auto';
+                        b.style.opacity = '1';
+                    }, 3000);
+                });
+            }
         }
     });
 });
@@ -411,14 +422,20 @@ st.divider()
 if ticker and current_price > 0:
     open_price = None
     price_label = "Current Price"
+    is_closed = trade_to_edit and trade_to_edit.status != "Open"
     if trade_to_edit:
         open_price = float(trade_to_edit.underlying_price_at_open) if trade_to_edit.underlying_price_at_open else None
-        if trade_to_edit.status != "Open" and getattr(trade_to_edit, 'underlying_price_at_close', None):
+        if is_closed and getattr(trade_to_edit, 'underlying_price_at_close', None):
             price_label = "Close price"
 
-    col_toggles = st.columns([1, 1, 2])
-    show_current_em = col_toggles[0].toggle("Show Current Expected Move", value=True)
-    show_open_em = col_toggles[1].toggle("Show Expected Move at Open", value=False) if trade_to_edit else False
+    if is_closed:
+        col_toggles = st.columns([1, 3])
+        show_current_em = False
+        show_open_em = col_toggles[0].toggle("Show Expected Move at Open", value=True)
+    else:
+        col_toggles = st.columns([1, 1, 2])
+        show_current_em = col_toggles[0].toggle("Show Current Expected Move", value=True)
+        show_open_em = col_toggles[1].toggle("Show Expected Move at Open", value=False) if trade_to_edit else False
 
     fig = generate_payoff_chart(legs_data, current_price, ticker, open_price=open_price, current_price_label=price_label, trade_date=date_opened, show_current_em=show_current_em, show_open_em=show_open_em)
     st.plotly_chart(fig, width='stretch')
@@ -528,7 +545,7 @@ if ticker and current_price > 0:
                 
             target_trade_id = trade_to_edit.id
             db.commit()
-            st.success("Trade updated successfully!")
+            st.toast("Trade updated successfully!", icon="✅")
             st.session_state[f"loaded_{trade_to_edit.id}"] = False
             st.session_state.edit_trade_id = None
         else:
@@ -576,7 +593,7 @@ if ticker and current_price > 0:
             )
             db.add(new_transaction)
             db.commit()
-            st.success("Trade saved successfully!")
+            st.toast("Trade saved successfully!", icon="✅")
             
         for leg in legs_data:
             new_leg = Leg(
@@ -593,6 +610,5 @@ if ticker and current_price > 0:
             db.add(new_leg)
             
         db.commit()
-        st.switch_page("pages/2_Journal.py")
 
 db.close()

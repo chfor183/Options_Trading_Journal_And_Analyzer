@@ -174,8 +174,6 @@ elif all_trades:
             
         period_return = 0.0
         ytd_return = 0.0
-        trend = "N/A"
-        trend_color = "inherit"
         if not sp500_df.empty:
             latest_close = sp500_df['Close'].iloc[-1]
             if date_filter == "All":
@@ -198,25 +196,6 @@ elif all_trades:
                 start_close_ytd = sp500_df.loc[mask_ytd, 'Close'].iloc[0]
                 ytd_return = ((latest_close - start_close_ytd) / start_close_ytd) * 100
                 
-            sp500_df['SMA_50'] = sp500_df['Close'].rolling(window=50).mean()
-            sp500_df['SMA_200'] = sp500_df['Close'].rolling(window=200).mean()
-            
-            sma_50 = sp500_df['SMA_50'].iloc[-1]
-            sma_200 = sp500_df['SMA_200'].iloc[-1]
-            
-            if latest_close > sma_50 and sma_50 > sma_200:
-                trend = "Bullish"
-                trend_color = "#21c354"
-            elif latest_close < sma_50 and sma_50 < sma_200:
-                trend = "Bearish"
-                trend_color = "#ff4b4b"
-            elif latest_close > sma_200:
-                trend = "Neutral-Bullish"
-                trend_color = "#6ee7b7"
-            else:
-                trend = "Neutral-Bearish"
-                trend_color = "#fca5a5"
-
         # Calculate Aggregates
         total_trades = len(filtered_data)
         wins = sum(1 for d in filtered_data if d["Is Winner"])
@@ -291,7 +270,8 @@ elif all_trades:
             with r3c3:
                 styled_metric(f"S&P 500 Return ({date_filter})", f"{period_return:+.2f}%", get_currency_color(period_return))
             with r3c4:
-                styled_metric("Current Trend (SMA 50/200)", trend, trend_color)
+                alpha = net_pnl_pct - period_return
+                styled_metric("Alpha (vs S&P 500)", f"{alpha:+.2f}%", get_currency_color(alpha), help_text="Difference between Net PnL (%) and S&P 500 Return")
         
         st.divider()
         
@@ -606,7 +586,141 @@ elif all_trades:
                 st.markdown("<hr style='margin:0.25rem 0; opacity: 0.3'>", unsafe_allow_html=True)
 
         st.divider()
-        st.subheader("S&P 500 Performance & Trend")
+        st.subheader("Periodic Performance")
+        
+        df_perf = pd.DataFrame(equity_data)
+        if not df_perf.empty:
+            df_perf["Reference Date"] = pd.to_datetime(df_perf["Reference Date"])
+            df_perf["Year"] = df_perf["Reference Date"].dt.year
+            df_perf["Month_period"] = df_perf["Reference Date"].dt.to_period("M")
+            
+            def get_sp500_return(start_date, end_date):
+                if sp500_df.empty: return 0.0
+                mask = (sp500_df.index.date >= start_date) & (sp500_df.index.date <= end_date)
+                if mask.any():
+                    start_close = sp500_df.loc[mask, 'Close'].iloc[0]
+                    end_close = sp500_df.loc[mask, 'Close'].iloc[-1]
+                    if start_close > 0:
+                        return ((end_close - start_close) / start_close) * 100
+                return 0.0
+
+            combined_data = []
+            today = datetime.today()
+            first_trade_month = df_perf["Reference Date"].min().replace(day=1)
+            month_range = pd.date_range(start=first_trade_month, end=today, freq='MS')
+            
+            for year, year_group in df_perf.groupby("Year"):
+                prem_col = year_group["Premium Collected"].sum()
+                prem_paid = year_group["Premium Paid"].sum()
+                comm = year_group["Commission"].sum()
+                net_pnl = year_group["PnL"].sum()
+                cost = sum((t.collateral or 0.0) for t in year_group["Trade"])
+                if cost == 0:
+                    cost = prem_paid
+                net_pnl_pct = (net_pnl / cost * 100) if cost > 0 else 0.0
+                
+                start_date = pd.Timestamp(year=year, month=1, day=1).date()
+                end_date = pd.Timestamp(year=year, month=12, day=31).date()
+                if year == today.year:
+                    end_date = today.date()
+                
+                sp500_ret = get_sp500_return(start_date, end_date)
+                alpha = net_pnl_pct - sp500_ret
+                
+                combined_data.append({
+                    "Period": str(year),
+                    "Premium Collected": prem_col,
+                    "Premium Paid": prem_paid,
+                    "Total Commission": comm,
+                    "Net Portfolio Cost": cost,
+                    "Net PnL": net_pnl,
+                    "Net PnL (%)": net_pnl_pct,
+                    "S&P 500 Return": sp500_ret,
+                    "Alpha (vs S&P 500)": alpha
+                })
+                
+                year_months = [dt for dt in month_range if dt.year == year]
+                for dt in year_months:
+                    period = pd.Period(dt, freq='M')
+                    group = df_perf[df_perf["Month_period"] == period]
+                    
+                    prem_col = group["Premium Collected"].sum() if not group.empty else 0.0
+                    prem_paid = group["Premium Paid"].sum() if not group.empty else 0.0
+                    comm = group["Commission"].sum() if not group.empty else 0.0
+                    net_pnl = group["PnL"].sum() if not group.empty else 0.0
+                    cost = sum((t.collateral or 0.0) for t in group["Trade"]) if not group.empty else 0.0
+                    if cost == 0:
+                        cost = prem_paid
+                    net_pnl_pct = (net_pnl / cost * 100) if cost > 0 else 0.0
+                    
+                    start_date = dt.date()
+                    end_date = (dt + pd.DateOffset(months=1) - pd.DateOffset(days=1)).date()
+                    if period.year == today.year and period.month == today.month:
+                        end_date = today.date()
+                        
+                    sp500_ret = get_sp500_return(start_date, end_date)
+                    alpha = net_pnl_pct - sp500_ret
+                    
+                    combined_data.append({
+                        "Period": dt.strftime("└ %b"),
+                        "Premium Collected": prem_col,
+                        "Premium Paid": prem_paid,
+                        "Total Commission": comm,
+                        "Net Portfolio Cost": cost,
+                        "Net PnL": net_pnl,
+                        "Net PnL (%)": net_pnl_pct,
+                        "S&P 500 Return": sp500_ret,
+                        "Alpha (vs S&P 500)": alpha
+                    })
+
+            def style_perf_dataframe(df):
+                def style_currency_perf(val):
+                    try:
+                        v = float(str(val).replace('$', '').replace(',', ''))
+                        if v > 0: return "color: #21c354; font-weight: bold;"
+                        elif v < 0: return "color: #ff4b4b; font-weight: bold;"
+                        return ""
+                    except: return ""
+
+                def style_pct_perf(val):
+                    try:
+                        v = float(str(val).replace('%', '').replace('+', ''))
+                        if v > 0: return "color: #21c354; font-weight: bold;"
+                        elif v < 0: return "color: #ff4b4b; font-weight: bold;"
+                        return ""
+                    except: return ""
+                    
+                def style_period(val):
+                    if not str(val).startswith("└"):
+                        return "font-weight: bold;"
+                    return ""
+                    
+                format_dict = {
+                    "Premium Collected": "${:,.2f}",
+                    "Premium Paid": "${:,.2f}",
+                    "Total Commission": "${:,.2f}",
+                    "Net Portfolio Cost": "${:,.2f}",
+                    "Net PnL": "${:,.2f}",
+                    "Net PnL (%)": "{:+.2f}%",
+                    "S&P 500 Return": "{:+.2f}%",
+                    "Alpha (vs S&P 500)": "{:+.2f}%"
+                }
+                
+                styled = df.style.format(format_dict)
+                
+                try:
+                    styled = styled.map(style_currency_perf, subset=["Net PnL"]).map(style_pct_perf, subset=["Net PnL (%)", "S&P 500 Return", "Alpha (vs S&P 500)"]).map(style_period, subset=["Period"])
+                except AttributeError:
+                    styled = styled.applymap(style_currency_perf, subset=["Net PnL"]).applymap(style_pct_perf, subset=["Net PnL (%)", "S&P 500 Return", "Alpha (vs S&P 500)"]).applymap(style_period, subset=["Period"])
+                    
+                return styled
+
+            st.dataframe(style_perf_dataframe(pd.DataFrame(combined_data)), width='stretch', hide_index=True)
+        else:
+            st.info("No data available for periodic performance.")
+
+        st.divider()
+        st.subheader("S&P 500 Performance")
             
         if not sp500_df.empty:
             latest_close = sp500_df['Close'].iloc[-1]
