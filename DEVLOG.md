@@ -1,5 +1,16 @@
 ## Recent Updates
 
+**Session Date: 2026-07-12**
+- **Dashboard Market Context (S&P 500)**:
+  - **S&P 500 Return Filter Integration**: Upgraded the *Closed Trades Review* page to fetch and calculate the S&P 500 (`^GSPC`) total percentage return matching the exact start date from the page's "Date Interval" filter. This allows users to accurately compare their portfolio's net filtered return against the broader market's exact performance over the exact same time span.
+  - **New Key Metrics Row**: Redesigned the "Key Metrics" section to include a third row of high-level statistics:
+    - `Net Portfolio Cost` (summing collateral or premium paid)
+    - `Net PnL (%)` (calculated dynamically against the portfolio cost)
+    - The filter-matched `S&P 500 Return` tile
+    - A `Current Trend (SMA 50/200)` momentum text indicator tile calculating standard moving average crossovers (Bullish/Bearish).
+  - **Tooltip Explanations**: Injected interactive native HTML `?` tooltip bubbles next to complex metric titles in the Key Metrics grid. Hovering reveals calculation definitions for Net PnL, Net Portfolio Cost, and Net PnL (%).
+  - **Historical & 12-Month Market Charts**: Deployed two side-by-side Plotly bar charts detailing S&P 500 historical average monthly returns (Since 1980) and a trailing Last 12 Months absolute return chart, both using fixed `categoryarray` chronological sorting to prevent Plotly's default alphabetical x-axis overrides.
+
 **Session Date: 2026-07-09**
 - **Payoff Chart Visualizer Upgrades**:
   - **Expected Move Dual Display**: Updated `options_math.py` to calculate and simultaneously plot both the **Current Expected Move** (relative to the live ticker price) and the **Expected Move at Open** (relative to the historical open price) on the payoff chart. 

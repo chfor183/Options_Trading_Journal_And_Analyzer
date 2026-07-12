@@ -19,7 +19,7 @@ A local, Python-based web application built with Streamlit to track, journal, an
 - **Real-Time Market Data**: Integrates with `yfinance` and `Barchart` to fetch live underlying prices, ticker metadata, and real-time options chain data.
 - **Trading Journal & Ledger**: Local PostgreSQL database integration tracking open/closed trades with custom pagination, sorting, dynamic filters (status, debit/credit, ticker), and bulk management. Includes a mechanism to seamlessly reopen closed trades.
 - **Probabilities & Quantitative Analyzer**: Dedicated dashboard calculating exact consecutive drawdown streak probabilities using recurrence relations. Includes comprehensive educational math guides on Geometric Brownian Motion (GBM), Log-normal Distributions, Probability of Profit (PoP), and Expected Value (EV).
-- **Dashboard & Analytics**: Track performance metrics such as Win Rate, Profit Factor, cumulative Net P&L equity curves, and grouped statistics by strategy, category, and DTE cohorts.
+- **Dashboard & Analytics**: Track performance metrics such as Win Rate, Profit Factor, cumulative Net P&L equity curves, and grouped statistics by strategy, category, and DTE cohorts. Includes an integrated S&P 500 market context comparison (matching timeframe returns, moving average momentum trends, and historical monthly seasonality charts).
 - **Pre-Trade Checklist & Education**: Interactive framework checklists with automated progress tracking, educational guides on cognitive biases, trading psychology, and dynamic extrinsic value decay curves.
 - **PDF & CSV Export**: Export comprehensive PDF reports with tabular trade summaries, month-by-month performance tables, and raw data to CSV formats.
 

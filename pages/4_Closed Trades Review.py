@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import yfinance as yf
 from datetime import datetime, timedelta
 from src.db import SessionLocal
 from src.models import Trade, Transaction
@@ -160,6 +161,62 @@ elif all_trades:
     if not filtered_data:
         st.warning("No trades match the selected filters.")
     else:
+        @st.cache_data(ttl=86400)
+        def get_sp500_data():
+            ticker = yf.Ticker("^GSPC")
+            df = ticker.history(period="max")
+            if not df.empty:
+                df.index = df.index.tz_localize(None)
+            return df
+            
+        with st.spinner("Loading market data..."):
+            sp500_df = get_sp500_data()
+            
+        period_return = 0.0
+        ytd_return = 0.0
+        trend = "N/A"
+        trend_color = "inherit"
+        if not sp500_df.empty:
+            latest_close = sp500_df['Close'].iloc[-1]
+            if date_filter == "All":
+                if equity_data:
+                    filter_start_date = min(d["Reference Date"] for d in equity_data)
+                else:
+                    filter_start_date = sp500_df.index[0].date()
+            else:
+                filter_start_date = start_date
+                
+            start_dt = pd.to_datetime(filter_start_date)
+            mask = sp500_df.index >= start_dt
+            if mask.any():
+                start_close = sp500_df.loc[mask, 'Close'].iloc[0]
+                period_return = ((latest_close - start_close) / start_close) * 100
+                
+            ytd_start_dt = pd.to_datetime(f"{datetime.today().year}-01-01")
+            mask_ytd = sp500_df.index >= ytd_start_dt
+            if mask_ytd.any():
+                start_close_ytd = sp500_df.loc[mask_ytd, 'Close'].iloc[0]
+                ytd_return = ((latest_close - start_close_ytd) / start_close_ytd) * 100
+                
+            sp500_df['SMA_50'] = sp500_df['Close'].rolling(window=50).mean()
+            sp500_df['SMA_200'] = sp500_df['Close'].rolling(window=200).mean()
+            
+            sma_50 = sp500_df['SMA_50'].iloc[-1]
+            sma_200 = sp500_df['SMA_200'].iloc[-1]
+            
+            if latest_close > sma_50 and sma_50 > sma_200:
+                trend = "Bullish"
+                trend_color = "#21c354"
+            elif latest_close < sma_50 and sma_50 < sma_200:
+                trend = "Bearish"
+                trend_color = "#ff4b4b"
+            elif latest_close > sma_200:
+                trend = "Neutral-Bullish"
+                trend_color = "#6ee7b7"
+            else:
+                trend = "Neutral-Bearish"
+                trend_color = "#fca5a5"
+
         # Calculate Aggregates
         total_trades = len(filtered_data)
         wins = sum(1 for d in filtered_data if d["Is Winner"])
@@ -176,13 +233,20 @@ elif all_trades:
         total_prem_paid = sum(d["Premium Paid"] for d in filtered_data)
         total_pnl = sum(d["PnL"] for d in filtered_data)
         
+        total_cost = sum((d["Trade"].collateral or 0.0) for d in filtered_data)
+        if total_cost == 0:
+            total_cost = sum(d["Premium Paid"] for d in filtered_data)
+            
+        net_pnl_pct = (total_pnl / total_cost * 100) if total_cost > 0 else 0.0
+        
         st.subheader("Key Metrics")
         
-        def styled_metric(label, value, color="inherit", height="auto", val_size="1.6rem", center=False):
+        def styled_metric(label, value, color="inherit", height="auto", val_size="1.6rem", center=False, help_text=None):
             align_style = "align-items: center; text-align: center;" if center else ""
+            help_html = f'<span title="{help_text}" style="cursor: help; margin-left: 4px; display: inline-block; width: 14px; height: 14px; line-height: 14px; text-align: center; border-radius: 50%; border: 1px solid #aaa; font-size: 0.65rem; color: #aaa;">?</span>' if help_text else ""
             st.markdown(f"""
                 <div style="height: {height}; display: flex; flex-direction: column; justify-content: center; {align_style} padding: 0.75rem; border-radius: 0.5rem; background-color: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); margin-bottom: 0.5rem;">
-                    <div style="font-size: 0.85rem; color: #aaa; margin-bottom: 0.2rem;">{label}</div>
+                    <div style="font-size: 0.85rem; color: #aaa; margin-bottom: 0.2rem; display: flex; align-items: center; justify-content: {"center" if center else "flex-start"};">{label}{help_html}</div>
                     <div style="font-size: {val_size}; font-weight: 600; color: {color}; line-height: 1.2;">{value}</div>
                 </div>
             """, unsafe_allow_html=True)
@@ -196,7 +260,7 @@ elif all_trades:
         col_left, col_right = st.columns([1, 4])
         with col_left:
             # Increased height slightly to perfectly match two rows of Streamlit columns + gaps
-            styled_metric("Total Trades", total_trades, height="172px", val_size="5rem", center=True)
+            styled_metric("Total Trades", total_trades, height="260px", val_size="5rem", center=True)
             
         with col_right:
             r1c1, r1c2, r1c3, r1c4 = st.columns(4)
@@ -217,7 +281,17 @@ elif all_trades:
             with r2c3:
                 styled_metric("Total Commission", f"${total_comm:.2f}", "#ff4b4b")
             with r2c4:
-                styled_metric("Net PnL", f"${total_pnl:.2f}", get_currency_color(total_pnl))
+                styled_metric("Net PnL", f"${total_pnl:.2f}", get_currency_color(total_pnl), help_text="Total premium collected minus total premium paid and commissions.")
+                
+            r3c1, r3c2, r3c3, r3c4 = st.columns(4)
+            with r3c1:
+                styled_metric("Net Portfolio Cost", f"${total_cost:,.2f}", help_text="Sum of collateral used for the trades. If collateral is not recorded, falls back to sum of premium paid.")
+            with r3c2:
+                styled_metric("Net PnL (%)", f"{net_pnl_pct:+.2f}%", get_currency_color(net_pnl_pct), help_text="Net PnL divided by Net Portfolio Cost.")
+            with r3c3:
+                styled_metric(f"S&P 500 Return ({date_filter})", f"{period_return:+.2f}%", get_currency_color(period_return))
+            with r3c4:
+                styled_metric("Current Trend (SMA 50/200)", trend, trend_color)
         
         st.divider()
         
@@ -530,5 +604,58 @@ elif all_trades:
                     st.switch_page("pages/12_Trade_Details.py")
                 
                 st.markdown("<hr style='margin:0.25rem 0; opacity: 0.3'>", unsafe_allow_html=True)
+
+        st.divider()
+        st.subheader("S&P 500 Performance & Trend")
+            
+        if not sp500_df.empty:
+            latest_close = sp500_df['Close'].iloc[-1]
+                
+            st.markdown("#### Market Context")
+            col_m1, col_m2 = st.columns(2)
+            
+            with col_m1:
+                styled_metric("S&P 500 Return (YTD)", f"{ytd_return:+.2f}%", get_currency_color(ytd_return))
+                
+            with col_m2:
+                styled_metric("S&P 500 Current Price", f"${latest_close:,.2f}")
+                
+            sp500_df['YearMonth'] = sp500_df.index.to_period('M')
+            monthly_df = sp500_df.groupby('YearMonth')['Close'].last().to_frame()
+            monthly_df['Return'] = monthly_df['Close'].pct_change() * 100
+            monthly_df = monthly_df.dropna()
+            monthly_df.index = monthly_df.index.to_timestamp()
+            
+            hist_df = monthly_df[monthly_df.index.year >= 1980].copy()
+            hist_df['Month'] = hist_df.index.month
+            monthly_avg = hist_df.groupby('Month')['Return'].mean().reset_index()
+            month_names = {1:'Jan', 2:'Feb', 3:'Mar', 4:'Apr', 5:'May', 6:'Jun', 7:'Jul', 8:'Aug', 9:'Sep', 10:'Oct', 11:'Nov', 12:'Dec'}
+            monthly_avg['Month Name'] = monthly_avg['Month'].map(month_names)
+            monthly_avg['Color'] = monthly_avg['Return'].apply(lambda x: '#21c354' if x > 0 else '#ff4b4b')
+            
+            fig_hist = px.bar(monthly_avg, x='Month Name', y='Return', 
+                              title='Historical Avg Monthly Return (Since 1980)',
+                              labels={'Return': 'Average Return (%)', 'Month Name': ''},
+                              color='Color', color_discrete_map='identity')
+            fig_hist.update_xaxes(categoryorder='array', categoryarray=['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
+            fig_hist.update_layout(showlegend=False, margin=dict(l=20, r=20, t=40, b=20), height=300)
+            
+            last_12 = monthly_df.tail(12).copy()
+            last_12['Month Year'] = last_12.index.strftime('%b %Y')
+            last_12['Color'] = last_12['Return'].apply(lambda x: '#21c354' if x > 0 else '#ff4b4b')
+            
+            fig_12m = px.bar(last_12, x='Month Year', y='Return',
+                             title='Last 12 Months Performance',
+                             labels={'Return': 'Return (%)', 'Month Year': ''},
+                             color='Color', color_discrete_map='identity')
+            fig_12m.update_xaxes(categoryorder='array', categoryarray=last_12['Month Year'].tolist())
+            fig_12m.update_layout(showlegend=False, margin=dict(l=20, r=20, t=40, b=20), height=300)
+
+            st.write("")
+            col_c1, col_c2 = st.columns(2)
+            with col_c1:
+                st.plotly_chart(fig_hist, use_container_width=True)
+            with col_c2:
+                st.plotly_chart(fig_12m, use_container_width=True)
 
 db.close()
