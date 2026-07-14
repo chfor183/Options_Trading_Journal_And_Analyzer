@@ -193,6 +193,7 @@ with col1:
             "Long Put (debit)",
             "Covered Call (credit)",
             "Cash-Secured Put (credit)",
+            "Poorman's Covered Call (debit)",
             "Custom"
         ]
         def_strat = st.session_state.get("strategy_val", "Bull Put Spread (credit)" if ticker == "GLD" else "Bull Put Spread (credit)")

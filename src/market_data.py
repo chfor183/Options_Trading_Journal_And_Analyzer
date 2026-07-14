@@ -2,7 +2,7 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=900)
 def get_ticker_info(ticker_symbol: str) -> dict:
     try:
         ticker = yf.Ticker(ticker_symbol)
@@ -15,7 +15,7 @@ def get_ticker_info(ticker_symbol: str) -> dict:
     except Exception as e:
         return {"name": "", "category": "", "current_price": 0.0}
 
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=900)
 def get_options_chains(ticker_symbol: str):
     try:
         ticker = yf.Ticker(ticker_symbol)
@@ -23,7 +23,7 @@ def get_options_chains(ticker_symbol: str):
     except Exception as e:
         return []
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=900)
 def get_option_chain_for_date(ticker_symbol: str, date: str):
     try:
         ticker = yf.Ticker(ticker_symbol)
@@ -62,6 +62,7 @@ def get_live_option_leg_data(ticker_symbol: str, expiry_date: str, strike: float
     except Exception as e:
         return None
 
+@st.cache_data(ttl=900)
 def get_cad_usd_exchange_rate():
     try:
         ticker = yf.Ticker("CAD=X")
@@ -72,7 +73,7 @@ def get_cad_usd_exchange_rate():
 import requests
 import urllib.parse
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=900)
 def get_barchart_option_chain(ticker_symbol: str, expiry_date: str):
     try:
         s = requests.Session()

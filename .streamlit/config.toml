@@ -1,2 +1,5 @@
 [browser]
 gatherUsageStats = false
+[client]
+# Hides developer options including the 'C' clear cache shortcut
+toolbarMode = "viewer" 
