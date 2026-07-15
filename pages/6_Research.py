@@ -41,10 +41,10 @@ with col1:
         if ticker:
             lower_ticker = ticker.lower()
             ticker_links = [
+                ("Stockanalysis.com", f"https://stockanalysis.com/stocks/{lower_ticker}/"),
                 ("Barchart.com", f"https://www.barchart.com/stocks/quotes/{ticker}/overview"),
                 ("Marketbeat.com", f"https://www.marketbeat.com/stocks/NASDAQ/{ticker}/"),
                 ("Tipranks.com", f"https://www.tipranks.com/stocks/{lower_ticker}"),
-                ("Stockanalysis.com", f"https://stockanalysis.com/stocks/{lower_ticker}/"),
                 ("Finance.yahoo.com", f"https://finance.yahoo.com/quote/{ticker}/"),
                 ("Optioncharts.io", f"https://optioncharts.io/options/{ticker}")
             ]
@@ -97,6 +97,7 @@ with col3:
 
     with st.container(border=True):
         st.markdown('<div class="compact-header">🎥 YouTube</div>', unsafe_allow_html=True)
+        st.markdown("<div class='link-item'><a href='https://www.youtube.com/@CashFlowInsiders' target='_blank' style='text-decoration: none;'>🔗 Cash Flow Insiders</a></div>", unsafe_allow_html=True)
         st.markdown("<div class='link-item'><a href='https://www.youtube.com/@DividendTalks' target='_blank' style='text-decoration: none;'>🔗 Dividend Talks</a></div>", unsafe_allow_html=True)
         st.markdown("<div class='link-item'><a href='https://www.youtube.com/@kenfreemancfa' target='_blank' style='text-decoration: none;'>🔗 Ken Freeman CFA</a></div>", unsafe_allow_html=True)
         st.markdown("<div class='link-item'><a href='https://www.youtube.com/@InvestwithHenry' target='_blank' style='text-decoration: none;'>🔗 Invest with Henry</a></div>", unsafe_allow_html=True)
