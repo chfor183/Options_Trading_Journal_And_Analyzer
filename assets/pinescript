@@ -114,6 +114,8 @@ strike1 = get_number_value(json_input, "strike1")
 strike2 = get_number_value(json_input, "strike2")
 strike3 = get_number_value(json_input, "strike3")
 strike4 = get_number_value(json_input, "strike4")
+json_be1 = get_number_value(json_input, "breakeven1")
+json_be2 = get_number_value(json_input, "breakeven2")
 
 // Auto-scale premium if entered as total contract premium instead of per-share premium
 float premium = raw_premium
@@ -284,7 +286,7 @@ if barstate.islast and not na(open_time) and not na(expiry_time) and not na(unde
         line_strike1 := line.new(x1 = open_time, y1 = strike1, x2 = expiry_time, y2 = strike1, xloc = xloc.bar_time, color = color_strike_line, style = line.style_solid, width = 2)
         label_strike1 := label.new(x = expiry_time, y = strike1, text = leg1_lbl + ": " + str.tostring(strike1), xloc = xloc.bar_time, color = color_strike_line, textcolor = color.white, style = label.style_label_left, size = size.small)
         
-        be1 := strike1 + premium
+        be1 := not na(json_be1) ? json_be1 : (strike1 + premium)
         line_be1 := line.new(x1 = open_time, y1 = be1, x2 = expiry_time, y2 = be1, xloc = xloc.bar_time, color = color_be_line, style = line.style_dotted, width = 2)
         label_be1 := label.new(x = open_time, y = be1, text = "Breakeven: " + str.tostring(be1), xloc = xloc.bar_time, color = color_be_line, textcolor = color.black, style = label.style_label_right, size = size.small)
 
@@ -297,7 +299,7 @@ if barstate.islast and not na(open_time) and not na(expiry_time) and not na(unde
         line_strike1 := line.new(x1 = open_time, y1 = strike1, x2 = expiry_time, y2 = strike1, xloc = xloc.bar_time, color = color_strike_line, style = line.style_solid, width = 2)
         label_strike1 := label.new(x = expiry_time, y = strike1, text = leg1_lbl + ": " + str.tostring(strike1), xloc = xloc.bar_time, color = color_strike_line, textcolor = color.white, style = label.style_label_left, size = size.small)
         
-        be1 := strike1 - premium
+        be1 := not na(json_be1) ? json_be1 : (strike1 - premium)
         line_be1 := line.new(x1 = open_time, y1 = be1, x2 = expiry_time, y2 = be1, xloc = xloc.bar_time, color = color_be_line, style = line.style_dotted, width = 2)
         label_be1 := label.new(x = open_time, y = be1, text = "Breakeven: " + str.tostring(be1), xloc = xloc.bar_time, color = color_be_line, textcolor = color.black, style = label.style_label_right, size = size.small)
 
@@ -310,7 +312,7 @@ if barstate.islast and not na(open_time) and not na(expiry_time) and not na(unde
         line_strike1 := line.new(x1 = open_time, y1 = strike1, x2 = expiry_time, y2 = strike1, xloc = xloc.bar_time, color = color_strike_line, style = line.style_solid, width = 2)
         label_strike1 := label.new(x = expiry_time, y = strike1, text = leg1_lbl + ": " + str.tostring(strike1), xloc = xloc.bar_time, color = color_strike_line, textcolor = color.white, style = label.style_label_left, size = size.small)
         
-        be1 := underlying_open - premium
+        be1 := not na(json_be1) ? json_be1 : (underlying_open - premium)
         line_be1 := line.new(x1 = open_time, y1 = be1, x2 = expiry_time, y2 = be1, xloc = xloc.bar_time, color = color_be_line, style = line.style_dotted, width = 2)
         label_be1 := label.new(x = open_time, y = be1, text = "Breakeven: " + str.tostring(be1), xloc = xloc.bar_time, color = color_be_line, textcolor = color.black, style = label.style_label_right, size = size.small)
 
@@ -323,7 +325,7 @@ if barstate.islast and not na(open_time) and not na(expiry_time) and not na(unde
         line_strike1 := line.new(x1 = open_time, y1 = strike1, x2 = expiry_time, y2 = strike1, xloc = xloc.bar_time, color = color_strike_line, style = line.style_solid, width = 2)
         label_strike1 := label.new(x = expiry_time, y = strike1, text = leg1_lbl + ": " + str.tostring(strike1), xloc = xloc.bar_time, color = color_strike_line, textcolor = color.white, style = label.style_label_left, size = size.small)
         
-        be1 := strike1 - premium
+        be1 := not na(json_be1) ? json_be1 : (strike1 - premium)
         line_be1 := line.new(x1 = open_time, y1 = be1, x2 = expiry_time, y2 = be1, xloc = xloc.bar_time, color = color_be_line, style = line.style_dotted, width = 2)
         label_be1 := label.new(x = open_time, y = be1, text = "Breakeven: " + str.tostring(be1), xloc = xloc.bar_time, color = color_be_line, textcolor = color.black, style = label.style_label_right, size = size.small)
 
@@ -341,7 +343,7 @@ if barstate.islast and not na(open_time) and not na(expiry_time) and not na(unde
         line_strike2 := line.new(x1 = open_time, y1 = strike2, x2 = expiry_time, y2 = strike2, xloc = xloc.bar_time, color = color_strike_line, style = line.style_solid, width = 2)
         label_strike2 := label.new(x = expiry_time, y = strike2, text = leg2_lbl + ": " + str.tostring(strike2), xloc = xloc.bar_time, color = color_strike_line, textcolor = color.white, style = label.style_label_left, size = size.small)
         
-        be1 := strike1 + premium
+        be1 := not na(json_be1) ? json_be1 : (strike1 + premium)
         line_be1 := line.new(x1 = open_time, y1 = be1, x2 = expiry_time, y2 = be1, xloc = xloc.bar_time, color = color_be_line, style = line.style_dotted, width = 2)
         label_be1 := label.new(x = open_time, y = be1, text = "Breakeven: " + str.tostring(be1), xloc = xloc.bar_time, color = color_be_line, textcolor = color.black, style = label.style_label_right, size = size.small)
 
@@ -359,7 +361,7 @@ if barstate.islast and not na(open_time) and not na(expiry_time) and not na(unde
         line_strike2 := line.new(x1 = open_time, y1 = strike2, x2 = expiry_time, y2 = strike2, xloc = xloc.bar_time, color = color_strike_line, style = line.style_solid, width = 2)
         label_strike2 := label.new(x = expiry_time, y = strike2, text = leg2_lbl + ": " + str.tostring(strike2), xloc = xloc.bar_time, color = color_strike_line, textcolor = color.white, style = label.style_label_left, size = size.small)
         
-        be1 := strike2 - premium
+        be1 := not na(json_be1) ? json_be1 : (strike2 - premium)
         line_be1 := line.new(x1 = open_time, y1 = be1, x2 = expiry_time, y2 = be1, xloc = xloc.bar_time, color = color_be_line, style = line.style_dotted, width = 2)
         label_be1 := label.new(x = open_time, y = be1, text = "Breakeven: " + str.tostring(be1), xloc = xloc.bar_time, color = color_be_line, textcolor = color.black, style = label.style_label_right, size = size.small)
 
@@ -377,7 +379,7 @@ if barstate.islast and not na(open_time) and not na(expiry_time) and not na(unde
         line_strike2 := line.new(x1 = open_time, y1 = strike2, x2 = expiry_time, y2 = strike2, xloc = xloc.bar_time, color = color_strike_line, style = line.style_solid, width = 2)
         label_strike2 := label.new(x = expiry_time, y = strike2, text = leg2_lbl + ": " + str.tostring(strike2), xloc = xloc.bar_time, color = color_strike_line, textcolor = color.white, style = label.style_label_left, size = size.small)
         
-        be1 := strike1 + premium
+        be1 := not na(json_be1) ? json_be1 : (strike1 + premium)
         line_be1 := line.new(x1 = open_time, y1 = be1, x2 = expiry_time, y2 = be1, xloc = xloc.bar_time, color = color_be_line, style = line.style_dotted, width = 2)
         label_be1 := label.new(x = open_time, y = be1, text = "Breakeven: " + str.tostring(be1), xloc = xloc.bar_time, color = color_be_line, textcolor = color.black, style = label.style_label_right, size = size.small)
 
@@ -395,7 +397,7 @@ if barstate.islast and not na(open_time) and not na(expiry_time) and not na(unde
         line_strike2 := line.new(x1 = open_time, y1 = strike2, x2 = expiry_time, y2 = strike2, xloc = xloc.bar_time, color = color_strike_line, style = line.style_solid, width = 2)
         label_strike2 := label.new(x = expiry_time, y = strike2, text = leg2_lbl + ": " + str.tostring(strike2), xloc = xloc.bar_time, color = color_strike_line, textcolor = color.white, style = label.style_label_left, size = size.small)
         
-        be1 := strike2 - premium
+        be1 := not na(json_be1) ? json_be1 : (strike2 - premium)
         line_be1 := line.new(x1 = open_time, y1 = be1, x2 = expiry_time, y2 = be1, xloc = xloc.bar_time, color = color_be_line, style = line.style_dotted, width = 2)
         label_be1 := label.new(x = open_time, y = be1, text = "Breakeven: " + str.tostring(be1), xloc = xloc.bar_time, color = color_be_line, textcolor = color.black, style = label.style_label_right, size = size.small)
 
@@ -421,11 +423,11 @@ if barstate.islast and not na(open_time) and not na(expiry_time) and not na(unde
         line_strike4 := line.new(x1 = open_time, y1 = strike4, x2 = expiry_time, y2 = strike4, xloc = xloc.bar_time, color = color_strike_line, style = line.style_solid, width = 2)
         label_strike4 := label.new(x = expiry_time, y = strike4, text = leg4_lbl + ": " + str.tostring(strike4), xloc = xloc.bar_time, color = color_strike_line, textcolor = color.white, style = label.style_label_left, size = size.small)
         
-        be1 := strike2 - premium
+        be1 := not na(json_be1) ? json_be1 : (strike2 - premium)
         line_be1 := line.new(x1 = open_time, y1 = be1, x2 = expiry_time, y2 = be1, xloc = xloc.bar_time, color = color_be_line, style = line.style_dotted, width = 2)
         label_be1 := label.new(x = open_time, y = be1, text = "Breakeven Down: " + str.tostring(be1), xloc = xloc.bar_time, color = color_be_line, textcolor = color.black, style = label.style_label_right, size = size.small)
 
-        be2 := strike3 + premium
+        be2 := not na(json_be2) ? json_be2 : (strike3 + premium)
         line_be2 := line.new(x1 = open_time, y1 = be2, x2 = expiry_time, y2 = be2, xloc = xloc.bar_time, color = color_be_line, style = line.style_dotted, width = 2)
         label_be2 := label.new(x = open_time, y = be2, text = "Breakeven Up: " + str.tostring(be2), xloc = xloc.bar_time, color = color_be_line, textcolor = color.black, style = label.style_label_right, size = size.small)
 
@@ -451,11 +453,11 @@ if barstate.islast and not na(open_time) and not na(expiry_time) and not na(unde
         line_strike4 := line.new(x1 = open_time, y1 = strike4, x2 = expiry_time, y2 = strike4, xloc = xloc.bar_time, color = color_strike_line, style = line.style_solid, width = 2)
         label_strike4 := label.new(x = expiry_time, y = strike4, text = leg4_lbl + ": " + str.tostring(strike4), xloc = xloc.bar_time, color = color_strike_line, textcolor = color.white, style = label.style_label_left, size = size.small)
         
-        be1 := strike2 - premium
+        be1 := not na(json_be1) ? json_be1 : (strike2 - premium)
         line_be1 := line.new(x1 = open_time, y1 = be1, x2 = expiry_time, y2 = be1, xloc = xloc.bar_time, color = color_be_line, style = line.style_dotted, width = 2)
         label_be1 := label.new(x = open_time, y = be1, text = "Breakeven Down: " + str.tostring(be1), xloc = xloc.bar_time, color = color_be_line, textcolor = color.black, style = label.style_label_right, size = size.small)
 
-        be2 := strike3 + premium
+        be2 := not na(json_be2) ? json_be2 : (strike3 + premium)
         line_be2 := line.new(x1 = open_time, y1 = be2, x2 = expiry_time, y2 = be2, xloc = xloc.bar_time, color = color_be_line, style = line.style_dotted, width = 2)
         label_be2 := label.new(x = open_time, y = be2, text = "Breakeven Up: " + str.tostring(be2), xloc = xloc.bar_time, color = color_be_line, textcolor = color.black, style = label.style_label_right, size = size.small)
 

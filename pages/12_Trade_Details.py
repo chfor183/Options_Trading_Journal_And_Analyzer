@@ -358,6 +358,22 @@ idea_text = f"{trade.ticker} - {trade.strategy_type or 'N/A'} ({days_to_expiry} 
             f"Cost of trade : {cost_str}\n" \
             f"Probability of profit : {pop_str}"
 
+# Calculate Entry Breakevens for Pinescript
+entry_legs = []
+if trade.legs:
+    for leg in trade.legs:
+        entry_legs.append({
+            "action": "Buy" if leg.position in ["Buy", "Long"] else "Sell",
+            "qty": leg.quantity if leg.quantity else 1,
+            "type": leg.option_type,
+            "strike": leg.strike,
+            "price": float(leg.price) if leg.price else 0.0,
+            "expiry": pd.to_datetime(leg.expiry),
+            "iv": float(leg.iv) if leg.iv else 0.0
+        })
+entry_metrics = calculate_metrics(entry_legs, float(trade.underlying_price_at_open) if trade.underlying_price_at_open else 100.0)
+entry_bes = entry_metrics.get("breakevens", [])
+
 # Formulate the JSON structure precisely as expected by the Pinescript
 sorted_strikes = sorted([float(leg.strike) for leg in trade.legs if leg.strike]) if trade.legs else []
 pinescript_json_dict = {
@@ -376,6 +392,11 @@ else:
 for idx, strike in enumerate(sorted_strikes[:4], start=1):
     pinescript_json_dict[f"strike{idx}"] = strike
     
+if len(entry_bes) >= 1:
+    pinescript_json_dict["breakeven1"] = round(entry_bes[0], 2)
+if len(entry_bes) >= 2:
+    pinescript_json_dict["breakeven2"] = round(entry_bes[1], 2)
+
 pinescript_json_str = json.dumps(pinescript_json_dict, indent=2)
 
 with idea_col1:

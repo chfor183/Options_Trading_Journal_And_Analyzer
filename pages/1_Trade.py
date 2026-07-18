@@ -211,7 +211,7 @@ with col2:
     idea_url = st.text_input("Idea URL", value=st.session_state.get("url_val", ""), label_visibility="collapsed")
     
     st.markdown("<span style='color: #60a5fa; font-weight: bold; font-size: 14px;'>Date Opened</span>", unsafe_allow_html=True)
-    date_opened = st.date_input("Date Opened", value=st.session_state.get("date_val", datetime(2026, 6, 26) if ticker == "GLD" else datetime.today()), label_visibility="collapsed")
+    date_opened = st.date_input("Date Opened", value=st.session_state.get("date_val", datetime.today()), label_visibility="collapsed")
 
 st.subheader("Options")
 
