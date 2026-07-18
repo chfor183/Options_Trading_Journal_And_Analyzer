@@ -208,7 +208,7 @@ with tabs[1]:
                 <td><b>LEAPS (Long Call / Put)</b></td>
                 <td><b>Stock substitute</b><br><span class="badge badge-debit">Debit</span></td>
                 <td>Capitalizing on a predefined large directional move up or down. Farming intrinsic value. Reduces Theta decay drag.</td>
-                <td>6 Months - 1+ Years</td>
+                <td>1+ Years</td>
                 <td>Deep ITM (High delta, typically &gt;= 0.70)</td>
                 <td>Profit on move with less capital and not owning shares. Close as soon as decent profit targets are met.</td>
             </tr>
@@ -535,7 +535,7 @@ with tabs[2]:
             | Parameter | Detail |
             | :--- | :--- |
             | **Description** | Buy a standard Call option with a chosen strike and expiration. |
-            | **Market Outlook** | Strongly Bullish (expecting a sharp upward breakout). |
+            | **Market Outlook** | Bullish on the underlying asset (Upward directional trend). |
             | **Reason to Use** | High leveraged upside potential with strictly capped risk. |
             | **Losing Conditions** | Sideways movement, price decrease, or severe time decay / implied volatility contraction. |
             | **Max Risk** | Premium paid (debit). |
@@ -556,12 +556,12 @@ with tabs[2]:
                 """)
                 st.markdown("**Risk Management**")
                 st.markdown("""
-                - Buy further out in expiration (60-90+ Days to Expiration) to buffer against immediate Theta decay.
+                - Buy further out in expiration (200+ Days to Expiration) to buffer against immediate Theta decay.
                 """)
                 st.markdown("**Exit & Take Profit Strategies**")
                 st.markdown("""
                 - *Take Profit*: Target closing at 50% - 100% option appreciation, or if momentum stalls.
-                - *Exit for Loss*: Cut losses if the trend breaks key horizontal support. Avoid holding into the last 30 DTE.
+                - *Exit for Loss*: Cut losses if the trend breaks key horizontal support. Avoid holding into the last 120 DTE.
                 """)
 
     elif strat_details == "Long Put [Debit]":
@@ -572,7 +572,7 @@ with tabs[2]:
             | Parameter | Detail |
             | :--- | :--- |
             | **Description** | Buy a standard Put option with a chosen strike and expiration. |
-            | **Market Outlook** | Strongly Bearish (expecting a sharp correction or breakdown). |
+            | **Market Outlook** | Bearish on the underlying asset (Downward directional trend). |
             | **Reason to Use** | Highly leveraged downside exposure with defined risk (an excellent hedge). |
             | **Losing Conditions** | Stock consolidates flat, rallies, or IV crushes. |
             | **Max Risk** | Premium paid (debit). |
@@ -592,13 +592,13 @@ with tabs[2]:
                 """)
                 st.markdown("**Risk Management**")
                 st.markdown("""
-
                 - Avoid buying during historically high Implied Volatility (IV Rank > 70%) to protect against IV crush.
+                - Buy further out in expiration (200+ Days to Expiration) to buffer against immediate Theta decay.
                 """)
                 st.markdown("**Exit & Take Profit Strategies**")
                 st.markdown("""
                 - *Take Profit*: Close out on sharp, swift downswings as volatility expansion will artificially pump the Put premiums.
-                - *Exit for Loss*: Cut loss if the stock reverses and consolidates above resistance.
+                - *Exit for Loss*: Cut loss if the stock reverses and consolidates above resistance. Avoid holding into the last 120 DTE.
                 """)
 
     elif strat_details == "Covered Call [Credit]":
@@ -609,7 +609,7 @@ with tabs[2]:
             | Parameter | Detail |
             | :--- | :--- |
             | **Description** | Buy/own 100 shares of stock and sell 1 Out-of-the-Money Call option against them. |
-            | **Market Outlook** | Neutral to Mildly Bullish. |
+            | **Market Outlook** | Neutral to Mildly Bearish. |
             | **Reason to Use** | Generate consistent passive income, reducing the effective cost basis of the shares. |
             | **Losing Conditions** | Severe stock drop (share losses exceed premium), or stock surges past the strike (gains capped). |
             | **Max Risk** | Stock purchase price minus Call premium received. |

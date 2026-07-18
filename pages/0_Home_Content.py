@@ -24,6 +24,8 @@ try:
 except Exception as e:
     st.error(f"Failed to connect to the database. Ensure PostgreSQL is running. Error: {e}")
 
+st.info("📅 **Calendar Spreads Not Supported:** Please note that calendar spreads (such as a Poor Man's Covered Call) are not currently supported as a single multi-leg entry. Each part of a calendar spread (having different expiration dates) should be entered and managed as a separate trade.")
+
 st.divider()
 
 # Options Basics Section

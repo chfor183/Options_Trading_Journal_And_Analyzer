@@ -63,7 +63,15 @@ db = SessionLocal()
 
 trade_to_edit = None
 if "edit_trade_id" in st.session_state and st.session_state.edit_trade_id:
-    st.title("Edit Trade Entry")
+    col_title, col_new = st.columns([8, 2])
+    with col_title:
+        st.title("Edit Trade Entry")
+    with col_new:
+        st.write("") # padding
+        if st.button("➕ New Trade", use_container_width=True):
+            st.session_state.edit_trade_id = None
+            st.rerun()
+            
     trade_to_edit = db.query(Trade).filter(Trade.id == st.session_state.edit_trade_id).first()
     if trade_to_edit and not st.session_state.get(f"loaded_{trade_to_edit.id}"):
         st.session_state[f"loaded_{trade_to_edit.id}"] = True
@@ -208,7 +216,7 @@ with col2:
     expected_direction = st.selectbox("Expected Direction", direction_options, index=direction_idx, label_visibility="collapsed")
     
     st.markdown("<span style='color: #60a5fa; font-weight: bold; font-size: 14px;'>Idea URL</span>", unsafe_allow_html=True)
-    idea_url = st.text_input("Idea URL", value=st.session_state.get("url_val", ""), label_visibility="collapsed")
+    idea_url = st.text_input("Idea URL", value=st.session_state.get("url_val", "") if trade_to_edit else "", label_visibility="collapsed")
     
     st.markdown("<span style='color: #60a5fa; font-weight: bold; font-size: 14px;'>Date Opened</span>", unsafe_allow_html=True)
     date_opened = st.date_input("Date Opened", value=st.session_state.get("date_val", datetime.today()), label_visibility="collapsed")
@@ -546,8 +554,6 @@ if ticker and current_price > 0:
             target_trade_id = trade_to_edit.id
             db.commit()
             st.toast("Trade updated successfully!", icon="✅")
-            st.session_state[f"loaded_{trade_to_edit.id}"] = False
-            st.session_state.edit_trade_id = None
         else:
             active_portfolio_id = st.session_state.get("active_portfolio_id")
             if not active_portfolio_id:
