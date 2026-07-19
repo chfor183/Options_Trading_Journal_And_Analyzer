@@ -223,12 +223,11 @@ if ticker_input:
         current_discount = st.session_state.get("discount_rate_slider", 8.0) / 100.0
         current_terminal = st.session_state.get("terminal_growth_slider", 3.0) / 100.0
 
-        # Calculate implied consensus growth rate from Wall Street Target Mean Price
-        target_mean_val = raw_data.get("target_mean")
-        if target_mean_val and target_mean_val > 0 and default_fcf_base_m > 0:
+        # Calculate implied growth rate from Current Stock Price
+        if current_price and current_price > 0 and default_fcf_base_m > 0:
             consensus_growth = solve_implied_growth(
                 fcf_base_m=default_fcf_base_m,
-                current_price=target_mean_val,
+                current_price=current_price,
                 shares_m=shares_m,
                 cash_m=cash_m,
                 debt_m=debt_m,
@@ -364,7 +363,7 @@ if ticker_input:
                 
             # Expander 3: Scenario Growth Setup
             with st.expander("🎭 Scenario Growth Presets", expanded=True):
-                st.caption(f"Wall Street Consensus Growth Estimate: **{consensus_growth * 100:.1f}%**")
+                st.caption(f"Implied Growth Estimate (Current Price): **{consensus_growth * 100:.1f}%**")
                 
                 # Base Growth input
                 base_growth_kwargs = {
