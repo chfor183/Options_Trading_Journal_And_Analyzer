@@ -64,7 +64,7 @@ db = SessionLocal()
 trade_to_edit = None
 st.title("New Trade Entry")
 
-with st.expander("🧙‍♂️ Trade Recommendation Wizard", expanded=st.session_state.get("wiz_expanded", False)):
+with st.expander("Trade Recommendation", expanded=st.session_state.get("wiz_expanded", False)):
     st.write("Find optimal trade combinations based on your criteria.")
     w_tcol, w_scol, w_ecol = st.columns(3)
     wizard_ticker = w_tcol.text_input("Ticker", value=st.session_state.get("ticker_val", "SPY"), key="wiz_ticker").upper()
@@ -506,12 +506,55 @@ for i in range(num_legs):
     })
 
 # Format strategy text
-st.markdown(f"#### {strategy_type}")
-for leg in legs_data:
-    color = "red" if leg['action'] == "Sell" else "green"
-    sign = "-" if leg['action'] == "Sell" else "+"
-    formatted_date = leg['expiry'].strftime("%b %d, %Y")
-    st.markdown(f"<span style='color:{color}; font-weight:bold;'>{leg['action'].upper()} {sign}{leg['qty']} {ticker} {formatted_date} {leg['strike']:.2f} {leg['type'].lower()} @${leg['price']:.3f}</span>", unsafe_allow_html=True)
+strat_col, calc_col = st.columns([1.2, 1])
+
+with strat_col:
+    st.markdown(f"#### {strategy_type}")
+    for leg in legs_data:
+        color = "red" if leg['action'] == "Sell" else "green"
+        sign = "-" if leg['action'] == "Sell" else "+"
+        formatted_date = leg['expiry'].strftime("%b %d, %Y")
+        st.markdown(f"<span style='color:{color}; font-weight:bold;'>{leg['action'].upper()} {sign}{leg['qty']} {ticker} {formatted_date} {leg['strike']:.2f} {leg['type'].lower()} @${leg['price']:.3f}</span>", unsafe_allow_html=True)
+
+with calc_col:
+    st.markdown("#### TP / SL Calculator")
+    net_premium = sum(leg['price'] * (1 if leg['action'] == 'Buy' else -1) for leg in legs_data)
+    is_credit = net_premium <= 0
+    base_price = abs(net_premium)
+    
+    input_col1, input_col2, result_col = st.columns([1, 1, 1.5])
+    
+    with input_col1:
+        st.markdown("<span style='color: #a1a1aa; font-weight: bold; font-size: 14px;'>Take Profit (%)</span>", unsafe_allow_html=True)
+        tp_pct = st.number_input("TP (%)", min_value=0.0, value=50.0, step=5.0, help="Percentage of premium to target for profit.", label_visibility="collapsed")
+    
+    with input_col2:
+        st.markdown("<span style='color: #a1a1aa; font-weight: bold; font-size: 14px;'>Stop Loss (%)</span>", unsafe_allow_html=True)
+        sl_pct = st.number_input("SL (%)", min_value=0.0, value=100.0 if is_credit else 50.0, step=5.0, help="Percentage of premium to stop out at.", label_visibility="collapsed")
+    
+    with result_col:
+        premium_str = f"-${base_price:.2f}" if not is_credit else f"${base_price:.2f}"
+        
+        if is_credit:
+            tp_price = base_price * (1 - tp_pct / 100.0)
+            sl_price = base_price * (1 + sl_pct / 100.0)
+            st.markdown(f"""
+            <div style='margin-top: -32px;'>
+                <div style='margin-bottom: 14px;'><span style='color:#a1a1aa; font-size: 16px;'>Premium: <b>{premium_str}</b></span></div>
+                <div style='margin-bottom: 14px;'><span style='color:#22c55e; font-size: 16px;'>TP Target (Buy to Close): <b>-${max(0, tp_price):.2f}</b></span></div>
+                <div><span style='color:#ef4444; font-size: 16px;'>SL Target (Buy to Close): <b>-${sl_price:.2f}</b></span></div>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            tp_price = base_price * (tp_pct / 100.0)
+            sl_price = base_price * (sl_pct / 100.0)
+            st.markdown(f"""
+            <div style='margin-top: -32px;'>
+                <div style='margin-bottom: 14px;'><span style='color:#a1a1aa; font-size: 14px;'>Premium: <b>{premium_str}</b></span></div>
+                <div style='margin-bottom: 14px;'><span style='color:#22c55e; font-size: 14px;'>TP Target (Sell to Close): <b>${tp_price:.2f}</b></span></div>
+                <div><span style='color:#ef4444; font-size: 14px;'>SL Target (Sell to Close): <b>${max(0, sl_price):.2f}</b></span></div>
+            </div>
+            """, unsafe_allow_html=True)
 
 if st.session_state.get("scroll_to_strategy"):
     import re
