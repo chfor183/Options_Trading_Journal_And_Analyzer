@@ -64,7 +64,7 @@ db = SessionLocal()
 trade_to_edit = None
 st.title("New Trade Entry")
 
-with st.expander("🧙‍♂️ Trade Recommendation Wizard", expanded=False):
+with st.expander("🧙‍♂️ Trade Recommendation Wizard", expanded=st.session_state.get("wiz_expanded", False)):
     st.write("Find optimal trade combinations based on your criteria.")
     w_tcol, w_scol, w_ecol = st.columns(3)
     wizard_ticker = w_tcol.text_input("Ticker", value=st.session_state.get("ticker_val", "SPY"), key="wiz_ticker").upper()
@@ -101,20 +101,19 @@ with st.expander("🧙‍♂️ Trade Recommendation Wizard", expanded=False):
                 return date_str
         wizard_expiry = w_ecol.selectbox("Expiry", wizard_chains, format_func=format_expiry, key="wiz_expiry")
         
-        w_c1, w_c2, w_c3, w_c4, w_c5, w_c6 = st.columns(6)
+        w_c1, w_c2, w_c3, w_c4 = st.columns(4)
         wizard_min_vol = w_c1.number_input("Min Vol", min_value=0, value=10, key="wiz_vol")
         wizard_min_oi = w_c2.number_input("Min OI", min_value=0, value=100, key="wiz_oi")
         wizard_min_pop = w_c3.number_input("Min PoP %", min_value=0, max_value=100, value=75, key="wiz_pop")
-        wizard_max_spread = w_c4.number_input("Max Spread %", min_value=0, max_value=200, value=11, key="wiz_spread")
-        wizard_min_roi = w_c5.number_input("Min ROI %", min_value=0, value=0, key="wiz_roi")
-        wizard_min_er = w_c6.number_input("Min ER %", min_value=0, value=0, key="wiz_er")
+        wizard_min_roi = w_c4.number_input("Min ROI %", min_value=0, value=10, key="wiz_roi")
         
         if st.button("Find Trades", type="primary"):
+            st.session_state["wiz_expanded"] = True
             with st.spinner("Finding best trades..."):
                 from src.trade_screener import find_best_trades
                 results = find_best_trades(
                     wizard_ticker, wizard_strat, wizard_expiry, 
-                    wizard_min_oi, wizard_min_vol, wizard_min_pop, wizard_max_spread, wizard_min_roi, wizard_min_er
+                    wizard_min_oi, wizard_min_vol, wizard_min_pop, 200, wizard_min_roi, 0
                 )
                 st.session_state["wiz_results"] = results
                 if not results:
@@ -122,6 +121,10 @@ with st.expander("🧙‍♂️ Trade Recommendation Wizard", expanded=False):
                 
     if "wiz_results" in st.session_state and st.session_state["wiz_results"]:
         st.markdown("#### Recommended Trades")
+        if len(st.session_state["wiz_results"]) > 0:
+            current_price = st.session_state["wiz_results"][0].get('underlying_price', 0)
+            em = st.session_state["wiz_results"][0].get('expected_move', [0, 0])
+            st.markdown(f"<span style='color: #60a5fa;'>Underlying Price: <b>&#36;{current_price:.2f}</b> | Expected Move: <b>[&#36;{em[0]:.2f}, &#36;{em[1]:.2f}]</b></span>", unsafe_allow_html=True)
         for idx, res in enumerate(st.session_state["wiz_results"]):
             metrics = res['metrics']
             net_cost = sum((leg['price'] * 100 * leg['qty'] * (1 if leg['action'] == 'Buy' else -1)) for leg in res['legs'])
@@ -151,11 +154,18 @@ with st.expander("🧙‍♂️ Trade Recommendation Wizard", expanded=False):
                 desc_parts.append(f"{leg['action']} {leg['strike']} {leg['type']}")
             desc = " | ".join(desc_parts)
             
-            er_pct = res['er'] * 100
-            stats_str = f"**PoP:** {res['pop']:.1f}% &nbsp;|&nbsp; **ER:** {er_pct:.1f}% &nbsp;|&nbsp; **Spread:** {res['spread_pct']:.1f}% &nbsp;|&nbsp; **Max P:** {mp_str} &nbsp;|&nbsp; **Max L:** {ml_str} &nbsp;|&nbsp; **Col:** {collateral_str} &nbsp;|&nbsp; **ROI:** {roi_str}"
+            vol = res.get('volume', 0)
+            oi = res.get('oi', 0)
+            spread = res.get('spread_pct', 0)
+            gross_spread = res.get('gross_spread_pct', 0)
             
-            r_col1.markdown(f"**{idx+1}.** {desc}<br><span style='font-size:14px; color:#a1a1aa;'>{stats_str}</span>", unsafe_allow_html=True)
+            stats_str = f"**PoP:** {res['pop']:.1f}% &nbsp;|&nbsp; **Vol:** {vol} &nbsp;|&nbsp; **OI:** {oi} &nbsp;|&nbsp; **Spread:** {spread:.2f}% (Net) / {gross_spread:.2f}% (Gross) &nbsp;|&nbsp; **Max Profit:** {mp_str} &nbsp;|&nbsp; **Max Loss:** {ml_str} &nbsp;|&nbsp; **Collateral:** {collateral_str} &nbsp;|&nbsp; **ROI:** {roi_str}"
+            
+            r_col1.markdown(f"**{idx+1}.** {desc} &nbsp;|&nbsp; <span style='font-size:14px; color:#a1a1aa;'>{stats_str}</span>", unsafe_allow_html=True)
             if r_col2.button(f"Select", key=f"sel_wiz_{idx}", use_container_width=True):
+                st.session_state["wiz_expanded"] = False
+                st.session_state["auto_pull"] = True
+                st.session_state["scroll_to_strategy"] = wizard_strat
                 st.session_state["ticker_val"] = wizard_ticker
                 st.session_state["strategy_val"] = wizard_strat
                 st.session_state["num_legs"] = len(res['legs'])
@@ -394,7 +404,8 @@ st.markdown("<span style='color: #a1a1aa; font-weight: bold; font-size: 14px;'>N
 num_legs = st.number_input("Number of Legs", min_value=1, max_value=8, key="num_legs", label_visibility="collapsed")
 
 col_btn1, col_btn2 = st.columns([2, 10])
-if col_btn1.button("Pull Live Data for All Legs"):
+pull_live_data = col_btn1.button("Pull Live Data for All Legs") or st.session_state.pop("auto_pull", False)
+if pull_live_data:
     with st.spinner("Fetching live data from Barchart..."):
         from src.market_data import get_barchart_live_option_leg_data
         from src.options_math import calculate_bs_delta
@@ -501,6 +512,19 @@ for leg in legs_data:
     sign = "-" if leg['action'] == "Sell" else "+"
     formatted_date = leg['expiry'].strftime("%b %d, %Y")
     st.markdown(f"<span style='color:{color}; font-weight:bold;'>{leg['action'].upper()} {sign}{leg['qty']} {ticker} {formatted_date} {leg['strike']:.2f} {leg['type'].lower()} @${leg['price']:.3f}</span>", unsafe_allow_html=True)
+
+if st.session_state.get("scroll_to_strategy"):
+    import re
+    strategy_id = re.sub(r'[^a-zA-Z0-9-]', '', st.session_state["scroll_to_strategy"].lower().replace(' ', '-'))
+    st.components.v1.html(f"""
+        <script>
+            const el = window.parent.document.getElementById('{strategy_id}');
+            if (el) {{
+                el.scrollIntoView({{behavior: 'smooth', block: 'start'}});
+            }}
+        </script>
+    """, height=0, width=0)
+    st.session_state["scroll_to_strategy"] = None
 
 st.divider()
 

@@ -51,7 +51,9 @@ def find_best_trades(ticker, strategy, expiry, min_oi, min_vol, min_pop, max_spr
             'ask': ask,
             'iv': float(row['impliedVolatility']) * 100 if pd.notna(row['impliedVolatility']) else 0.0,
             'expiry': parsed_expiry,
-            'delta': 0.0
+            'delta': 0.0,
+            'volume': int(row['volume']) if pd.notna(row.get('volume')) else 0,
+            'oi': int(row['openInterest']) if pd.notna(row.get('openInterest')) else 0
         }
 
     combinations = []
@@ -127,12 +129,15 @@ def find_best_trades(ticker, strategy, expiry, min_oi, min_vol, min_pop, max_spr
     valid_trades = []
     for legs in combinations:
         total_spread = sum(max(0, l['ask'] - l['bid']) for l in legs)
+        gross_mid = sum(((l['ask'] + l['bid']) / 2) for l in legs)
         net_mid = sum(((l['ask'] + l['bid'])/2) * (1 if l['action'] == 'Buy' else -1) for l in legs)
         
-        if abs(net_mid) < 0.01: 
+        if abs(net_mid) < 0.01 or gross_mid <= 0: 
             continue
             
         spread_pct = total_spread / abs(net_mid)
+        gross_spread_pct = total_spread / gross_mid
+        
         if spread_pct > (max_spread_pct / 100.0):
             continue
             
@@ -169,7 +174,15 @@ def find_best_trades(ticker, strategy, expiry, min_oi, min_vol, min_pop, max_spr
                 'pop': pop,
                 'er': er,
                 'spread_pct': spread_pct * 100,
-                'metrics': metrics
+                'gross_spread_pct': gross_spread_pct * 100,
+                'metrics': metrics,
+                'underlying_price': current_price,
+                'expected_move': [
+                    current_price * (1 - metrics.get('expected_move_pct', 0)),
+                    current_price * (1 + metrics.get('expected_move_pct', 0))
+                ],
+                'volume': sum(l.get('volume', 0) for l in legs),
+                'oi': min((l.get('oi', 0) for l in legs), default=0)
             })
         except Exception as e:
             continue

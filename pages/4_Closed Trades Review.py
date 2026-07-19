@@ -133,6 +133,7 @@ elif all_trades:
         
         trade_dict = {
             "Trade": t,
+            "Ticker": t.ticker if t.ticker else "N/A",
             "Reference Date": ref_date,
             "Month": t.date_opened.strftime("%b %Y"),
             "Month Opened": t.date_opened.strftime("%B"),
@@ -281,7 +282,7 @@ elif all_trades:
         if "breakdown_by" not in st.session_state:
             st.session_state.breakdown_by = "Expected Direction"
             
-        btn_cols = st.columns(7)
+        btn_cols = st.columns(8)
         if btn_cols[0].button("Expected Direction", use_container_width=True, type="primary" if st.session_state.breakdown_by == "Expected Direction" else "secondary"):
             st.session_state.breakdown_by = "Expected Direction"
             st.rerun()
@@ -302,6 +303,9 @@ elif all_trades:
             st.rerun()
         if btn_cols[6].button("Month Opened", use_container_width=True, type="primary" if st.session_state.breakdown_by == "Month Opened" else "secondary"):
             st.session_state.breakdown_by = "Month Opened"
+            st.rerun()
+        if btn_cols[7].button("Ticker", use_container_width=True, type="primary" if st.session_state.breakdown_by == "Ticker" else "secondary"):
+            st.session_state.breakdown_by = "Ticker"
             st.rerun()
             
         breakdown_by = st.session_state.breakdown_by

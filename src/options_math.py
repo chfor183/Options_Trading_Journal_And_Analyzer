@@ -297,6 +297,9 @@ def calculate_metrics(legs, current_price):
     # User requested risk to reward ratio (Risk / Reward)
     rr = risk / max_profit if max_profit != 0 else float('inf')
     
+    # Calculate Expected Move % using 1 std dev
+    expected_move_pct = sigma
+
     return {
         "max_profit": max_profit,
         "max_loss": max_loss,
@@ -307,5 +310,6 @@ def calculate_metrics(legs, current_price):
         "pop_max_loss": pop_max_loss,
         "ev": ev,
         "er": er,
-        "rr": rr
+        "rr": rr,
+        "expected_move_pct": expected_move_pct
     }
