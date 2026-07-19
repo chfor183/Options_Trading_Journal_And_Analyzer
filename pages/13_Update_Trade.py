@@ -15,44 +15,6 @@ def toggle_type(i):
     current = st.session_state[f"type_val_{i}"]
     st.session_state[f"type_val_{i}"] = "Call" if current == "Put" else "Put"
 
-@st.dialog("Extract Multi-Leg Strategy Help", width="large")
-def show_multi_help():
-    import os
-    from PIL import Image
-    try:
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        img_path = os.path.join(base_dir, "assets", "Multileg_tutorial.png")
-        img = Image.open(img_path)
-        st.image(img, use_container_width=True)
-    except Exception as e:
-        st.error(f"Error loading tutorial image: {e}")
-    st.markdown("""
-    **How to use Extract Multi-Leg Strategy:**
-    1. Open your **Interactive Brokers Desktop App**.
-    2. View the multi-leg order/trade confirmation.
-    3. Take a screenshot of the area shown in the image above (e.g., using Windows Snipping Tool `Win + Shift + S`).
-    4. Click the **Extract Multi-Leg Strategy** button to automatically paste and parse it!
-    """)
-
-@st.dialog("Extract Single Contract Details Help", width="large")
-def show_single_help():
-    import os
-    from PIL import Image
-    try:
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        img_path = os.path.join(base_dir, "assets", "Singleleg_tutorial.png")
-        img = Image.open(img_path)
-        st.image(img, use_container_width=True)
-    except Exception as e:
-        st.error(f"Error loading tutorial image: {e}")
-    st.markdown("""
-    **How to use Extract Single Contract Details:**
-    1. Open your **Interactive Brokers Desktop App**.
-    2. View the single contract details.
-    3. Take a screenshot of the area shown in the image above (e.g., using Windows Snipping Tool `Win + Shift + S`).
-    4. Click the **Extract Single Contract Details** button to automatically paste and parse it!
-    """)
-
 st.set_page_config(page_title="Trade Entry", page_icon="📝", layout="wide")
 
 # Initialize default session state values safely
@@ -62,179 +24,33 @@ if "num_legs" not in st.session_state:
 db = SessionLocal()
 
 trade_to_edit = None
-st.title("New Trade Entry")
-
-with st.expander("🧙‍♂️ Trade Recommendation Wizard", expanded=False):
-    st.write("Find optimal trade combinations based on your criteria.")
-    w_tcol, w_scol, w_ecol = st.columns(3)
-    wizard_ticker = w_tcol.text_input("Ticker", value=st.session_state.get("ticker_val", "SPY"), key="wiz_ticker").upper()
-    
-    wiz_strat_options = [
-        "Bull Put Spread (credit)",
-        "Bear Call Spread (credit)",
-        "Bull Call Spread (debit)",
-        "Bear Put Spread (debit)",
-        "Iron Condor (debit)",
-        "Short Iron Condor (credit)",
-        "Long Call (debit)",
-        "Long Put (debit)",
-        "Covered Call (credit)",
-        "Cash-Secured Put (credit)"
-    ]
-    wizard_strat = w_scol.selectbox("Strategy", wiz_strat_options, index=0, key="wiz_strat")
-    
-    wizard_chains = []
-    if wizard_ticker:
-        from src.market_data import get_options_chains
-        wizard_chains = get_options_chains(wizard_ticker)
-    
-    if not wizard_chains:
-        w_ecol.selectbox("Expiry", ["No expirations found"], disabled=True, key="wiz_exp_disabled")
-    else:
-        def format_expiry(date_str):
-            try:
-                d = datetime.strptime(date_str, "%Y-%m-%d")
-                dte = (d.date() - datetime.today().date()).days
-                is_monthly = d.weekday() == 4 and 15 <= d.day <= 21
-                return f"{date_str} ({'m' if is_monthly else 'w'}) ({dte} DTE)"
-            except:
-                return date_str
-        wizard_expiry = w_ecol.selectbox("Expiry", wizard_chains, format_func=format_expiry, key="wiz_expiry")
-        
-        w_c1, w_c2, w_c3, w_c4, w_c5, w_c6 = st.columns(6)
-        wizard_min_vol = w_c1.number_input("Min Vol", min_value=0, value=10, key="wiz_vol")
-        wizard_min_oi = w_c2.number_input("Min OI", min_value=0, value=100, key="wiz_oi")
-        wizard_min_pop = w_c3.number_input("Min PoP %", min_value=0, max_value=100, value=75, key="wiz_pop")
-        wizard_max_spread = w_c4.number_input("Max Spread %", min_value=0, max_value=200, value=11, key="wiz_spread")
-        wizard_min_roi = w_c5.number_input("Min ROI %", min_value=0, value=0, key="wiz_roi")
-        wizard_min_er = w_c6.number_input("Min ER %", min_value=0, value=0, key="wiz_er")
-        
-        if st.button("Find Trades", type="primary"):
-            with st.spinner("Finding best trades..."):
-                from src.trade_screener import find_best_trades
-                results = find_best_trades(
-                    wizard_ticker, wizard_strat, wizard_expiry, 
-                    wizard_min_oi, wizard_min_vol, wizard_min_pop, wizard_max_spread, wizard_min_roi, wizard_min_er
-                )
-                st.session_state["wiz_results"] = results
-                if not results:
-                    st.warning("No trades found matching your criteria.")
-                
-    if "wiz_results" in st.session_state and st.session_state["wiz_results"]:
-        st.markdown("#### Recommended Trades")
-        for idx, res in enumerate(st.session_state["wiz_results"]):
-            metrics = res['metrics']
-            net_cost = sum((leg['price'] * 100 * leg['qty'] * (1 if leg['action'] == 'Buy' else -1)) for leg in res['legs'])
-            max_loss = metrics.get('max_loss', 0)
-            max_profit = metrics.get('max_profit', 0)
+if "edit_trade_id" in st.session_state and st.session_state.edit_trade_id:
+    st.title("Update Trade Entry")
             
-            if max_loss == float('-inf'):
-                collateral_str = "Infinite"
-            else:
-                collateral_val = abs(max_loss) * 1.6 if (max_loss < 0 and net_cost < 0) else 0.0
-                collateral_str = f"&#36;{collateral_val:.2f}"
-                
-            mp_str = f"&#36;{max_profit:.2f}" if max_profit != float('inf') else "Infinite"
-            ml_str = f"&#36;{max_loss:.2f}" if max_loss != float('-inf') else "Infinite"
-            
-            if max_loss == 0:
-                roi_str = "Infinite"
-            elif max_profit == float('inf') or max_loss == float('-inf'):
-                roi_str = "N/A"
-            else:
-                roi_str = f"{abs(max_profit / max_loss) * 100:.2f}%"
+    trade_to_edit = db.query(Trade).filter(Trade.id == st.session_state.edit_trade_id).first()
+    if trade_to_edit and not st.session_state.get(f"loaded_{trade_to_edit.id}"):
+        st.session_state[f"loaded_{trade_to_edit.id}"] = True
+        st.session_state["ticker_val"] = trade_to_edit.ticker
+        st.session_state["name_val"] = trade_to_edit.underlying_name
+        st.session_state["last_ticker"] = trade_to_edit.ticker
+        st.session_state["strategy_val"] = trade_to_edit.strategy_type
+        st.session_state["direction_val"] = trade_to_edit.expected_direction
+        st.session_state["url_val"] = trade_to_edit.idea_url
+        st.session_state["date_val"] = trade_to_edit.date_opened
+        st.session_state["num_legs"] = len(trade_to_edit.legs) or 2
+        for i, leg in enumerate(trade_to_edit.legs):
+            st.session_state[f"action_val_{i}"] = leg.position
+            st.session_state[f"qty_{i}"] = leg.quantity if leg.quantity else 1
+            st.session_state[f"type_val_{i}"] = leg.option_type
+            st.session_state[f"strike_{i}"] = leg.strike
+            st.session_state[f"price_{i}"] = float(leg.price)
+            st.session_state[f"delta_{i}"] = float(leg.delta)
+            st.session_state[f"iv_{i}"] = float(leg.iv)
+            st.session_state[f"expiry_{i}"] = leg.expiry
+else:
+    st.warning("No trade selected for editing.")
+    st.stop()
 
-            r_col1, r_col2 = st.columns([8.5, 1.5])
-            
-            desc_parts = []
-            for leg in res['legs']:
-                desc_parts.append(f"{leg['action']} {leg['strike']} {leg['type']}")
-            desc = " | ".join(desc_parts)
-            
-            er_pct = res['er'] * 100
-            stats_str = f"**PoP:** {res['pop']:.1f}% &nbsp;|&nbsp; **ER:** {er_pct:.1f}% &nbsp;|&nbsp; **Spread:** {res['spread_pct']:.1f}% &nbsp;|&nbsp; **Max P:** {mp_str} &nbsp;|&nbsp; **Max L:** {ml_str} &nbsp;|&nbsp; **Col:** {collateral_str} &nbsp;|&nbsp; **ROI:** {roi_str}"
-            
-            r_col1.markdown(f"**{idx+1}.** {desc}<br><span style='font-size:14px; color:#a1a1aa;'>{stats_str}</span>", unsafe_allow_html=True)
-            if r_col2.button(f"Select", key=f"sel_wiz_{idx}", use_container_width=True):
-                st.session_state["ticker_val"] = wizard_ticker
-                st.session_state["strategy_val"] = wizard_strat
-                st.session_state["num_legs"] = len(res['legs'])
-                for i, leg in enumerate(res['legs']):
-                    st.session_state[f"action_val_{i}"] = leg['action']
-                    st.session_state[f"type_val_{i}"] = leg['type']
-                    st.session_state[f"strike_input_{i}"] = leg['strike']
-                    st.session_state[f"strike_{i}"] = leg['strike']
-                    st.session_state[f"expiry_input_{i}"] = leg['expiry']
-                    st.session_state[f"expiry_{i}"] = leg['expiry']
-                    st.session_state[f"qty_{i}"] = leg['qty']
-                    st.session_state[f"price_{i}"] = leg['price']
-                    st.session_state[f"delta_{i}"] = 0.0
-                    st.session_state[f"iv_{i}"] = leg['iv']
-                st.rerun()
-
-st.write("### 📸 Auto-Fill from Clipboard")
-st.info("💡 **Note:** This OCR feature is designed **only for the Interactive Brokers Desktop App**.")
-st.write("Take a screenshot of your broker's trade confirmation, then click one of the buttons below to paste it.")
-
-# Use compact, native columns for the action and help buttons
-col_btn1, col_help1, col_btn2, col_help2, _ = st.columns([2.6, 0.5, 2.8, 0.5, 5.6])
-
-with col_btn1:
-    btn_multi = st.button("Extract Multi-Leg Strategy", type="primary", use_container_width=True)
-with col_help1:
-    if st.button("❓", key="multi_help", use_container_width=True, help="Show Multi-Leg Screenshot Tutorial"):
-        show_multi_help()
-
-with col_btn2:
-    btn_single = st.button("Extract Single Contract Details", use_container_width=True)
-with col_help2:
-    if st.button("❓", key="single_help", use_container_width=True, help="Show Single Contract Screenshot Tutorial"):
-        show_single_help()
-
-if btn_multi or btn_single:
-    with st.spinner("Reading clipboard and extracting text with OCR..."):
-        from src.ocr_parser import parse_trade_image, parse_single_leg_image
-        from PIL import ImageGrab, Image
-        
-        img = ImageGrab.grabclipboard()
-        
-        if img is None:
-            st.error("No image found on your clipboard. Please take a screenshot first (e.g., using Snipping Tool).")
-        else:
-            if isinstance(img, list):
-                try:
-                    img = Image.open(img[0])
-                except Exception as e:
-                    st.error("Found files in clipboard but could not load as an image.")
-                    img = None
-            
-            if img:
-                if btn_multi:
-                    result = parse_trade_image(img)
-                else:
-                    result = parse_single_leg_image(img)
-                    
-                if "error" in result:
-                    st.error(result["error"])
-                else:
-                    st.session_state["ticker_val"] = result["ticker"]
-                    legs = result["legs"]
-                    st.session_state["num_legs"] = len(legs)
-                    for i, leg in enumerate(legs):
-                        st.session_state[f"action_val_{i}"] = leg["action"]
-                        st.session_state[f"qty_{i}"] = leg["qty"]
-                        st.session_state[f"type_val_{i}"] = leg["type"]
-                        st.session_state[f"strike_input_{i}"] = leg["strike"]
-                        st.session_state[f"strike_{i}"] = leg["strike"]
-                        try:
-                            parsed_date = datetime.strptime(leg["expiry"], "%Y-%m-%d").date()
-                            st.session_state[f"expiry_input_{i}"] = parsed_date
-                            st.session_state[f"expiry_{i}"] = parsed_date
-                        except:
-                            pass # Let it fallback to default if parsing failed
-                        st.session_state[f"price_{i}"] = 0.0 # Force pulling live data or manual entry
-                        st.session_state[f"delta_{i}"] = 0.0
-                    st.rerun()
 st.divider()
 
 col1, col2 = st.columns(2)

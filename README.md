@@ -44,7 +44,7 @@ finance/
 ├── README.md               # Project documentation
 ├── pages/
 │   ├── 0_Home_Content.py   # Home page content
-│   ├── 1_Trade.py          # Trade entry, editing, and payoff chart
+│   ├── 1_Trade.py          # Trade recommendation wizard, trade entry form, and payoff chart
 │   ├── 2_Journal.py        # Ledger of saved trades (pagination, filters, bulk delete)
 │   ├── 3_Open_Trades.py    # Live open trades tracker, P&L estimator, and health dashboard
 │   ├── 4_Closed Trades Review.py # High-level performance metrics and dashboards
@@ -54,10 +54,16 @@ finance/
 │   ├── 8_Framework.py      # Interactive pre-trade checklists and mindset guidelines
 │   ├── 9_Strategies.py     # Responsive reference tables and setup rules
 │   ├── 10_Probabilities.py # Interactive streak calculator and quantitative math guide
-│   └── 11_DCF_Evaluation.py # Dynamic 10-Year multi-scenario DCF models, growth decay patterns, & Reverse DCF bisection solver
+│   ├── 11_DCF_Evaluation.py # Dynamic 10-Year multi-scenario DCF models, growth decay patterns, & Reverse DCF bisection solver
+│   ├── 12_Trade_Details.py # Detailed view of individual trades and leg history
+│   └── 13_Update_Trade.py  # Hidden navigation tab for editing existing trades
 └── src/
     ├── db.py               # Database connection, finance schema setup, and session management
     ├── market_data.py      # yfinance API wrappers
+    ├── models.py           # SQLAlchemy ORM models (Portfolio, Trade, Leg, Transaction)
+    ├── ocr_parser.py       # Tesseract-OCR clipboard image processing and Regex pattern matching
+    ├── options_math.py     # Complex payoff calculations, standard deviation logic, and Black-Scholes derivations
+    └── trade_screener.py   # Trade permutation generation, criteria screening, and ranking engine
     ├── models.py           # SQLAlchemy ORM models (Portfolio, Trade, Leg, Transaction)
     └── ocr_parser.py       # Tesseract-OCR clipboard image processing and Regex pattern matching
 ```

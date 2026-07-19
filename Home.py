@@ -94,7 +94,8 @@ pages = {
     ],
     "Hidden": [
         st.Page("pages/5_Close Trade.py", title="Close Trade", icon="✖"),
-        st.Page("pages/12_Trade_Details.py", title="Trade Details", icon="ℹ️")
+        st.Page("pages/12_Trade_Details.py", title="Trade Details", icon="ℹ️"),
+        st.Page("pages/13_Update_Trade.py", title="Update Trade", icon="🔄")
     ]
 }
 

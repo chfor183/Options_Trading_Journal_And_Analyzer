@@ -547,7 +547,7 @@ if trades:
         if cols[15].button("Edit", key=f"edit_{t.id}", use_container_width=True):
             st.session_state.edit_trade_id = t.id
             st.session_state[f"loaded_{t.id}"] = False
-            st.switch_page("pages/1_Trade.py")
+            st.switch_page("pages/13_Update_Trade.py")
             
         if t.status == "Open":
             if cols[16].button("Close", key=f"close_{t.id}", use_container_width=True):

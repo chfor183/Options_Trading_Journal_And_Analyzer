@@ -1,5 +1,18 @@
 ## Recent Updates
 
+**Session Date: 2026-07-19**
+- **Trade Recommendation Wizard**:
+  - Implemented a powerful new options screener at the top of the New Trade page.
+  - Generates optimized spread permutations (e.g., Bull Put Spreads, Iron Condors) dynamically from the live options chain using `yfinance`.
+  - Added sophisticated criteria filters including Min Volume, Min Open Interest, Min Probability of Profit (PoP), Max Spread %, Min Expected Return (ER), and Min ROI.
+  - Added a "Select" button that automatically parses the generated strategy and seamlessly injects the legs, actions, quantities, and prices straight into the Trade Entry form fields via `st.session_state`.
+- **Trade Page Segregation**:
+  - Separated the dual-purpose "Trade" entry and update interface into two distinct pages: `1_Trade.py` (strictly for new trade origination and wizards) and `13_Update_Trade.py` (a hidden route strictly for editing existing trades).
+  - Wired the "Edit" buttons across the Journal and Open Trades dashboards to safely point to the new Update route.
+- **Expiry Math & Math Formatting**: 
+  - Expiry dates in the wizard dropdown now automatically calculate and display both the Monthly/Weekly contract status and the exact Days to Expiration (DTE).
+  - Fixed a markdown syntax bug where Streamlit mistakenly interpreted currency symbols and text spacing as a KaTeX math equation block.
+
 **Session Date: 2026-07-12**
 - **Dashboard Market Context (S&P 500)**:
   - **S&P 500 Return Filter Integration**: Upgraded the *Closed Trades Review* page to fetch and calculate the S&P 500 (`^GSPC`) total percentage return matching the exact start date from the page's "Date Interval" filter. This allows users to accurately compare their portfolio's net filtered return against the broader market's exact performance over the exact same time span.

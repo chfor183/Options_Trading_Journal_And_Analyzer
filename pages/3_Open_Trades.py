@@ -542,7 +542,7 @@ for idx, p in enumerate(filtered_processed):
             if col_act1.button("✏️ Edit", key=f"edit_btn_{t.id}", use_container_width=True):
                 st.session_state.edit_trade_id = t.id
                 st.session_state[f"loaded_{t.id}"] = False
-                st.switch_page("pages/1_Trade.py")
+                st.switch_page("pages/13_Update_Trade.py")
                 
             if col_act2.button("✖ Close", key=f"close_btn_{t.id}", use_container_width=True):
                 st.session_state.close_trade_id = t.id
