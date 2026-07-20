@@ -70,61 +70,71 @@ def find_best_trades(ticker, strategy, expiry, min_oi, min_vol, min_pop, max_spr
 
     elif strategy == "Bull Put Spread (credit)":
         for i in range(len(puts_f)):
-            for w in range(1, 4):
-                if i + w < len(puts_f):
-                    sell_leg = make_leg(puts_f.iloc[i+w], "Sell", "Put")
-                    buy_leg = make_leg(puts_f.iloc[i], "Buy", "Put")
-                    if sell_leg['strike'] <= current_price * 1.05:
-                        combinations.append([sell_leg, buy_leg])
+            for w in range(1, min(15, len(puts_f) - i)):
+                sell_leg = make_leg(puts_f.iloc[i+w], "Sell", "Put")
+                buy_leg = make_leg(puts_f.iloc[i], "Buy", "Put")
+                combinations.append([sell_leg, buy_leg])
                         
     elif strategy == "Bear Call Spread (credit)":
         for i in range(len(calls_f)):
-            for w in range(1, 4):
-                if i + w < len(calls_f):
-                    sell_leg = make_leg(calls_f.iloc[i], "Sell", "Call")
-                    buy_leg = make_leg(calls_f.iloc[i+w], "Buy", "Call")
-                    if sell_leg['strike'] >= current_price * 0.95:
-                        combinations.append([sell_leg, buy_leg])
+            for w in range(1, min(15, len(calls_f) - i)):
+                sell_leg = make_leg(calls_f.iloc[i], "Sell", "Call")
+                buy_leg = make_leg(calls_f.iloc[i+w], "Buy", "Call")
+                combinations.append([sell_leg, buy_leg])
                         
     elif strategy == "Bull Call Spread (debit)":
         for i in range(len(calls_f)):
-            for w in range(1, 4):
-                if i + w < len(calls_f):
-                    buy_leg = make_leg(calls_f.iloc[i], "Buy", "Call")
-                    sell_leg = make_leg(calls_f.iloc[i+w], "Sell", "Call")
-                    combinations.append([buy_leg, sell_leg])
+            for w in range(1, min(15, len(calls_f) - i)):
+                buy_leg = make_leg(calls_f.iloc[i], "Buy", "Call")
+                sell_leg = make_leg(calls_f.iloc[i+w], "Sell", "Call")
+                combinations.append([buy_leg, sell_leg])
                     
     elif strategy == "Bear Put Spread (debit)":
         for i in range(len(puts_f)):
-            for w in range(1, 4):
-                if i + w < len(puts_f):
-                    buy_leg = make_leg(puts_f.iloc[i+w], "Buy", "Put")
-                    sell_leg = make_leg(puts_f.iloc[i], "Sell", "Put")
-                    combinations.append([buy_leg, sell_leg])
+            for w in range(1, min(15, len(puts_f) - i)):
+                buy_leg = make_leg(puts_f.iloc[i+w], "Buy", "Put")
+                sell_leg = make_leg(puts_f.iloc[i], "Sell", "Put")
+                combinations.append([buy_leg, sell_leg])
                     
     elif "Iron Condor" in strategy:
         is_credit = "Short" in strategy
         put_spreads = []
         for i in range(len(puts_f)):
-            for w in range(1, 3):
-                if i + w < len(puts_f):
-                    leg1 = make_leg(puts_f.iloc[i+w], "Sell" if is_credit else "Buy", "Put")
-                    leg2 = make_leg(puts_f.iloc[i], "Buy" if is_credit else "Sell", "Put")
-                    if leg1['strike'] < current_price:
+            for w in range(1, min(15, len(puts_f) - i)):
+                leg1 = make_leg(puts_f.iloc[i+w], "Sell" if is_credit else "Buy", "Put")
+                leg2 = make_leg(puts_f.iloc[i], "Buy" if is_credit else "Sell", "Put")
+                if leg1['strike'] < current_price:
+                    # Pre-filter for minimal estimated premium viability
+                    net_est = ((leg1['bid'] + leg1['ask'])/2) - ((leg2['bid'] + leg2['ask'])/2)
+                    if net_est > 0.05:
                         put_spreads.append([leg1, leg2])
         call_spreads = []
         for i in range(len(calls_f)):
-            for w in range(1, 3):
-                if i + w < len(calls_f):
-                    leg1 = make_leg(calls_f.iloc[i], "Sell" if is_credit else "Buy", "Call")
-                    leg2 = make_leg(calls_f.iloc[i+w], "Buy" if is_credit else "Sell", "Call")
-                    if leg1['strike'] > current_price:
+            for w in range(1, min(15, len(calls_f) - i)):
+                leg1 = make_leg(calls_f.iloc[i], "Sell" if is_credit else "Buy", "Call")
+                leg2 = make_leg(calls_f.iloc[i+w], "Buy" if is_credit else "Sell", "Call")
+                if leg1['strike'] > current_price:
+                    # Pre-filter for minimal estimated premium viability
+                    net_est = ((leg1['bid'] + leg1['ask'])/2) - ((leg2['bid'] + leg2['ask'])/2)
+                    if net_est > 0.05:
                         call_spreads.append([leg1, leg2])
         
-        for ps in put_spreads[-5:]:
-            for cs in call_spreads[:5]:
-                condor = ps + cs
-                combinations.append(condor)
+        for ps in put_spreads:
+            for cs in call_spreads:
+                # Require wings to not overlap
+                if ps[0]['strike'] < cs[0]['strike']:
+                    # Iron Condors are almost always traded with symmetrical widths
+                    width_p = abs(ps[0]['strike'] - ps[1]['strike'])
+                    width_c = abs(cs[0]['strike'] - cs[1]['strike'])
+                    if abs(width_p - width_c) < 0.01:
+                        condor = ps + cs
+                        combinations.append(condor)
+
+    # To prevent combinatorial explosion and freezing, sample evenly across 
+    # the chain if we exceed 2,000 viable combinations.
+    if len(combinations) > 2000:
+        step = len(combinations) // 2000
+        combinations = combinations[::step][:2000]
 
     valid_trades = []
     for legs in combinations:
@@ -140,6 +150,35 @@ def find_best_trades(ticker, strategy, expiry, min_oi, min_vol, min_pop, max_spr
         
         if spread_pct > (max_spread_pct / 100.0):
             continue
+            
+        # VERY FAST PRE-FILTER: Estimate max loss and ROI algebraically 
+        # to skip the 10,000-point array math for doomed trades.
+        max_loss_est = 0
+        max_profit_est = 0
+        
+        if strategy in ["Bull Put Spread (credit)", "Bear Call Spread (credit)"]:
+            width = abs(legs[0]['strike'] - legs[1]['strike'])
+            max_loss_est = width - abs(net_mid)
+            max_profit_est = abs(net_mid)
+        elif strategy in ["Bull Call Spread (debit)", "Bear Put Spread (debit)"]:
+            width = abs(legs[0]['strike'] - legs[1]['strike'])
+            max_loss_est = abs(net_mid)
+            max_profit_est = width - abs(net_mid)
+        elif "Iron Condor" in strategy:
+            width_p = abs(legs[0]['strike'] - legs[1]['strike'])
+            width_c = abs(legs[2]['strike'] - legs[3]['strike'])
+            if "Short" in strategy:
+                max_loss_est = max(width_p, width_c) - abs(net_mid)
+                max_profit_est = abs(net_mid)
+            else:
+                max_loss_est = abs(net_mid)
+                max_profit_est = max(width_p, width_c) - abs(net_mid)
+            
+        if max_loss_est > 0:
+            roi_est = (max_profit_est / max_loss_est) * 100
+            # If the best-case mathematical ROI is less than the user's minimum, skip it!
+            if min_roi > 0 and roi_est < min_roi * 0.95:
+                continue
             
         try:
             metrics = calculate_metrics(legs, current_price)
@@ -157,7 +196,9 @@ def find_best_trades(ticker, strategy, expiry, min_oi, min_vol, min_pop, max_spr
                 
             if max_loss == 0:
                 roi = float('inf')
-            elif max_profit == float('inf') or max_loss == float('-inf'):
+            elif max_profit == float('inf') and max_loss != float('-inf'):
+                roi = float('inf')
+            elif max_loss == float('-inf'):
                 roi = 0.0
             else:
                 roi = abs(max_profit / max_loss) * 100
@@ -187,5 +228,5 @@ def find_best_trades(ticker, strategy, expiry, min_oi, min_vol, min_pop, max_spr
         except Exception as e:
             continue
 
-    valid_trades.sort(key=lambda x: x['er'], reverse=True)
+    valid_trades.sort(key=lambda x: (x['pop'], x['er']), reverse=True)
     return valid_trades[:5]

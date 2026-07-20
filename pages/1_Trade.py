@@ -142,10 +142,28 @@ with st.expander("Trade Recommendation", expanded=st.session_state.get("wiz_expa
             
             if max_loss == 0:
                 roi_str = "Infinite"
-            elif max_profit == float('inf') or max_loss == float('-inf'):
+                roi_val = float('inf')
+                rr_str = "0.00"
+            elif max_profit == float('inf') and max_loss != float('-inf'):
+                roi_str = "Infinite"
+                roi_val = float('inf')
+                rr_str = "0.00"
+            elif max_loss == float('-inf'):
                 roi_str = "N/A"
+                roi_val = 0
+                rr_str = "N/A"
             else:
-                roi_str = f"{abs(max_profit / max_loss) * 100:.2f}%"
+                roi_val = abs(max_profit / max_loss) * 100
+                roi_str = f"{roi_val:.2f}%"
+                rr_str = f"{abs(max_loss / max_profit):.2f}" if max_profit != 0 else "Infinite"
+            
+            pop_val = res.get('pop', 0)
+            if roi_str == "Infinite":
+                roi_pop_str = "Infinite"
+            elif pop_val > 0 and roi_str != "N/A":
+                roi_pop_str = f"{(roi_val / pop_val) * 100:.2f}%"
+            else:
+                roi_pop_str = "N/A"
 
             r_col1, r_col2 = st.columns([8.5, 1.5])
             
@@ -159,7 +177,12 @@ with st.expander("Trade Recommendation", expanded=st.session_state.get("wiz_expa
             spread = res.get('spread_pct', 0)
             gross_spread = res.get('gross_spread_pct', 0)
             
-            stats_str = f"**PoP:** {res['pop']:.1f}% &nbsp;|&nbsp; **Vol:** {vol} &nbsp;|&nbsp; **OI:** {oi} &nbsp;|&nbsp; **Spread:** {spread:.2f}% (Net) / {gross_spread:.2f}% (Gross) &nbsp;|&nbsp; **Max Profit:** {mp_str} &nbsp;|&nbsp; **Max Loss:** {ml_str} &nbsp;|&nbsp; **Collateral:** {collateral_str} &nbsp;|&nbsp; **ROI:** {roi_str}"
+            stats_str = (
+                f"**PoP:** {pop_val:.1f}% &nbsp;|&nbsp; **Vol:** {vol} &nbsp;|&nbsp; **OI:** {oi} &nbsp;|&nbsp; "
+                f"**Sprd:** {spread:.2f}% (N) / {gross_spread:.2f}% (G) &nbsp;|&nbsp; "
+                f"**MaxP:** {mp_str} &nbsp;|&nbsp; **MaxL:** {ml_str} &nbsp;|&nbsp; **Coll:** {collateral_str} &nbsp;|&nbsp; "
+                f"**ROI:** {roi_str} &nbsp;|&nbsp; **R/R:** {rr_str} &nbsp;|&nbsp; **ROI/PoP:** {roi_pop_str}"
+            )
             
             r_col1.markdown(f"**{idx+1}.** {desc} &nbsp;|&nbsp; <span style='font-size:14px; color:#a1a1aa;'>{stats_str}</span>", unsafe_allow_html=True)
             if r_col2.button(f"Select", key=f"sel_wiz_{idx}", use_container_width=True):
