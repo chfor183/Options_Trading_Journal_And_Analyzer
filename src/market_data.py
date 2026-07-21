@@ -6,11 +6,29 @@ import pandas as pd
 def get_ticker_info(ticker_symbol: str) -> dict:
     try:
         ticker = yf.Ticker(ticker_symbol)
+        
+        # 1. Get price fast using fast_info
+        try:
+            current_price = ticker.fast_info.last_price
+        except Exception:
+            current_price = None
+            
+        # 2. Fetch the standard info dict
         info = ticker.info
+        
+        # 3. Aggressive fallbacks for morning / pre-market missing data
+        if not current_price or pd.isna(current_price):
+            current_price = (
+                info.get("currentPrice") or 
+                info.get("regularMarketPrice") or 
+                info.get("previousClose") or 
+                0.0
+            )
+            
         return {
             "name": info.get("shortName", ""),
             "category": info.get("quoteType", ""),
-            "current_price": info.get("currentPrice") or info.get("regularMarketPrice")
+            "current_price": float(current_price) if current_price else 0.0
         }
     except Exception as e:
         return {"name": "", "category": "", "current_price": 0.0}

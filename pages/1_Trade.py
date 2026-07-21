@@ -91,11 +91,39 @@ with st.expander("Trade Recommendation", expanded=st.session_state.get("wiz_expa
     if not wizard_chains:
         w_ecol.selectbox("Expiry", ["No expirations found"], disabled=True, key="wiz_exp_disabled")
     else:
+        # Pre-calculate true monthly expirations deterministically based on available chains
+        import calendar
+        monthly_expiries = set()
+        year_months = set()
+        
+        for d_str in wizard_chains:
+            try:
+                d = datetime.strptime(d_str, "%Y-%m-%d")
+                year_months.add((d.year, d.month))
+            except:
+                pass
+                
+        for y, m in year_months:
+            cal = calendar.monthcalendar(y, m)
+            # Index 4 is Friday
+            fridays = [week[4] for week in cal if week[4] != 0]
+            if len(fridays) >= 3:
+                third_friday = fridays[2]
+                third_friday_str = f"{y:04d}-{m:02d}-{third_friday:02d}"
+                
+                if third_friday_str in wizard_chains:
+                    monthly_expiries.add(third_friday_str)
+                else:
+                    # If 3rd Friday isn't available (e.g., market holiday), fallback to Thursday before it
+                    thursday_str = f"{y:04d}-{m:02d}-{(third_friday - 1):02d}"
+                    if thursday_str in wizard_chains:
+                        monthly_expiries.add(thursday_str)
+                        
         def format_expiry(date_str):
             try:
                 d = datetime.strptime(date_str, "%Y-%m-%d")
                 dte = (d.date() - datetime.today().date()).days
-                is_monthly = d.weekday() == 4 and 15 <= d.day <= 21
+                is_monthly = date_str in monthly_expiries
                 return f"{date_str} ({'m' if is_monthly else 'w'}) ({dte} DTE)"
             except:
                 return date_str
@@ -569,13 +597,13 @@ with calc_col:
             </div>
             """, unsafe_allow_html=True)
         else:
-            tp_price = base_price * (tp_pct / 100.0)
-            sl_price = base_price * (sl_pct / 100.0)
+            tp_price = base_price * (1 + tp_pct / 100.0)
+            sl_price = base_price * (1 - sl_pct / 100.0)
             st.markdown(f"""
             <div style='margin-top: -32px;'>
-                <div style='margin-bottom: 14px;'><span style='color:#a1a1aa; font-size: 14px;'>Premium: <b>{premium_str}</b></span></div>
-                <div style='margin-bottom: 14px;'><span style='color:#22c55e; font-size: 14px;'>TP Target (Sell to Close): <b>${tp_price:.2f}</b></span></div>
-                <div><span style='color:#ef4444; font-size: 14px;'>SL Target (Sell to Close): <b>${max(0, sl_price):.2f}</b></span></div>
+                <div style='margin-bottom: 14px;'><span style='color:#a1a1aa; font-size: 16px;'>Premium: <b>{premium_str}</b></span></div>
+                <div style='margin-bottom: 14px;'><span style='color:#22c55e; font-size: 16px;'>TP Target (Sell to Close): <b>${tp_price:.2f}</b></span></div>
+                <div><span style='color:#ef4444; font-size: 16px;'>SL Target (Sell to Close): <b>${max(0, sl_price):.2f}</b></span></div>
             </div>
             """, unsafe_allow_html=True)
 
