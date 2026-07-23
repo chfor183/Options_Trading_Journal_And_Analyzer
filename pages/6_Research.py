@@ -108,6 +108,4 @@ with col3:
         st.markdown("<div class='link-item'><a href='https://www.youtube.com/@EverythingMoney' target='_blank' style='text-decoration: none;'>🔗 Everything Money</a></div>", unsafe_allow_html=True)
         st.markdown("<div class='link-item'><a href='https://www.youtube.com/@JosephCarlsonAfterHours' target='_blank' style='text-decoration: none;'>🔗 Joseph Carlson After Hours</a></div>", unsafe_allow_html=True)
         st.markdown("<div class='link-item'><a href='https://www.youtube.com/@unrivaled' target='_blank' style='text-decoration: none;'>🔗 Unrivaled Investing</a></div>", unsafe_allow_html=True)
-        st.markdown("<div class='link-item'><a href='https://www.youtube.com/@LearntoInvest' target='_blank' style='text-decoration: none;'>🔗 Learn to Invest</a></div>", unsafe_allow_html=True)
-        st.markdown("<div class='link-item'><a href='https://www.youtube.com/@inthemoneypod' target='_blank' style='text-decoration: none;'>🔗 In The Money</a></div>", unsafe_allow_html=True)
 
