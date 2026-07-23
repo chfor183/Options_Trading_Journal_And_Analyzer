@@ -7,7 +7,6 @@ from fpdf import FPDF, XPos, YPos
 from src.db import SessionLocal
 from src.models import Trade
 
-st.set_page_config(page_title="Export", page_icon="📄", layout="wide")
 st.title("Export")
 
 # Inject custom CSS styles for PDF and CSV download buttons

@@ -7,7 +7,6 @@ from src.models import Trade, Leg, Transaction
 from src.market_data import get_ticker_info, get_barchart_live_option_leg_data
 from src.options_math import calculate_metrics, calculate_payoff_array
 
-st.set_page_config(page_title="Open Trades", page_icon="🔓", layout="wide")
 st.title("🔓 Open Trades Review")
 
 # 1. Database & Portfolio Session Setup

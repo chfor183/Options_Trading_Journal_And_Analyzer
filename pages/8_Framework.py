@@ -2,7 +2,6 @@ import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
 
-st.set_page_config(page_title="Investment Framework", page_icon="🧠", layout="wide")
 st.title("🧠 Investment Framework")
 
 tabs = st.tabs(["📋 Analysis Checklists", "💰 Allocation & Notes", "⚖️ Rules & Mindset", "🧠 Psychology & Takeaways"])

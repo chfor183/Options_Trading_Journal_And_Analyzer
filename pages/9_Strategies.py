@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 
-st.set_page_config(page_title="Option Strategies", page_icon="📈", layout="wide")
 st.title("📈 Option Strategies")
 
 # Define the tabs: Options Theory, Summary, and Details

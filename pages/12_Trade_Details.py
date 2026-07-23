@@ -10,7 +10,6 @@ from src.models import Trade, Transaction
 from src.market_data import get_ticker_info, get_barchart_live_option_leg_data
 from src.options_math import calculate_metrics, generate_payoff_chart
 
-st.set_page_config(page_title="Trade Details", page_icon="ℹ️", layout="wide")
 
 def get_leg_current_price(ticker, expiry_date, strike, option_type, position, fallback_price):
     try:

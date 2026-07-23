@@ -4,9 +4,6 @@ import numpy as np
 import plotly.graph_objects as go
 from src.market_data import get_dcf_financial_data
 
-# Set Streamlit page config
-st.set_page_config(page_title="DCF Evaluation", page_icon="💵", layout="wide")
-
 # Custom Compact CSS
 st.markdown("""
 <style>

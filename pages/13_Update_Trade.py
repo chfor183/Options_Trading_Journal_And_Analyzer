@@ -15,7 +15,6 @@ def toggle_type(i):
     current = st.session_state[f"type_val_{i}"]
     st.session_state[f"type_val_{i}"] = "Call" if current == "Put" else "Put"
 
-st.set_page_config(page_title="Trade Entry", page_icon="📝", layout="wide")
 
 # Initialize default session state values safely
 if "num_legs" not in st.session_state:
@@ -57,7 +56,7 @@ col1, col2 = st.columns(2)
 
 with col1:
     st.markdown("<span style='color: #a1a1aa; font-weight: bold; font-size: 14px;'>Underlying Ticker</span>", unsafe_allow_html=True)
-    ticker = st.text_input("Underlying Ticker", value=st.session_state.get("ticker_val", "GLD"), label_visibility="collapsed").upper()
+    ticker = st.text_input("Underlying Ticker", value=st.session_state.get("ticker_val", "SPY"), label_visibility="collapsed").upper()
     if ticker:
         with st.spinner("Fetching data..."):
             info = get_ticker_info(ticker)
@@ -65,19 +64,21 @@ with col1:
         # Check if the ticker has changed to fetch and update name_val
         if "last_ticker" not in st.session_state or st.session_state["last_ticker"] != ticker:
             st.session_state["last_ticker"] = ticker
-            st.session_state["name_val"] = "SPDR Gold Shares" if ticker == "GLD" else info['name']
+            st.session_state["name_val"] = info['name']
         
         st.markdown("<span style='color: #a1a1aa; font-weight: bold; font-size: 14px;'>Name of Underlying</span>", unsafe_allow_html=True)
-        name = st.text_input("Name of Underlying", value=st.session_state.get("name_val", "SPDR Gold Shares" if ticker == "GLD" else info['name']), label_visibility="collapsed")
+        name = st.text_input("Name of Underlying", value=st.session_state.get("name_val", info['name']), label_visibility="collapsed")
         
         cat_options = ["Stock", "ETF", "Index", "Futures", "Forex", "Crypto"]
-        default_cat = "ETF" if ticker == "GLD" else (info['category'].capitalize() if info['category'].capitalize() in cat_options else "Stock")
+        default_cat = "Stock"
+        if trade_to_edit and trade_to_edit.category in cat_options:
+            default_cat = trade_to_edit.category
         st.markdown("<span style='color: #60a5fa; font-weight: bold; font-size: 14px;'>Category</span>", unsafe_allow_html=True)
         category = st.selectbox("Category", cat_options, index=cat_options.index(default_cat), label_visibility="collapsed")
         
         st.markdown("<span style='color: #a1a1aa; font-weight: bold; font-size: 14px;'>Underlying Price</span>", unsafe_allow_html=True)
         
-        default_price = float(373.63) if ticker == "GLD" else (float(info['current_price']) if info.get('current_price') else 1151.38)
+        default_price = float(info['current_price']) if info.get('current_price') else 100.00
         if trade_to_edit and trade_to_edit.status != "Open" and getattr(trade_to_edit, 'underlying_price_at_close', None):
             default_price = float(trade_to_edit.underlying_price_at_close)
             
@@ -96,14 +97,14 @@ with col1:
             "Cash-Secured Put (credit)",
             "Custom"
         ]
-        def_strat = st.session_state.get("strategy_val", "Bull Put Spread (credit)" if ticker == "GLD" else "Bull Put Spread (credit)")
+        def_strat = st.session_state.get("strategy_val", "Bull Put Spread (credit)")
         strat_idx = strat_options.index(def_strat) if def_strat in strat_options else 0
         st.markdown("<span style='color: #60a5fa; font-weight: bold; font-size: 14px;'>Strategy Type</span>", unsafe_allow_html=True)
         strategy_type = st.selectbox("Strategy Type", strat_options, index=strat_idx, label_visibility="collapsed")
 
 with col2:
     direction_options = ["Bullish ↗", "Neutral →", "Bearish ↘", "High volatility"]
-    def_direction = st.session_state.get("direction_val", "Bullish ↗" if ticker == "GLD" else "Bullish ↗")
+    def_direction = st.session_state.get("direction_val", "Bullish ↗")
     direction_idx = direction_options.index(def_direction) if def_direction in direction_options else 0
     st.markdown("<span style='color: #60a5fa; font-weight: bold; font-size: 14px;'>Expected Direction</span>", unsafe_allow_html=True)
     expected_direction = st.selectbox("Expected Direction", direction_options, index=direction_idx, label_visibility="collapsed")

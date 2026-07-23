@@ -1,12 +1,6 @@
 import streamlit as st
 from src.db import init_db
 
-st.set_page_config(
-    page_title="Options Trading Journal",
-    page_icon="📈",
-    layout="wide",
-)
-
 # Custom stylized banner / header
 st.markdown("""
 <div style="background-color: rgba(0, 97, 252, 0.1); border-left: 5px solid #013382; padding: 20px; border-radius: 5px; margin-bottom: 25px;">

@@ -8,7 +8,6 @@ from src.db import SessionLocal
 from src.models import Trade, Transaction
 from src.market_data import get_ticker_info
 
-st.set_page_config(page_title="Trading Journal", page_icon="📓", layout="wide")
 st.title("Trading Journal")
 
 db = SessionLocal()

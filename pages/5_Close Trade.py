@@ -6,7 +6,6 @@ from src.db import SessionLocal
 from src.models import Trade, Transaction
 from src.market_data import get_ticker_info, get_barchart_live_option_leg_data
 
-st.set_page_config(page_title="Close Trade", page_icon="✖", layout="wide")
 st.markdown("<h3 style='margin-top: -15px; padding-top: 0; margin-bottom: 10px;'>Close Trade</h3>", unsafe_allow_html=True)
 
 if "close_trade_id" not in st.session_state:

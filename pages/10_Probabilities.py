@@ -5,7 +5,6 @@ import math
 import plotly.graph_objects as go
 
 # Page setup
-st.set_page_config(page_title="Probabilities", page_icon="🎲", layout="wide")
 
 st.title("Probabilities Dashboard")
 st.write("Analyze trading streak probabilities, explore probability models, and understand key math metrics used in options trading.")

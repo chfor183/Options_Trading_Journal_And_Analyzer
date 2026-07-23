@@ -8,6 +8,8 @@ if sys.platform == 'win32':
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 import streamlit as st
+st.set_page_config(page_title="Options Trading Journal", page_icon="📈", layout="wide")
+
 from src.db import init_db, SessionLocal
 from src.models import Portfolio
 
@@ -28,21 +30,26 @@ with st.sidebar:
     if portfolios:
         portfolio_options = {p.id: p.name for p in portfolios}
         
-        # Determine index of current selection, default to 0
-        current_idx = 0
-        if "active_portfolio_id" in st.session_state:
-            for i, p in enumerate(portfolios):
-                if p.id == st.session_state.active_portfolio_id:
-                    current_idx = i
-                    break
+        # Ensure active_portfolio_id is set and is valid
+        if "active_portfolio_id" not in st.session_state or st.session_state.active_portfolio_id not in portfolio_options:
+            st.session_state.active_portfolio_id = list(portfolio_options.keys())[0]
+            
+        def on_portfolio_change():
+            st.session_state.active_portfolio_id = st.session_state.portfolio_select_box
+            
+        try:
+            current_idx = list(portfolio_options.keys()).index(st.session_state.active_portfolio_id)
+        except ValueError:
+            current_idx = 0
                     
-        selected_p_id = st.selectbox(
+        st.selectbox(
             "Select Portfolio",
             options=list(portfolio_options.keys()),
             format_func=lambda x: portfolio_options[x],
-            index=current_idx
+            index=current_idx,
+            key="portfolio_select_box",
+            on_change=on_portfolio_change
         )
-        st.session_state.active_portfolio_id = selected_p_id
     else:
         st.warning("No portfolios found.")
 

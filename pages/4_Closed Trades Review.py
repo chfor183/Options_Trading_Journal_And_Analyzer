@@ -6,7 +6,6 @@ from datetime import datetime, timedelta
 from src.db import SessionLocal
 from src.models import Trade, Transaction
 
-st.set_page_config(page_title="Closed Trades Review", page_icon="📊", layout="wide")
 
 # Custom CSS to make the page more vertically compact
 st.markdown("""
