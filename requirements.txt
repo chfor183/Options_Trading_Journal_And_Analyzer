@@ -6,6 +6,3 @@ plotly
 pandas
 scipy
 fpdf2
-pytesseract
-Pillow
-dateparser

@@ -15,44 +15,6 @@ def toggle_type(i):
     current = st.session_state[f"type_val_{i}"]
     st.session_state[f"type_val_{i}"] = "Call" if current == "Put" else "Put"
 
-@st.dialog("Extract Multi-Leg Strategy Help", width="large")
-def show_multi_help():
-    import os
-    from PIL import Image
-    try:
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        img_path = os.path.join(base_dir, "assets", "Multileg_tutorial.png")
-        img = Image.open(img_path)
-        st.image(img, use_container_width=True)
-    except Exception as e:
-        st.error(f"Error loading tutorial image: {e}")
-    st.markdown("""
-    **How to use Extract Multi-Leg Strategy:**
-    1. Open your **Interactive Brokers Desktop App**.
-    2. View the multi-leg order/trade confirmation.
-    3. Take a screenshot of the area shown in the image above (e.g., using Windows Snipping Tool `Win + Shift + S`).
-    4. Click the **Extract Multi-Leg Strategy** button to automatically paste and parse it!
-    """)
-
-@st.dialog("Extract Single Contract Details Help", width="large")
-def show_single_help():
-    import os
-    from PIL import Image
-    try:
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        img_path = os.path.join(base_dir, "assets", "Singleleg_tutorial.png")
-        img = Image.open(img_path)
-        st.image(img, use_container_width=True)
-    except Exception as e:
-        st.error(f"Error loading tutorial image: {e}")
-    st.markdown("""
-    **How to use Extract Single Contract Details:**
-    1. Open your **Interactive Brokers Desktop App**.
-    2. View the single contract details.
-    3. Take a screenshot of the area shown in the image above (e.g., using Windows Snipping Tool `Win + Shift + S`).
-    4. Click the **Extract Single Contract Details** button to automatically paste and parse it!
-    """)
-
 # Initialize default session state values safely
 if "num_legs" not in st.session_state:
     st.session_state["num_legs"] = 2
@@ -231,69 +193,6 @@ with st.expander("Trade Recommendation", expanded=st.session_state.get("wiz_expa
                     st.session_state[f"iv_{i}"] = leg['iv']
                 st.rerun()
 
-st.write("### 📸 Auto-Fill from Clipboard")
-st.info("💡 **Note:** This OCR feature is designed **only for the Interactive Brokers Desktop App**.")
-st.write("Take a screenshot of your broker's trade confirmation, then click one of the buttons below to paste it.")
-
-# Use compact, native columns for the action and help buttons
-col_btn1, col_help1, col_btn2, col_help2, _ = st.columns([2.6, 0.5, 2.8, 0.5, 5.6])
-
-with col_btn1:
-    btn_multi = st.button("Extract Multi-Leg Strategy", type="primary", use_container_width=True)
-with col_help1:
-    if st.button("❓", key="multi_help", use_container_width=True, help="Show Multi-Leg Screenshot Tutorial"):
-        show_multi_help()
-
-with col_btn2:
-    btn_single = st.button("Extract Single Contract Details", use_container_width=True)
-with col_help2:
-    if st.button("❓", key="single_help", use_container_width=True, help="Show Single Contract Screenshot Tutorial"):
-        show_single_help()
-
-if btn_multi or btn_single:
-    with st.spinner("Reading clipboard and extracting text with OCR..."):
-        from src.ocr_parser import parse_trade_image, parse_single_leg_image
-        from PIL import ImageGrab, Image
-        
-        img = ImageGrab.grabclipboard()
-        
-        if img is None:
-            st.error("No image found on your clipboard. Please take a screenshot first (e.g., using Snipping Tool).")
-        else:
-            if isinstance(img, list):
-                try:
-                    img = Image.open(img[0])
-                except Exception as e:
-                    st.error("Found files in clipboard but could not load as an image.")
-                    img = None
-            
-            if img:
-                if btn_multi:
-                    result = parse_trade_image(img)
-                else:
-                    result = parse_single_leg_image(img)
-                    
-                if "error" in result:
-                    st.error(result["error"])
-                else:
-                    st.session_state["ticker_val"] = result["ticker"]
-                    legs = result["legs"]
-                    st.session_state["num_legs"] = len(legs)
-                    for i, leg in enumerate(legs):
-                        st.session_state[f"action_val_{i}"] = leg["action"]
-                        st.session_state[f"qty_{i}"] = leg["qty"]
-                        st.session_state[f"type_val_{i}"] = leg["type"]
-                        st.session_state[f"strike_input_{i}"] = leg["strike"]
-                        st.session_state[f"strike_{i}"] = leg["strike"]
-                        try:
-                            parsed_date = datetime.strptime(leg["expiry"], "%Y-%m-%d").date()
-                            st.session_state[f"expiry_input_{i}"] = parsed_date
-                            st.session_state[f"expiry_{i}"] = parsed_date
-                        except:
-                            pass # Let it fallback to default if parsing failed
-                        st.session_state[f"price_{i}"] = 0.0 # Force pulling live data or manual entry
-                        st.session_state[f"delta_{i}"] = 0.0
-                    st.rerun()
 st.divider()
 
 col1, col2 = st.columns(2)

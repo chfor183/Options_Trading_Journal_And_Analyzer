@@ -141,11 +141,6 @@
   - **Button Centering & Flexbox Styling**: Addressed an alignment issue where the text on actions buttons ("Details", "Edit", "Close", "Reopen") appeared off-center. Configured explicit CSS flex centering rules (`display: flex !important; justify-content: center !important;`) applied down the button hierarchy to ensure perfect text positioning.
 - **Copyable Trade Idea Refinements**:
   - Overhauled the header line of the **Copyable Trade Idea** raw text output block to act as a highly informative, clean title structured as `[Ticker] - [Strategy Type] ([DTE] DTE) @ [Cost/Premium]` without any redundant `"Title :"` or `[POP: ...]` prefixes. This ensures the output can be cleanly shared with other tools/users immediately with all necessary high-density parameters intact.
-- **OCR Tutorial Modals**:
-  - Overhauled the manual OCR help system, replacing the hover tooltips with Streamlit's native `@st.dialog` closable modal views for both the Multi-Leg Strategy extractor and the Single Contract Details extractor.
-  - Implemented sleek "❓" help triggers that trigger centered modal overlays displaying high-fidelity screenshot tutorial guides (`Multileg_tutorial.png` and `Singleleg_tutorial.png`) paired with step-by-step usage workflows.
-  - Added a distinct, prominent information banner stating that the clipboard OCR extractor feature is designed exclusively for the **Interactive Brokers Desktop App** (Trader Workstation / TWS).
-  - Streamlined and narrowed the OCR action buttons row using compact, theme-aware layout columns (`[2.6, 0.5, 2.8, 0.5, 5.6]`) to eliminate unnecessary wide whitespace and align flawlessly with the Streamlit theme's styling cues.
 
 **Session Date: 2026-06-30**
 - **Home Page Redesign**:
