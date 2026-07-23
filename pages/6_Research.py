@@ -57,7 +57,10 @@ with col1:
         st.markdown("<div class='link-item'><a href='https://www.tradingview.com/' target='_blank' style='text-decoration: none;'>🔗 TradingView</a></div>", unsafe_allow_html=True)
         st.markdown("<div class='link-item'><a href='https://www.tradingview.com/chart/' target='_blank' style='text-decoration: none;'>🔗 TradingView Charts</a></div>", unsafe_allow_html=True)
         st.markdown("<div class='link-item'><a href='https://finviz.com/map?t=sec_all' target='_blank' style='text-decoration: none;'>🔗 Finviz Heatmaps</a></div>", unsafe_allow_html=True)
-        st.markdown("<div class='link-item'><a href='https://www.tradingview.com/heatmap/stock' target='_blank' style='text-decoration: none;'>🔗 TradingView Stock Heatmap</a></div>", unsafe_allow_html=True)
+
+    with st.container(border=True):
+        st.markdown('<div class="compact-header">📅 Economic Calendar</div>', unsafe_allow_html=True)
+        st.markdown("<div class='link-item'><a href='https://tradingeconomics.com/calendar' target='_blank' style='text-decoration: none;'>🔗 Trading Economics Calendar</a></div>", unsafe_allow_html=True)
 
     with st.container(border=True):
         st.markdown('<div class="compact-header">🔎 Screener</div>', unsafe_allow_html=True)
@@ -93,6 +96,7 @@ with col3:
         st.markdown("<div class='link-item'><a href='https://www.cnbc.com/' target='_blank' style='text-decoration: none;'>🔗 CNBC</a></div>", unsafe_allow_html=True)
         st.markdown("<div class='link-item'><a href='https://www.nbcnews.com/' target='_blank' style='text-decoration: none;'>🔗 NBC News</a></div>", unsafe_allow_html=True)
         st.markdown("<div class='link-item'><a href='https://ground.news/' target='_blank' style='text-decoration: none;'>🔗 Ground News</a></div>", unsafe_allow_html=True)
+        st.markdown("<div class='link-item'><a href='https://www.cnn.com/' target='_blank' style='text-decoration: none;'>🔗 CNN</a></div>", unsafe_allow_html=True)
 
 
     with st.container(border=True):
