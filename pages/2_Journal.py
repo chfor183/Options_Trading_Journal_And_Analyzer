@@ -294,7 +294,7 @@ if trades:
                 st.rerun()
             
     # Header row
-    col_widths = [0.4, 0.5, 0.7, 1.4, 1.1, 1.1, 1.5, 0.5, 1.0, 1.1, 1.0, 1.2, 1.2, 1.7, 0.8, 0.7, 0.9, 0.4]
+    col_widths = [0.4, 0.5, 0.8, 1.4, 1.1, 1.1, 1.5, 0.5, 1.0, 1.1, 1.0, 1.2, 1.2, 1.7, 0.8, 0.7, 0.9, 0.4]
     cols = st.columns(col_widths)
     headers_config = [
         ("", False),
