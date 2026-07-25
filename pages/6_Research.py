@@ -106,6 +106,5 @@ with col3:
         st.markdown("<div class='link-item'><a href='https://www.youtube.com/@TheDavidLinReport' target='_blank' style='text-decoration: none;'>🔗 David Lin Report</a></div>", unsafe_allow_html=True)
         st.markdown("<div class='link-item'><a href='https://www.youtube.com/@Click-Capital' target='_blank' style='text-decoration: none;'>🔗 Click Capital</a></div>", unsafe_allow_html=True)
         st.markdown("<div class='link-item'><a href='https://www.youtube.com/@EverythingMoney' target='_blank' style='text-decoration: none;'>🔗 Everything Money</a></div>", unsafe_allow_html=True)
-        st.markdown("<div class='link-item'><a href='https://www.youtube.com/@JosephCarlsonAfterHours' target='_blank' style='text-decoration: none;'>🔗 Joseph Carlson After Hours</a></div>", unsafe_allow_html=True)
         st.markdown("<div class='link-item'><a href='https://www.youtube.com/@unrivaled' target='_blank' style='text-decoration: none;'>🔗 Unrivaled Investing</a></div>", unsafe_allow_html=True)
 
