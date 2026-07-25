@@ -100,12 +100,11 @@ else:
     val_amount = sum((tx.price - tx.commission) for tx in close_dates)
 
 val_pct = 0.0
-pos_return_dollars = pnl + val_amount
+pos_return_dollars = pnl * 100 / trade.collateral
 if pnl != 0:
-    val_pct = (pos_return_dollars / abs(pnl)) * 100
-    val_pct_str = f"{format_currency(pos_return_dollars)}({'+' if val_pct > 0 else ''}{val_pct:.2f}%)"
+    val_pct_str = f"{'+' if pos_return_dollars > 0 else ''}{pos_return_dollars:.2f}%"
 else:
-    val_pct_str = f"{format_currency(pos_return_dollars)}(N/A)"
+    val_pct_str = f"(N/A)"
 
 val_sign = "+" if val_amount > 0 else ""
 val_display_str = f"<span>{val_sign}{format_currency(val_amount)}</span>"
