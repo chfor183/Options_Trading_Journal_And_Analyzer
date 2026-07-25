@@ -60,6 +60,8 @@ def format_string(val):
 open_tx = next((tx for tx in trade.transactions if tx.action == "Open"), None)
 raw_cost = open_tx.price if open_tx else 0.0
 display_cost = -raw_cost
+open_commission = sum(tx.commission for tx in trade.transactions if tx.action == "Open")
+total_open_cost = display_cost - open_commission
 
 pnl = 0.0
 total_commission = 0.0
@@ -99,18 +101,14 @@ if is_open:
 else:
     val_amount = sum((tx.price - tx.commission) for tx in close_dates)
 
-val_pct = 0.0
-pos_return_dollars = pnl * 100 / trade.collateral
-if pnl != 0:
-    val_pct_str = f"{'+' if pos_return_dollars > 0 else ''}{pos_return_dollars:.2f}%"
-else:
-    val_pct_str = f"(N/A)"
+pos_return_dollars = val_amount + total_open_cost
+val_pct = round((pos_return_dollars / total_open_cost) * 100, 2) if total_open_cost != 0 else 0.0
 
 val_sign = "+" if val_amount > 0 else ""
 val_display_str = f"<span>{val_sign}{format_currency(val_amount)}</span>"
 
 pct_color = "#28a745" if pos_return_dollars > 0 else "#dc3545" if pos_return_dollars < 0 else "inherit"
-pct_display_str = f"<span style='color:{pct_color}; font-weight:bold;'>{val_pct_str}</span>"
+pct_display_str = f"<span style='color:{pct_color}; font-weight:bold;'>{format_currency(pos_return_dollars)} ({val_pct:.2f}%)</span>"
 
 st.markdown(f"### {trade.ticker} - {format_string(trade.underlying_name)}")
 
