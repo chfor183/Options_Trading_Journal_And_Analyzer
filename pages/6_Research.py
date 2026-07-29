@@ -79,10 +79,10 @@ with col2:
 
     with st.container(border=True):
         st.markdown('<div class="compact-header">🎭 Sentiment</div>', unsafe_allow_html=True)
+        st.markdown("<div class='link-item'><a href='https://www.currentmarketvaluation.com/' target='_blank' style='text-decoration: none;'>🔗 Current Market Valuation</a></div>", unsafe_allow_html=True)
         st.markdown("<div class='link-item'><a href='https://www.cnn.com/markets/fear-and-greed' target='_blank' style='text-decoration: none;'>🔗 CNN Fear & Greed</a></div>", unsafe_allow_html=True)
         st.markdown("<div class='link-item'><a href='https://www.aaii.com/sentiment-survey' target='_blank' style='text-decoration: none;'>🔗 AAII Survey</a></div>", unsafe_allow_html=True)
         st.markdown("<div class='link-item'><a href='https://truflation.com/indexes' target='_blank' style='text-decoration: none;'>🔗 Truflation</a></div>", unsafe_allow_html=True)
-        st.markdown("<div class='link-item'><a href='https://www.currentmarketvaluation.com/' target='_blank' style='text-decoration: none;'>🔗 Current Market Valuation</a></div>", unsafe_allow_html=True)
 
     with st.container(border=True):
         st.markdown('<div class="compact-header">💰 Earnings</div>', unsafe_allow_html=True)
@@ -99,12 +99,12 @@ with col3:
 
     with st.container(border=True):
         st.markdown('<div class="compact-header">🎥 YouTube</div>', unsafe_allow_html=True)
+        st.markdown("<div class='link-item'><a href='https://www.youtube.com/@EverythingMoney' target='_blank' style='text-decoration: none;'>🔗 Everything Money</a></div>", unsafe_allow_html=True)
         st.markdown("<div class='link-item'><a href='https://www.youtube.com/@CashFlowInsiders' target='_blank' style='text-decoration: none;'>🔗 Cash Flow Insiders</a></div>", unsafe_allow_html=True)
         st.markdown("<div class='link-item'><a href='https://www.youtube.com/@DividendTalks' target='_blank' style='text-decoration: none;'>🔗 Dividend Talks</a></div>", unsafe_allow_html=True)
         st.markdown("<div class='link-item'><a href='https://www.youtube.com/@kenfreemancfa' target='_blank' style='text-decoration: none;'>🔗 Ken Freeman CFA</a></div>", unsafe_allow_html=True)
         st.markdown("<div class='link-item'><a href='https://www.youtube.com/@InvestwithHenry' target='_blank' style='text-decoration: none;'>🔗 Invest with Henry</a></div>", unsafe_allow_html=True)
         st.markdown("<div class='link-item'><a href='https://www.youtube.com/@TheDavidLinReport' target='_blank' style='text-decoration: none;'>🔗 David Lin Report</a></div>", unsafe_allow_html=True)
         st.markdown("<div class='link-item'><a href='https://www.youtube.com/@Click-Capital' target='_blank' style='text-decoration: none;'>🔗 Click Capital</a></div>", unsafe_allow_html=True)
-        st.markdown("<div class='link-item'><a href='https://www.youtube.com/@EverythingMoney' target='_blank' style='text-decoration: none;'>🔗 Everything Money</a></div>", unsafe_allow_html=True)
         st.markdown("<div class='link-item'><a href='https://www.youtube.com/@unrivaled' target='_blank' style='text-decoration: none;'>🔗 Unrivaled Investing</a></div>", unsafe_allow_html=True)
 
