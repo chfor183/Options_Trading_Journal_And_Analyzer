@@ -100,6 +100,7 @@ with col3:
     with st.container(border=True):
         st.markdown('<div class="compact-header">🎥 YouTube</div>', unsafe_allow_html=True)
         st.markdown("<div class='link-item'><a href='https://www.youtube.com/@EverythingMoney' target='_blank' style='text-decoration: none;'>🔗 Everything Money</a></div>", unsafe_allow_html=True)
+        st.markdown("<div class='link-item'><a href='https://www.youtube.com/@PhilTownRule1Investing' target='_blank' style='text-decoration: none;'>🔗 Rule #1 Investing</a></div>", unsafe_allow_html=True)
         st.markdown("<div class='link-item'><a href='https://www.youtube.com/@CashFlowInsiders' target='_blank' style='text-decoration: none;'>🔗 Cash Flow Insiders</a></div>", unsafe_allow_html=True)
         st.markdown("<div class='link-item'><a href='https://www.youtube.com/@DividendTalks' target='_blank' style='text-decoration: none;'>🔗 Dividend Talks</a></div>", unsafe_allow_html=True)
         st.markdown("<div class='link-item'><a href='https://www.youtube.com/@kenfreemancfa' target='_blank' style='text-decoration: none;'>🔗 Ken Freeman CFA</a></div>", unsafe_allow_html=True)
