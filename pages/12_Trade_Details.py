@@ -102,7 +102,7 @@ else:
     val_amount = sum((tx.price - tx.commission) for tx in close_dates)
 
 pos_return_dollars = val_amount + total_open_cost
-val_pct = round((pos_return_dollars / total_open_cost) * 100, 2) if total_open_cost != 0 else 0.0
+val_pct = round((pos_return_dollars / total_open_cost) * 100, 2) * -1 if total_open_cost != 0 else 0.0
 
 val_sign = "+" if val_amount > 0 else ""
 val_display_str = f"<span>{val_sign}{format_currency(val_amount)}</span>"
