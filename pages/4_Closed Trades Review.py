@@ -551,7 +551,11 @@ elif all_trades:
             st.rerun()
             
         selected_tier = st.session_state.selected_tier
-        trades_to_show = direction_stats[selected_tier]["trades"]
+        trades_to_show = sorted(
+            direction_stats[selected_tier]["trades"],
+            key=lambda x: x["Trade"].date_opened if x["Trade"].date_opened else datetime.min,
+            reverse=True
+        )
         
         # Pagination Logic for Trades by Tier (5 trades per page)
         TIER_PAGE_SIZE = 5
