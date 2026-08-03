@@ -238,6 +238,7 @@ with col1:
             "Long Put (debit)",
             "Covered Call (credit)",
             "Cash-Secured Put (credit)",
+            "Turbo (mixed)",
             "Custom"
         ]
         def_strat = st.session_state.get("strategy_val", "Bull Put Spread (credit)")
