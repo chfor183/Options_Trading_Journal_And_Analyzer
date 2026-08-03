@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import yfinance as yf
+import math
 from datetime import datetime, timedelta
 from src.db import SessionLocal
 from src.models import Trade, Transaction
@@ -524,26 +525,46 @@ elif all_trades:
         if "selected_tier" not in st.session_state:
             st.session_state.selected_tier = "Very Right"
             
+        if "tier_page" not in st.session_state:
+            st.session_state.tier_page = 1
+            
         tier_btn_cols = st.columns(5)
         if tier_btn_cols[0].button("Very Right", use_container_width=True, type="primary" if st.session_state.selected_tier == "Very Right" else "secondary", key="tier_very_right"):
             st.session_state.selected_tier = "Very Right"
+            st.session_state.tier_page = 1
             st.rerun()
         if tier_btn_cols[1].button("Right", use_container_width=True, type="primary" if st.session_state.selected_tier == "Right" else "secondary", key="tier_right"):
             st.session_state.selected_tier = "Right"
+            st.session_state.tier_page = 1
             st.rerun()
         if tier_btn_cols[2].button("Wrong", use_container_width=True, type="primary" if st.session_state.selected_tier == "Wrong" else "secondary", key="tier_wrong"):
             st.session_state.selected_tier = "Wrong"
+            st.session_state.tier_page = 1
             st.rerun()
         if tier_btn_cols[3].button("Very Wrong", use_container_width=True, type="primary" if st.session_state.selected_tier == "Very Wrong" else "secondary", key="tier_very_wrong"):
             st.session_state.selected_tier = "Very Wrong"
+            st.session_state.tier_page = 1
             st.rerun()
         if tier_btn_cols[4].button("N/A (Missing Data)", use_container_width=True, type="primary" if st.session_state.selected_tier == "N/A (Missing Data)" else "secondary", key="tier_na"):
             st.session_state.selected_tier = "N/A (Missing Data)"
+            st.session_state.tier_page = 1
             st.rerun()
             
         selected_tier = st.session_state.selected_tier
         trades_to_show = direction_stats[selected_tier]["trades"]
         
+        # Pagination Logic for Trades by Tier (5 trades per page)
+        TIER_PAGE_SIZE = 5
+        total_tier_pages = max(1, math.ceil(len(trades_to_show) / TIER_PAGE_SIZE))
+        if st.session_state.tier_page > total_tier_pages:
+            st.session_state.tier_page = total_tier_pages
+        if st.session_state.tier_page < 1:
+            st.session_state.tier_page = 1
+
+        start_idx = (st.session_state.tier_page - 1) * TIER_PAGE_SIZE
+        end_idx = start_idx + TIER_PAGE_SIZE
+        paginated_tier_trades = trades_to_show[start_idx:end_idx]
+
         if not trades_to_show:
             st.info(f"No trades in the '{selected_tier}' tier.")
         else:
@@ -562,7 +583,7 @@ elif all_trades:
             # Use an aggressive negative margin to collapse Streamlit's default vertical gaps
             st.markdown("<div style='margin-top: -45px; margin-bottom: -20px;'><hr></div>", unsafe_allow_html=True)
 
-            for t_dict in trades_to_show:
+            for t_dict in paginated_tier_trades:
                 t = t_dict["Trade"]
                 pnl = t_dict["PnL"]
                 open_p = t.underlying_price_at_open
@@ -587,6 +608,16 @@ elif all_trades:
                     st.switch_page("pages/12_Trade_Details.py")
                 
                 st.markdown("<hr style='margin:0.25rem 0; opacity: 0.3'>", unsafe_allow_html=True)
+
+            # Pagination UI
+            tier_page_col1, tier_page_col2, tier_page_col3 = st.columns([1, 2, 1])
+            if tier_page_col1.button("Previous Page", key="tier_prev_page") and st.session_state.tier_page > 1:
+                st.session_state.tier_page -= 1
+                st.rerun()
+            tier_page_col2.write(f"Page {st.session_state.tier_page} of {total_tier_pages}")
+            if tier_page_col3.button("Next Page", key="tier_next_page") and st.session_state.tier_page < total_tier_pages:
+                st.session_state.tier_page += 1
+                st.rerun()
 
         st.divider()
         st.subheader("Periodic Performance")
