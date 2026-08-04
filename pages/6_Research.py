@@ -40,7 +40,7 @@ with col1:
             lower_ticker = ticker.lower()
             ticker_links = [
                 ("Stockanalysis.com", f"https://stockanalysis.com/stocks/{lower_ticker}/"),
-                ("Barchart.com", f"https://www.barchart.com/stocks/quotes/{ticker}/overview"),
+                ("Barchart.com", f"https://www.barchart.com/stocks/quotes/{ticker}/options-data"),
                 ("Marketbeat.com", f"https://www.marketbeat.com/stocks/NASDAQ/{ticker}/"),
                 ("Tipranks.com", f"https://www.tipranks.com/stocks/{lower_ticker}"),
                 ("Finance.yahoo.com", f"https://finance.yahoo.com/quote/{ticker}/"),
