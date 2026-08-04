@@ -138,6 +138,15 @@ st.markdown(f"<div class='compact-section'><h5 class='compact-header'>Position L
 
 st.markdown("<h5 style='margin: 15px 0 8px 0; font-size: 1.1rem; font-weight: 600; color: #a1a1aa;'>Closing Information</h5>", unsafe_allow_html=True)
 
+total_quantity = sum(leg.quantity if leg.quantity else 1 for leg in trade.legs)
+default_commission = float(total_quantity * 0.65)
+
+default_underlying_price = None
+if ticker_info and ticker_info.get("current_price"):
+    cur_p = float(ticker_info["current_price"])
+    if cur_p > 0:
+        default_underlying_price = cur_p
+
 with st.form("close_trade_form"):
     fcol1, fcol2, fcol3, fcol4, fcol5 = st.columns(5)
     
@@ -152,11 +161,11 @@ with st.form("close_trade_form"):
         "Closed by broker"
     ])
     
-    closing_price = fcol3.number_input("Closing Price (Net)", step=0.01, format="%.2f", help="Net credit received (+) or debit paid (-) to close")
+    closing_price = fcol3.number_input("Closing Price (Net)", value=float(liquidation_value), step=0.01, format="%.2f", help="Net credit received (+) or debit paid (-) to close")
     
-    commission = fcol4.number_input("Closing Commission", value=0.0, step=0.01, format="%.2f")
+    commission = fcol4.number_input("Closing Commission", value=default_commission, step=0.01, format="%.2f")
     
-    underlying_price_at_close = fcol5.number_input("Underlying Price", value=None, step=0.01, format="%.2f", help="Price of the underlying asset when closing")
+    underlying_price_at_close = fcol5.number_input("Underlying Price", value=default_underlying_price, step=0.01, format="%.2f", help="Price of the underlying asset when closing")
     
     submit = st.form_submit_button("Submit Close")
     
@@ -225,7 +234,8 @@ const observer = new MutationObserver(() => {
     const buttons = parentDoc.querySelectorAll('button');
     buttons.forEach(b => {
         // Style Save/Update Trade buttons
-        if (['Submit Close'].includes(b.innerText)) {
+        const btnText = (b.innerText || b.textContent || '').trim();
+        if (btnText === 'Submit Close' || btnText.includes('Submit Close')) {
             b.classList.add('fixed-save-button');
             if (!b.dataset.clickDisabled) {
                 b.dataset.clickDisabled = "true";
